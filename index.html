@@ -10,12 +10,12 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=13">
-    <script src="content.js?v=5" defer></script>
+    <link rel="stylesheet" href="styles.css?v=14">
+    <script src="content.js?v=7" defer></script>
     <script src="firebase-config.js?v=1" defer></script>
     <script src="steam-config.js?v=3" defer></script>
     <script src="app.js?v=10" defer></script>
-    <script src="auth.js?v=8" defer></script>
+    <script src="auth.js?v=11" defer></script>
   </head>
   <body>
     <header class="site-header">
@@ -163,7 +163,10 @@
         <div class="page-heading"><div><div class="eyebrow section-eyebrow"><span data-copy="profile.eyebrow"></span> <span class="heading-line"></span></div><h1><span data-copy="profile.title"></span><span class="heading-period">.</span></h1><p data-copy="profile.description"></p></div></div>
         <div class="profile-layout">
           <section class="profile-card">
-            <div class="profile-avatar" id="profile-avatar" data-copy-aria="profile.avatarAria">E</div>
+            <div class="profile-avatar" id="profile-avatar" data-copy-aria="profile.avatarAria"><span class="profile-avatar-initial" id="profile-avatar-initial">E</span><img class="profile-avatar-image" id="profile-avatar-image" alt="" hidden></div>
+            <input class="avatar-file-input" id="avatar-file" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+            <button class="avatar-upload-button" id="avatar-upload" type="button" hidden data-copy="profile.avatarUpload"></button>
+            <p class="avatar-status" id="avatar-status" role="status" aria-live="polite" hidden></p>
             <h2 id="profile-name" data-copy="profile.guest"></h2>
             <p id="profile-email" data-copy="profile.guestDescription"></p>
             <div class="profile-balance"><span data-copy="profile.balanceLabel"></span><strong><span class="coin-symbol" data-copy="product.currency"></span> <span id="profile-balance" data-copy="wallet.displayBalance"></span></strong></div>
@@ -176,7 +179,7 @@
             </div>
             <h2 id="auth-title" data-copy="profile.loginTitle"></h2>
             <p class="auth-subtitle" id="auth-subtitle" data-copy="profile.loginDescription"></p>
-            <div class="firebase-notice" id="firebase-notice" role="status" data-copy="profile.firebaseMissing"></div>
+            <div class="firebase-notice" id="firebase-notice" role="status" data-copy="profile.firebaseMissing" hidden></div>
             <form id="auth-form">
               <label class="auth-field" id="display-name-field" hidden><span data-copy="profile.displayName"></span><input id="display-name" name="displayName" type="text" autocomplete="nickname" maxlength="30" data-copy-placeholder="profile.displayNamePlaceholder"></label>
               <label class="auth-field"><span data-copy="profile.email"></span><input id="email" name="email" type="email" autocomplete="email" required data-copy-placeholder="profile.emailPlaceholder"></label>

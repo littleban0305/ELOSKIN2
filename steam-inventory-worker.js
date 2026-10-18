@@ -307,14 +307,73 @@ async function steamLoginCallback(request, requestUrl, env) {
   return authRedirect(returnUrl.href, "steam-auth", customToken, true);
 }
 
+function steamXmlValue(xml, tag) {
+  const expression = new RegExp(`<${tag}>(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?<\\/${tag}>`);
+  const match = expression.exec(xml);
+  return match ? match[1].replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").trim() : "";
+}
+
+async function steamProfile(requestUrl, env) {
+  const steamId = requestUrl.searchParams.get("steamId") || "";
+  if (!/^\d{17}$/.test(steamId)) {
+    return jsonResponse({ error: "invalid_steam_id" }, 400, {});
+  }
+
+  let response;
+  try {
+    response = await fetch(`https://steamcommunity.com/profiles/${steamId}?xml=1`, {
+      headers: { "Accept": "application/xml, text/xml" },
+      redirect: "error",
+      cf: { cacheTtl: 3600, cacheEverything: true }
+    });
+  } catch {
+    return jsonResponse({ error: "steam_profile_unavailable" }, 502, {});
+  }
+  if (!response.ok) return jsonResponse({ error: "steam_profile_unavailable" }, 502, {});
+
+  let xml;
+  try {
+    xml = await response.text();
+  } catch {
+    return jsonResponse({ error: "steam_profile_unavailable" }, 502, {});
+  }
+  const displayName = steamXmlValue(xml, "steamID");
+  const avatarUrl = steamXmlValue(xml, "avatarFull");
+  let safeAvatarUrl = "";
+  try {
+    const parsedAvatar = new URL(avatarUrl);
+    if (
+      parsedAvatar.protocol === "https:"
+      && ["avatars.steamstatic.com", "steamcdn-a.akamaihd.net"].includes(parsedAvatar.hostname)
+    ) {
+      safeAvatarUrl = parsedAvatar.href;
+    }
+  } catch {
+    safeAvatarUrl = "";
+  }
+  return jsonResponse({
+    steamId,
+    displayName: displayName.slice(0, 64),
+    photoURL: safeAvatarUrl
+  }, 200, {});
+}
+
 async function handleSteamAuth(request, requestUrl, env) {
   const origin = request.headers.get("Origin");
-  if (requestUrl.pathname === "/auth/steam/start" && origin && !allowedOrigins(env).includes(origin)) {
+  const origins = allowedOrigins(env);
+  if (origin && !origins.includes(origin)) {
     return textResponse("This website is not allowed to use Steam sign-in.", 403);
   }
   if (request.method !== "GET") return textResponse("Method not allowed.", 405);
   if (requestUrl.pathname === "/auth/steam/start") return steamLoginStart(requestUrl, env);
   if (requestUrl.pathname === "/auth/steam/callback") return steamLoginCallback(request, requestUrl, env);
+  if (requestUrl.pathname === "/auth/steam/profile") {
+    const corsHeaders = origin ? { "Access-Control-Allow-Origin": origin, "Vary": "Origin" } : {};
+    const response = await steamProfile(requestUrl, env);
+    const headers = new Headers(response.headers);
+    for (const [key, value] of Object.entries(corsHeaders)) headers.set(key, value);
+    return new Response(response.body, { status: response.status, headers });
+  }
   return textResponse("Not found.", 404);
 }
 

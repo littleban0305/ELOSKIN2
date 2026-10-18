@@ -42,7 +42,8 @@ Steam 交易連結會公開在網站前端；任何能瀏覽網站的人都能�
 2. 將 Firebase Web App 設定的 `apiKey`、`authDomain`、`projectId`、`appId` 填入 `firebase-config.js`。這些是 Firebase 用戶端設定；不要在前端放置服務帳號金鑰。
 3. 在 Firebase Authentication 的授權網域加入 `littleban0305.github.io`（本機開發可加入 `localhost`）。使用 Google 登入時會開啟 Google 帳號選擇視窗。
 4. 從 `http://localhost` 或部署後的網站網址開啟，不要直接以 `file://` 開啟。
-5. Steam 登入會使用同一個 Cloudflare Worker 完成 Steam OpenID 驗證，並由 Firebase Custom Token 建立 `steam:<SteamID64>` 帳號。重新部署更新後的 `steam-inventory-worker.js`，再將以下三項設為 Worker 的 **Secret**（不可設為一般明文變數或提交到 Git）：
+5. Google 登入會顯示 Google 頭像；Steam 登入會讀取公開 Steam 頭像。自訂頭像會縮小後儲存在目前瀏覽器的本機空間，不需啟用 Firebase Storage 或升級 Blaze；它不會同步到其他裝置或瀏覽器。支援 JPG、PNG、WebP，原始圖片上限 5 MB。清除瀏覽器網站資料也會移除本機自訂頭像。
+6. Steam 登入會使用同一個 Cloudflare Worker 完成 Steam OpenID 驗證，並由 Firebase Custom Token 建立 `steam:<SteamID64>` 帳號。重新部署更新後的 `steam-inventory-worker.js`，再將以下三項設為 Worker 的 **Secret**（不可設為一般明文變數或提交到 Git）：
    - `FIREBASE_SERVICE_ACCOUNT_EMAIL`：Firebase Console → Project settings → Service accounts，使用 Firebase Admin SDK 服務帳號的 `client_email`。
    - `FIREBASE_PRIVATE_KEY`：同一服務帳號 JSON 檔中的 `private_key` 完整內容。金鑰只需留在本機與 Cloudflare Secret，不要傳給任何人或貼進程式碼。
    - `STEAM_STATE_SECRET`：自行產生至少 32 個隨機位元組的隨機字串，用於簽署 Steam 登入狀態 Cookie。

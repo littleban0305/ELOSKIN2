@@ -4,6 +4,9 @@ const firebaseNotice = document.querySelector("#firebase-notice");
 const passwordReset = document.querySelector("#password-reset");
 const googleAuthButton = document.querySelector("#google-auth");
 const steamAuthButton = document.querySelector("#steam-auth");
+const avatarFile = document.querySelector("#avatar-file");
+const avatarUploadButton = document.querySelector("#avatar-upload");
+const avatarStatus = document.querySelector("#avatar-status");
 const authTabs = document.querySelectorAll("[data-auth-mode]");
 const firebaseConfig = window.ELOSKIN_FIREBASE_CONFIG;
 const steamAuthConfig = window.ELOSKIN2_STEAM_CONFIG;
@@ -29,6 +32,12 @@ function showAuthMessage(message, kind = "error") {
 }
 
 window.showAuthMessage = showAuthMessage;
+
+function showAvatarMessage(message, kind = "error") {
+  avatarStatus.textContent = message;
+  avatarStatus.dataset.kind = kind;
+  avatarStatus.hidden = !message;
+}
 
 function setAuthMode(mode) {
   authMode = mode;
@@ -66,22 +75,40 @@ function updateAccount(user) {
   const steamId = user?.uid?.startsWith("steam:") ? user.uid.slice("steam:".length) : "";
   const name = user?.displayName || user?.email?.split("@")[0] || (steamId ? `Steam ${steamId}` : authText("profile.guest"));
   const initial = [...name.trim()][0]?.toLocaleUpperCase("zh-Hant") || authText("profile.fallbackInitial");
+  const avatarImage = document.querySelector("#profile-avatar-image");
+  const avatarInitial = document.querySelector("#profile-avatar-initial");
+  let avatarUrl = user?.photoURL || "";
+  if (user) {
+    try {
+      avatarUrl = localStorage.getItem(`eloskin2.avatar.${user.uid}`) || avatarUrl;
+    } catch (error) {
+      showAvatarMessage(authText("profile.avatarLocalReadError", { message: error.message }));
+    }
+  }
   document.querySelector("#profile-name").textContent = user ? name : authText("profile.guest");
   document.querySelector("#profile-email").textContent = user?.email || (steamId ? `Steam ID ${steamId}` : authText("profile.guestDescription"));
-  document.querySelector("#profile-avatar").textContent = initial;
+  avatarInitial.textContent = initial;
+  avatarImage.hidden = !avatarUrl;
+  avatarInitial.hidden = Boolean(avatarUrl);
+  avatarImage.onerror = () => {
+    avatarImage.hidden = true;
+    avatarInitial.hidden = false;
+  };
+  if (avatarUrl) avatarImage.src = avatarUrl;
+  else avatarImage.removeAttribute("src");
   document.querySelector("#profile-avatar").classList.toggle("signed-in", Boolean(user));
   document.querySelector("#profile-shortcut").textContent = user ? initial : authText("nav.account");
   document.querySelector("#profile-shortcut").setAttribute("aria-label", user ? authText("nav.profileAria") : authText("nav.accountAria"));
   document.querySelector("#profile-shortcut").classList.toggle("signed-in", Boolean(user));
   document.querySelector("#ec-balance-wrapper").hidden = !user;
   document.querySelector("#sign-out").hidden = !user;
+  avatarUploadButton.hidden = !user;
   document.querySelector("#auth-form").hidden = Boolean(user);
   document.querySelector(".auth-tabs").hidden = Boolean(user);
-  document.querySelector("#firebase-notice").hidden = Boolean(user);
   document.querySelector(".auth-privacy").hidden = Boolean(user);
   document.querySelector("#auth-title").textContent = user ? authText("profile.signedInTitle") : authMode === "register" ? authText("profile.registerTitle") : authText("profile.loginTitle");
   document.querySelector("#auth-subtitle").textContent = user ? authText("profile.signedInDescription") : authMode === "register" ? authText("profile.registerDescription") : authText("profile.loginDescription");
-  if (user) showAuthMessage(authText("profile.signedInMessage"), "success");
+  if (!user) showAvatarMessage("");
 }
 
 function isConfigured(config) {
@@ -104,7 +131,7 @@ async function initializeFirebase() {
     return;
   }
 
-  firebaseNotice.textContent = authText("profile.firebaseConnecting");
+  firebaseNotice.hidden = true;
   try {
     const version = "10.14.1";
     await loadFirebaseScript(`https://www.gstatic.com/firebasejs/${version}/firebase-app-compat.js`);
@@ -118,9 +145,9 @@ async function initializeFirebase() {
       showAuthMessage(authText("profile.firebaseStateError", { message: error.message }));
     });
     firebaseReady = true;
-    firebaseNotice.textContent = authText("profile.firebaseConnected");
     await completeSteamSignIn();
   } catch (error) {
+    firebaseNotice.hidden = false;
     firebaseNotice.textContent = authText("profile.firebaseInitError", { message: error.message });
     showAuthMessage(authText("profile.firebaseInitError", { message: error.message }));
   }
@@ -263,11 +290,89 @@ async function completeSteamSignIn() {
   }
 
   try {
-    await firebaseAuth.signInWithCustomToken(steamCallback.token);
+    const credential = await firebaseAuth.signInWithCustomToken(steamCallback.token);
+    const steamId = credential.user.uid.startsWith("steam:")
+      ? credential.user.uid.slice("steam:".length)
+      : "";
+    if (!steamId || !steamAuthConfig?.authEndpoint) return;
+    await loadSteamProfile(credential.user, steamId);
   } catch (error) {
     showAuthMessage(authText("profile.steamLoginFirebaseFailed", { message: error.message }));
   }
 }
+
+async function loadSteamProfile(user, steamId) {
+  try {
+    const profileEndpoint = new URL("/auth/steam/profile", steamAuthConfig.authEndpoint);
+    profileEndpoint.searchParams.set("steamId", steamId);
+    const response = await fetch(profileEndpoint);
+    if (!response.ok) throw new Error(authText("profile.steamProfileError"));
+    const profile = await response.json();
+    const updates = {};
+    if (profile.displayName) updates.displayName = profile.displayName;
+    if (profile.photoURL) updates.photoURL = profile.photoURL;
+    if (Object.keys(updates).length) {
+      await user.updateProfile(updates);
+      updateAccount(user);
+    }
+  } catch (error) {
+    showAvatarMessage(authText("profile.steamProfileError"), "error");
+  }
+}
+
+avatarUploadButton.addEventListener("click", () => avatarFile.click());
+
+avatarFile.addEventListener("change", async () => {
+  const file = avatarFile.files?.[0];
+  if (!file) {
+    showAvatarMessage(authText("profile.avatarChooseFile"));
+    return;
+  }
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+    showAvatarMessage(authText("profile.avatarInvalidType"));
+    avatarFile.value = "";
+    return;
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    showAvatarMessage(authText("profile.avatarTooLarge"));
+    avatarFile.value = "";
+    return;
+  }
+  if (!firebaseAuth?.currentUser) {
+    showAvatarMessage(authText("profile.configureFirebase"));
+    avatarFile.value = "";
+    return;
+  }
+
+  avatarUploadButton.disabled = true;
+  showAvatarMessage(authText("profile.avatarUploading"), "info");
+  try {
+    const user = firebaseAuth.currentUser;
+    const image = await createImageBitmap(file);
+    const scale = Math.min(1, 512 / Math.max(image.width, image.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(image.width * scale));
+    canvas.height = Math.max(1, Math.round(image.height * scale));
+    const context = canvas.getContext("2d");
+    if (!context) {
+      image.close();
+      throw new Error(authText("profile.avatarCanvasUnavailable"));
+    }
+    context.fillStyle = "#fff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    image.close();
+    const avatarData = canvas.toDataURL("image/jpeg", 0.85);
+    localStorage.setItem(`eloskin2.avatar.${user.uid}`, avatarData);
+    updateAccount(user);
+    showAvatarMessage(authText("profile.avatarUploadSuccess"), "success");
+  } catch (error) {
+    showAvatarMessage(authText("profile.avatarLocalSaveError", { message: error.message }));
+  } finally {
+    avatarUploadButton.disabled = false;
+    avatarFile.value = "";
+  }
+});
 
 passwordReset.addEventListener("click", async () => {
   if (!firebaseReady || !firebaseAuth) {
