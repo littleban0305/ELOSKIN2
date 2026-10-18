@@ -21,7 +21,7 @@ GitHub Pages 是靜態網站，不能直接讀取 Steam 庫存 API（Steam 不�
    - 設定位置：Cloudflare Dashboard → Workers & Pages → 選擇你的 Worker → Settings → Variables and Secrets → Add variable。名稱填 `ALLOWED_ORIGINS`，值填上面整理好的網址，儲存後重新部署／生效。
    - 如果網站使用自訂網域，填自訂網域的開頭，例如 `https://skins.example.com`。不要填 `file://` 開啟的本機檔案網址。
 3. 確認 Steam 個人資料及物品庫設為公開。此 Worker 固定讀取 Steam ID `76561199883868233` 的 CS2（App 730）物品庫，只回傳可交易物品，最多讀取 20,000 件；Steam 上游回應會由 Cloudflare 快取 60 秒。
-4. 將部署後 Worker 網址加上 `/inventory`，填入 `steam-config.js` 的 `inventoryEndpoint`，例如 `https://你的-worker.workers.dev/inventory`。
+4. Worker 網址已接入 `steam-config.js`：`https://eloskin2.littleban0305.workers.dev/inventory`。目前 `ALLOWED_ORIGINS` 已允許 `https://littleban0305.github.io`。
 5. 網站商店的「重新讀取庫存」按鈕可再次同步。若要設定物品售價，在 `steam-config.js` 的 `ecPrices` 依 Steam 市場名稱填入正整數 EC，例如 `ecPrices: { "AK-47 | Redline (Field-Tested)": 1200 }`。交易按鈕會開啟主要帳號提供的 Steam 交易連結。
 
 Steam 交易連結會公開在網站前端；任何能瀏覽網站的人都能看到該連結。不要將 Steam 密碼、API 金鑰或登入 Cookie 放進 Worker 或前端。
