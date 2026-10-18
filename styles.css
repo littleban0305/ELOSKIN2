@@ -3354,6 +3354,25 @@ button, a { transition-duration: .18s; }
 .search-box img,
 .home-search > img { filter: brightness(.9); }
 
+.cart-button img { width: 24px; height: 24px; }
+.search-box img,
+.home-search > img { width: 22px; height: 22px; }
+.button-icon { width: 17px; height: 17px; }
+.category-arrow img { width: 16px; height: 16px; }
+.favorite-button img { width: 19px; height: 19px; }
+.add-button img { width: 18px; height: 18px; }
+.close-button img { width: 22px; height: 22px; }
+.step-icon img,
+.preview-swap-icon { width: 28px; height: 28px; object-fit: contain; mix-blend-mode: screen; }
+.cart-button img,
+.search-box img,
+.home-search > img,
+.button-icon,
+.category-arrow img,
+.favorite-button img,
+.add-button img,
+.close-button img { filter: brightness(1.15) drop-shadow(0 0 2px rgba(79, 220, 200, .32)); }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
