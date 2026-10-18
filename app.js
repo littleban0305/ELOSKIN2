@@ -1,12 +1,6 @@
 const copy = window.ELOSKIN2_TEXT;
 const t = window.eloText;
-const products = copy.demoProducts.map((product) => ({
-  ...product,
-  category: copy.categories[product.category],
-  kind: copy.categories[product.kind],
-  game: "ROBLOX RIVALS",
-  wear: copy.product.notApplicable
-}));
+const products = [];
 window.eloProductCatalog = products;
 window.eloHiddenProductIds = new Set();
 window.eloProductVisibilityId = (product) => product.source === "steam"
@@ -15,7 +9,6 @@ window.eloProductVisibilityId = (product) => product.source === "steam"
 function isProductPublished(product) {
   return !window.eloHiddenProductIds.has(window.eloProductVisibilityId(product));
 }
-const playerListings = copy.playerListings;
 const categoryKeys = ["item", "case", "weapon", "competitor", "rifle", "sniper", "pistol", "knife", "gloves", "rivals"];
 const categories = [copy.categories.allItems, ...categoryKeys.map((key) => copy.categories[key])];
 const games = [
@@ -165,14 +158,12 @@ function productCardMarkup(product) {
   return `
     <article class="product-card">
       <div class="product-visual art-${product.art}">
-        <span class="visual-type">${escapeHtml(product.label)}</span>
         <button class="favorite-button${favorite ? " is-favorite" : ""}" type="button" data-favorite="${escapeHtml(product.id)}" aria-label="${escapeHtml(favoriteLabel)}：${safeName}" aria-pressed="${favorite}">
           <img src="assets/icon_new/${favoriteIcon}" alt="" aria-hidden="true">
         </button>
         ${artwork}
       </div>
       <div class="product-info">
-        <div class="product-meta"><span>${escapeHtml(product.game === "CS2" ? copy.games.cs2 : copy.games.rivals)}</span><span class="product-category">${escapeHtml(product.category)}</span></div>
         <h3 title="${safeName}">${safeName}</h3>
         <div class="product-description">${escapeHtml(product.description)}${product.wear === copy.product.notApplicable ? "" : ` <span>／ ${escapeHtml(product.wear)}</span>`}</div>
         <div class="product-bottom">
@@ -210,28 +201,7 @@ function renderHomeProducts() {
   featured.sort(sorters[state.sort] || sorters.featured);
   featured = featured.slice(0, 5);
   $("#featured-grid").innerHTML = featured.map(productCardMarkup).join("");
-  $("#curated-grid").innerHTML = playerListings.slice(0, 3).map(playerListingMarkup).join("");
-}
-
-function playerListingMarkup(listing) {
-  return `
-    <article class="trade-card">
-      <div class="trade-card-visual ${listing.tone}">
-        <span class="trade-game">${escapeHtml(listing.game === "CS2" ? copy.games.cs2 : copy.games.rivals)} · ${escapeHtml(listing.category)}</span>
-        <span class="trade-item-mark">${listing.game === "CS2" ? "CS" : "R"}</span>
-        <span class="trade-availability"><i></i> ${escapeHtml(t("trade.available"))}</span>
-      </div>
-      <div class="trade-card-content">
-        <div class="seller-line"><span class="seller-avatar">${escapeHtml(listing.seller)}</span><span><small>${escapeHtml(t("trade.seller"))}</small><strong>${escapeHtml(listing.sellerName)}</strong></span><span class="seller-rating">${escapeHtml(t("trade.reputation"))}</span></div>
-        <h2>${escapeHtml(listing.name)}</h2>
-        <p>${escapeHtml(listing.detail)}</p>
-        <div class="trade-card-bottom"><div><small>${escapeHtml(t("trade.conditions"))}</small><strong>${escapeHtml(listing.wants)}</strong></div><button class="offer-button" type="button" data-offer="${escapeHtml(listing.id)}">${escapeHtml(t("trade.makeOffer"))}</button></div>
-      </div>
-    </article>`;
-}
-
-function renderPlayerListings() {
-  $("#trade-grid").innerHTML = playerListings.map(playerListingMarkup).join("");
+  $("#curated-grid").replaceChildren();
 }
 
 function renderCart() {
@@ -596,11 +566,9 @@ renderFilters();
 renderHomeCategories();
 renderProducts();
 renderHomeProducts();
-renderPlayerListings();
 renderCart();
 const initialDestination = location.hash.slice(1) || "home";
 if (["guide", "safety", "marketplace"].includes(initialDestination)) showHomeAnchor(initialDestination);
 else {
   navigateTo(initialDestination);
 }
-loadSteamInventory();

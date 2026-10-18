@@ -4131,3 +4131,34 @@ html {
     font-size: 12px;
   }
 }
+
+.button-icon {
+  order: -1;
+}
+
+.cart-button img,
+.search-box img,
+.home-search > img,
+.button-icon,
+.category-arrow img,
+.favorite-button img,
+.add-button img,
+.close-button img,
+.step-icon img,
+.preview-swap-icon {
+  filter: brightness(0) saturate(100%) invert(36%) sepia(33%) saturate(1195%) hue-rotate(129deg) brightness(91%) contrast(91%);
+  mix-blend-mode: normal;
+}
+
+.site-footer {
+  display: flex;
+  min-height: 70px;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 12px 5.5%;
+}
+
+.footer-main {
+  display: flex;
+  align-items: center;
+}

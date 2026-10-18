@@ -1,12 +1,12 @@
 # ELOSKIN2
 
-首頁依 ELOSKIN2 的獨立版型呈現 CS2 與 Roblox Rivals 商店、玩家交換、新手指南及交易安全說明。商店以 ELOCoin（EC）標價；CS2 商品庫存可從主要 Steam 帳號讀取，只列出可交易物品。商品搜尋、類別／遊戲篩選、排序、收藏與購物車在前端運作。
+ELOSKIN2 是供朋友使用的 CS2 與 Roblox 道具交易網站。目前介面暫時精簡：首頁只顯示 banner，商店只保留標題和搜尋欄，交易頁只保留標題；商品與玩家刊登範例已移除。登入、註冊及管理者商品上／下架功能仍保留。
 
 ## 編輯網站文字
 
-網站介面文案集中在 `content.js`。導覽、首頁、商店、玩家刊登、登入註冊、狀態提示、商品範例與篩選分類都從此檔讀取：
+網站介面文案集中在 `content.js`。導覽、商店、登入註冊、狀態提示與篩選分類都從此檔讀取：
 
-- 直接編輯對應區塊中的文字值；商品範例與玩家刊登資料也在此檔。
+- 直接編輯對應區塊中的文字值。
 - `index.html` 的 `data-copy`、`data-copy-aria`、`data-copy-placeholder`、`data-copy-alt` 和 `data-copy-content` 屬性連到文案鍵。
 - `app.js` 與 `auth.js` 用 `t("區塊.鍵名")` 讀取動態訊息，例如 `t("shop.empty")`。
 - 新增文案時，先在 `content.js` 對應區塊新增鍵，再於 HTML 或 JavaScript 使用該鍵。缺少的鍵會明確拋出錯誤，方便定位。
@@ -20,11 +20,7 @@
 
 此專案使用 GitHub Actions 自動發布。將變更推送至 `main` 分支後，可在 GitHub repo 的 **Actions** 頁面查看發布狀態；首次成功發布後，網站網址會是 `https://littleban0305.github.io/ELOSKIN2/`。公開 Pages 網站任何人都能瀏覽，並看見網站上顯示的 Steam 交易連結。
 
-SkinApe 累積收益回饋目前展示 1,000 回饋 100 EC、10,000 回饋 1,000 EC，其餘級距仍待確認。EC 餘額、價格、Rivals 庫存和玩家刊登皆為展示資料，不是即時市場資料；CS2 庫存可按下文設定為讀取 Steam 公開庫存。
-
-首頁精選區最多顯示 5 件官方商品；下方玩家寄售區展示的是玩家刊登範例。
-
-Roblox Rivals 商品仍為展示資料。CS2 商品名稱、圖示與庫存來自 Steam 公開物品庫；未設定 EC 價格的 CS2 物品會標示「需設定 EC 價格」，不能加入購物車。可於 `steam-config.js` 的 `ecPrices` 依 Steam `market_hash_name` 設定 EC 價格。Steam 庫存並非即時訂單保留，完成 Steam 交易後請重新讀取。
+EC 商品目錄目前沒有上架項目。CS2 庫存讀取設定仍保留，但同步按鈕所在的庫存面板目前不顯示；在恢復商品介面前，網站不會展示庫存或建立商品訂單。
 
 ## 啟用 Steam 庫存讀取
 
@@ -38,7 +34,7 @@ GitHub Pages 是靜態網站，不能直接讀取 Steam 庫存 API（Steam 不�
    - 如果網站使用自訂網域，填自訂網域的開頭，例如 `https://skins.example.com`。不要填 `file://` 開啟的本機檔案網址。
 3. 確認 Steam 個人資料及物品庫設為公開。此 Worker 固定讀取 Steam ID `76561199883868233` 的 CS2（App 730）物品庫，只回傳可交易物品，最多讀取 20,000 件；Steam 上游回應會由 Cloudflare 快取 60 秒。
 4. Worker 網址已接入 `steam-config.js`：`https://eloskin2.littleban0305.workers.dev/inventory`。目前 `ALLOWED_ORIGINS` 已允許 `https://littleban0305.github.io`。
-5. 網站商店的「重新讀取庫存」按鈕可再次同步。若要設定物品售價，在 `steam-config.js` 的 `ecPrices` 依 Steam 市場名稱填入正整數 EC，例如 `ecPrices: { "AK-47 | Redline (Field-Tested)": 1200 }`。交易按鈕會開啟主要帳號提供的 Steam 交易連結。
+5. 目前庫存面板與同步按鈕已隱藏，網站不會在介面顯示 Steam 庫存。若日後恢復商店功能，可在 `steam-config.js` 的 `ecPrices` 依 Steam 市場名稱填入正整數 EC。
 
 Steam 交易連結會公開在網站前端；任何能瀏覽網站的人都能看到該連結。不要將 Steam 密碼、API 金鑰或登入 Cookie 放進 Worker 或前端。
 
@@ -59,4 +55,4 @@ Steam 交易連結會公開在網站前端；任何能瀏覽網站的人都能�
 
 ELOSKIN2 的目標使用者是受邀朋友，但目前原型尚未設定朋友白名單或頁面存取限制；不要把它當作已啟用的私人網站。
 
-EC 餘額、Rivals 商品、玩家刊登及交易提案仍是前端展示資料。Steam 庫存同步僅用來顯示主要帳號目前的可交易 CS2 物品，不會自動估價、建立真實訂單、扣款或送出 Steam 交易。購物車庫存限制僅在目前頁面生效，不是即時庫存保留。管理者商品上／下架狀態透過 Firestore 同步；管理介面每次最多顯示 100 筆搜尋結果。
+商品與玩家刊登範例目前已移除，商店及交易功能頁暫時只保留頁首。Firestore 商品管理功能仍保留；管理介面每次最多顯示 100 筆搜尋結果。

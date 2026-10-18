@@ -105,12 +105,10 @@ function updateAccount(user) {
   document.querySelector("#profile-shortcut").textContent = user ? initial : authText("nav.account");
   document.querySelector("#profile-shortcut").setAttribute("aria-label", user ? authText("nav.profileAria") : authText("nav.accountAria"));
   document.querySelector("#profile-shortcut").classList.toggle("signed-in", Boolean(user));
-  document.querySelector("#ec-balance-wrapper").hidden = !user;
   document.querySelector("#sign-out").hidden = !user;
   avatarUploadButton.hidden = !user;
   document.querySelector("#auth-form").hidden = Boolean(user);
   document.querySelector(".auth-tabs").hidden = Boolean(user);
-  document.querySelector(".auth-privacy").hidden = Boolean(user);
   document.querySelector("#auth-title").textContent = user ? authText("profile.signedInTitle") : authMode === "register" ? authText("profile.registerTitle") : authText("profile.loginTitle");
   document.querySelector("#auth-subtitle").textContent = user ? authText("profile.signedInDescription") : authMode === "register" ? authText("profile.registerDescription") : authText("profile.loginDescription");
   const isAdmin = user?.email?.toLowerCase() === ADMIN_EMAIL;
