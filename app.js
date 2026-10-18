@@ -194,7 +194,9 @@ function escapeHtml(value) {
 }
 
 function renderHomeProducts() {
-  let featured = products.filter((product) => product.game === "CS2" && isProductPublished(product));
+  const published = products.filter(isProductPublished);
+  let featured = published.filter((product) => product.game === "CS2");
+  if (!featured.length) featured = published;
   if (homeMarketMode === "latest") featured = featured.slice().reverse();
   if (homeMarketMode === "budget") featured = featured.filter((product) => Number.isFinite(product.price) && product.price <= 1500);
   const sorters = {
