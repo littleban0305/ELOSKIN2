@@ -196,6 +196,7 @@ window.ELOSKIN2_TEXT = {
     inventoryEyebrow: "PRIMARY ACCOUNT INVENTORY",
     inventoryTitle: "主帳號 CS2 物品庫",
     inventoryInitialStatus: "正在連線到 Steam 庫存讀取服務...",
+    refreshLoading: "讀取中…",
     inventoryHint: "僅顯示 Steam 內「可交易」的物品；需要手動設定 EC 價格才能加入購物車。",
     inventoryRefresh: "重新整理庫存",
     steamTrade: "發起 Steam 交易提案",
@@ -220,6 +221,172 @@ window.ELOSKIN2_TEXT = {
     invalidSteamResponse: "Steam 回傳的庫存資料格式錯誤。",
     corsNotAllowed: "當前網站網域尚未加入 Cloudflare Worker 的 ALLOWED_ORIGINS 白名單中。",
     workerUnavailable: "無法連線到代理 Worker；請檢查 Worker 網址、部署狀態或 CORS 網域設定是否正確。",
-    invalidWorkerResponse: "Steam 連線異常或代理回傳格式不正確。"
+    invalidWorkerResponse: "Steam 連線異常或代理回傳格式不正確。",
+    workerHttpError: "庫存代理讀取失敗（HTTP {status}）。",
+    missingItems: "庫存服務缺少物品清單。",
+    genericInventoryError: "讀取 Steam 物品庫失敗。",
+    missingPrice: "此物品尚未設定 EC 價格。",
+    maxCartStock: "購物車數量已達目前庫存。"
+  },
+  trade: {
+    eyebrow: "PLAYER TO PLAYER",
+    title: "玩家交易",
+    description: "瀏覽玩家刊登的物品，提出你想交換的條件。",
+    createListing: "刊登交易",
+    noticeIcon: "i",
+    notice: "使用 EC 提出道具交換；目前顯示範例刊登，交易提案尚未連接資料庫或遊戲物品交付。台幣參考匯率為 1 EC = NT$0.03。",
+    seller: "刊登玩家",
+    reputation: "信譽良好",
+    available: "開放提案",
+    conditions: "希望交易條件",
+    makeOffer: "提出交易",
+    proposalUnavailable: "交易提案功能尚未連接；目前不會送出真實提案。",
+    listingRequiresLogin: "登入或註冊後即可建立個人交易刊登。",
+    listingNotConnected: "刊登功能尚未連接資料庫，尚未建立真實刊登。"
+  },
+  profile: {
+    eyebrow: "YOUR ACCOUNT",
+    title: "個人頁面",
+    description: "登入帳號以管理個人資料與交易。",
+    guest: "訪客",
+    fallbackInitial: "E",
+    guestDescription: "登入或註冊以使用個人帳號",
+    avatarAria: "個人圓形頭像",
+    accountOptions: "帳號選項",
+    balanceLabel: "展示代幣餘額",
+    avatarUpload: "編輯頭像",
+    avatarChooseFile: "請選擇圖片檔案。",
+    avatarInvalidType: "請上傳 JPG、PNG 或 WebP 圖片。",
+    avatarTooLarge: "圖片大小不能超過 5 MB。",
+    avatarLocalReadError: "無法讀取此裝置儲存的頭像：{message}",
+    avatarLocalSaveError: "無法在此裝置儲存頭像：{message}",
+    avatarCanvasUnavailable: "目前瀏覽器無法處理圖片。",
+    avatarUploading: "正在處理頭像…",
+    avatarUploadSuccess: "頭像已更新。",
+    loginTab: "登入",
+    registerTab: "註冊",
+    loginTitle: "歡迎回來",
+    registerTitle: "建立你的帳號",
+    loginDescription: "使用電子郵件登入；若尚未註冊，會自動建立帳號。",
+    registerDescription: "註冊 ELOSKIN2 玩家帳號。",
+    firebaseMissing: "尚未設定 Firebase。填入 firebase-config.js 並啟用 Email/Password 驗證後，即可開放登入與註冊。",
+    displayName: "顯示名稱",
+    displayNamePlaceholder: "你希望玩家怎麼稱呼你",
+    email: "電子郵件",
+    emailPlaceholder: "you@example.com",
+    password: "密碼",
+    passwordPlaceholder: "至少 6 個字元",
+    showPassword: "顯示",
+    hidePassword: "隱藏",
+    confirmPassword: "確認密碼",
+    confirmPasswordPlaceholder: "再次輸入密碼",
+    passwordReset: "忘記密碼？寄送重設連結",
+    passwordResetSending: "正在寄送密碼重設連結…",
+    passwordResetSent: "密碼重設連結已寄到你的電子郵件，請查看收件匣。",
+    passwordResetError: "無法寄送重設連結：{message}",
+    enterEmailForReset: "請先輸入註冊帳號的電子郵件。",
+    invalidCredential: "電子郵件或密碼不正確。請確認輸入內容；若忘記密碼，可使用「忘記密碼？」寄送重設連結。",
+    invalidEmail: "電子郵件格式不正確，請檢查後再試。",
+    userDisabled: "此帳號目前已停用，請聯絡網站管理員。",
+    tooManyRequests: "嘗試次數過多，請稍後再試。",
+    networkError: "目前無法連線，請檢查網路後再試。",
+    emailInUse: "此電子郵件已註冊，請直接登入。",
+    weakPassword: "密碼強度不足，請使用至少 6 個字元。",
+    authError: "驗證失敗（{code}）：{message}",
+    autoRegistering: "找不到此電子郵件帳號，正在為你建立帳號…",
+    autoRegistered: "已為你建立帳號並登入。",
+    googleLogin: "使用 Google 繼續",
+    googleLoginProgress: "正在連線 Google…",
+    googleLoginCancelled: "已取消 Google 登入。",
+    googleProviderDisabled: "Google 登入尚未啟用，請在 Firebase Console 啟用 Google 提供者。",
+    googleDomainNotAuthorized: "此網站尚未加入 Firebase Authentication 授權網域。",
+    googlePopupBlocked: "登入視窗遭到封鎖，請允許此網站開啟彈出視窗後重試。",
+    googleAccountConflict: "此電子郵件已使用其他登入方式註冊，請先使用原登入方式登入。",
+    steamLogin: "使用 Steam 登入",
+    steamLoginProgress: "正在前往 Steam 安全驗證…",
+    steamLoginNotConfigured: "Steam 登入服務尚未設定完成，請稍後再試。",
+    steamLoginCancelled: "已取消 Steam 登入。",
+    steamLoginVerificationFailed: "Steam 身分驗證失敗，請重新登入。",
+    steamLoginUnavailable: "Steam 登入服務暫時無法使用，請稍後再試。",
+    steamProfileError: "登入成功，但目前無法讀取 Steam 頭像。",
+    steamLoginFirebaseFailed: "Steam 驗證成功，但 Firebase 登入失敗：{message}",
+    login: "登入",
+    createAccount: "建立帳號",
+    accountPrivacy: "帳號由 Firebase Authentication 管理；請勿在此輸入其他網站的密碼。",
+    accountSafetyEyebrow: "ACCOUNT SAFETY",
+    accountSafetyTitle: "帳號只在官方頁面登入。",
+    accountSafetyDescription: "登入由 Firebase Authentication 管理。ELOSKIN2 目前不會要求你提供 Steam 密碼、驗證碼或 API 金鑰。",
+    signedInTitle: "已登入",
+    signedInDescription: "你已登入 ELOSKIN2。",
+    signedInMessage: "帳號已安全登入。",
+    signOut: "登出",
+    signOutSuccess: "已登出。",
+    signOutError: "登出失敗：{message}",
+    firebaseInitError: "Firebase 初始化失敗：{message}",
+    firebaseStateError: "帳號狀態更新失敗：{message}",
+    firebaseSdkError: "無法載入 Firebase SDK：{source}",
+    firebaseMissingObject: "Firebase SDK 載入後未提供 firebase 物件。",
+    configureFirebase: "尚未設定 Firebase，請先填入 firebase-config.js 的專案設定。",
+    passwordMismatch: "兩次輸入的密碼不一致。",
+    creatingAccount: "正在建立帳號…",
+    loggingIn: "正在登入…"
+  },
+  cart: {
+    eyebrow: "YOUR SELECTION",
+    title: "購物車",
+    closeAria: "關閉購物車",
+    empty: "購物車還沒有物品。",
+    total: "合計",
+    checkout: "確認展示訂單",
+    note: "EC 為平台展示點數；此為原型，不會扣款或建立真實訂單。",
+    remove: "減少{name}數量",
+    increase: "增加{name}數量",
+    demoOrderComplete: "展示訂單已完成；沒有建立真實交易。"
+  },
+  footer: {
+    explore: "探索造型",
+    shop: "造型商店",
+    trade: "道具交換",
+    curated: "精選上架",
+    support: "交易支援",
+    guide: "新手指南",
+    safety: "交易安全",
+    faq: "常見問題",
+    about: "關於平台",
+    aboutSite: "關於 ELOSKIN2",
+    privacy: "隱私權政策",
+    prototype: "展示原型說明",
+    copyright: "© 2026 ELOSKIN2 · CONCEPT DESIGN",
+    note: "CS2 庫存讀取自 Steam；EC 餘額、Rivals 商品與交換資訊仍為展示資料。1 EC = NT$0.03 為參考標價。"
+  },
+  messages: {
+    favoriteAdded: "已加入收藏",
+    favoriteRemoved: "已從收藏移除",
+    cartAdded: "已加入購物車"
   }
 };
+
+window.eloText = (key, values = {}) => {
+  const value = key.split(".").reduce((current, part) => current?.[part], window.ELOSKIN2_TEXT);
+  if (typeof value !== "string") throw new Error(`Missing ELOSKIN2 text: ${key}`);
+  return value.replace(/\{(\w+)\}/g, (match, name) => name in values ? String(values[name]) : match);
+};
+
+for (const element of document.querySelectorAll("[data-copy]")) {
+  element.textContent = window.eloText(element.dataset.copy);
+}
+for (const element of document.querySelectorAll("[data-copy-aria]")) {
+  element.setAttribute("aria-label", window.eloText(element.dataset.copyAria));
+}
+for (const element of document.querySelectorAll("[data-copy-placeholder]")) {
+  element.setAttribute("placeholder", window.eloText(element.dataset.copyPlaceholder));
+}
+for (const element of document.querySelectorAll("[data-copy-alt]")) {
+  element.setAttribute("alt", window.eloText(element.dataset.copyAlt));
+}
+for (const element of document.querySelectorAll("[data-copy-content]")) {
+  element.setAttribute("content", window.eloText(element.dataset.copyContent));
+}
+for (const element of document.querySelectorAll("[data-copy-title]")) {
+  element.setAttribute("title", window.eloText(element.dataset.copyTitle));
+}
