@@ -80,7 +80,7 @@ function renderHomeCategories() {
       <button class="category-tile" type="button" data-home-category="${escapeHtml(category)}">
         <span class="category-symbol">${escapeHtml(categoryArt[categoryKey] || "")}</span>
         <span><strong>${escapeHtml(category)}</strong><small>${escapeHtml(gameLabel)}</small></span>
-        <span class="category-arrow" aria-hidden="true"><img src="assets/icon/icon-external-link.png" alt=""></span>
+        <span class="category-arrow" aria-hidden="true"><img src="assets/icon_new/arrow_forward_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt=""></span>
       </button>`;
   }).join("");
 }
@@ -148,6 +148,9 @@ function productArtwork(product) {
 function productCardMarkup(product) {
   const favorite = state.favorites.has(product.id);
   const safeName = escapeHtml(product.name);
+  const favoriteIcon = favorite
+    ? "heart_minus_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png"
+    : "heart_plus_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png";
   const priced = Number.isFinite(product.price) && product.price > 0;
   const artwork = product.iconUrl
     ? `<img class="product-art steam-product-art" src="${escapeHtml(product.iconUrl)}" alt="${safeName}" loading="lazy">`
@@ -164,7 +167,7 @@ function productCardMarkup(product) {
       <div class="product-visual art-${product.art}">
         <span class="visual-type">${escapeHtml(product.label)}</span>
         <button class="favorite-button${favorite ? " is-favorite" : ""}" type="button" data-favorite="${escapeHtml(product.id)}" aria-label="${escapeHtml(favoriteLabel)}：${safeName}" aria-pressed="${favorite}">
-          <img src="assets/icon/icon-heart.png" alt="" aria-hidden="true">
+          <img src="assets/icon_new/${favoriteIcon}" alt="" aria-hidden="true">
         </button>
         ${artwork}
       </div>
@@ -176,7 +179,7 @@ function productCardMarkup(product) {
           <div class="product-price">${priced ? `<span class="currency-symbol">${escapeHtml(t("product.currency"))}</span>${product.price.toLocaleString()}` : `<span class="unpriced-label">${escapeHtml(t("product.noPrice"))}</span>`}</div>
           <div class="product-stock">${product.stock === 0 ? escapeHtml(t("product.unavailable")) : stockLabel}</div>
           <button class="add-button" type="button" data-add="${escapeHtml(product.id)}" aria-label="${escapeHtml(addLabel)}" ${product.stock === 0 || !priced ? "disabled" : ""}>
-            <img src="assets/icon/icon-add.png" alt="" aria-hidden="true">
+            <img src="assets/icon_new/add_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="" aria-hidden="true">
           </button>
         </div>
       </div>

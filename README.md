@@ -12,6 +12,10 @@
 - 新增文案時，先在 `content.js` 對應區塊新增鍵，再於 HTML 或 JavaScript 使用該鍵。缺少的鍵會明確拋出錯誤，方便定位。
 - Steam 即時庫存名稱、Firebase 驗證服務回傳的錯誤內容，以及使用者的顯示名稱不是網站靜態文案，因此仍由服務或使用者提供。
 
+## 編輯網站圖示
+
+網站操作圖示集中在 `assets/icon_new/`，目前導覽列購物車、搜尋、交換、加入購物車、收藏、關閉視窗及導覽箭頭都使用此資料夾的 PNG。商品收藏會依狀態切換 `heart_plus` 和 `heart_minus`。
+
 ## GitHub Pages 部署
 
 此專案使用 GitHub Actions 自動發布。將變更推送至 `main` 分支後，可在 GitHub repo 的 **Actions** 頁面查看發布狀態；首次成功發布後，網站網址會是 `https://littleban0305.github.io/ELOSKIN2/`。公開 Pages 網站任何人都能瀏覽，並看見網站上顯示的 Steam 交易連結。
