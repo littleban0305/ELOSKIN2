@@ -3321,6 +3321,39 @@ button, a { transition-duration: .18s; }
     height: 32px;
   }
 }
+
+.cart-button img,
+.search-box img,
+.home-search > img,
+.button-icon,
+.category-arrow img,
+.favorite-button img,
+.add-button img,
+.close-button img {
+  display: block;
+  flex: 0 0 auto;
+  object-fit: contain;
+  mix-blend-mode: screen;
+}
+
+.cart-button img { width: 18px; height: 18px; }
+.search-box img,
+.home-search > img { width: 17px; height: 17px; }
+.button-icon { width: 13px; height: 13px; }
+.category-arrow img { width: 11px; height: 11px; }
+.favorite-button img { width: 14px; height: 14px; }
+.add-button img { width: 13px; height: 13px; }
+.close-button img { width: 17px; height: 17px; }
+
+.close-button {
+  display: grid;
+  place-items: center;
+}
+
+.cart-button img,
+.search-box img,
+.home-search > img { filter: brightness(.9); }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }

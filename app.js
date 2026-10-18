@@ -75,7 +75,7 @@ function renderHomeCategories() {
     <button class="category-tile" type="button" data-home-category="${category}">
       <span class="category-symbol">${categoryArt[category]}</span>
     <span><strong>${category}</strong><small>${["競爭者", "Rivals 道具"].includes(category) ? "ROBLOX RIVALS" : category === "商品" ? "CS2 · ROBLOX RIVALS" : "CS2 COLLECTION"}</small></span>
-      <span class="category-arrow" aria-hidden="true">↗</span>
+      <span class="category-arrow" aria-hidden="true"><img src="assets/icon/icon-external-link.png" alt=""></span>
     </button>`).join("");
 }
 
@@ -152,7 +152,7 @@ function productCardMarkup(product) {
       <div class="product-visual art-${product.art}">
         <span class="visual-type">${escapeHtml(product.label)}</span>
         <button class="favorite-button${favorite ? " is-favorite" : ""}" type="button" data-favorite="${escapeHtml(product.id)}" aria-label="${favorite ? "取消收藏" : "加入收藏"}：${safeName}" aria-pressed="${favorite}">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 8.8c0 5-8.8 10-8.8 10s-8.8-5-8.8-10a4.6 4.6 0 0 1 8.8-1.7 4.6 4.6 0 0 1 8.8 1.7Z"/></svg>
+          <img src="assets/icon/icon-heart.png" alt="" aria-hidden="true">
         </button>
         ${artwork}
       </div>
@@ -164,7 +164,7 @@ function productCardMarkup(product) {
           <div class="product-price">${priced ? `<span class="currency-symbol">EC</span>${product.price.toLocaleString()}` : `<span class="unpriced-label">需設定 EC 價格</span>`}</div>
           <div class="product-stock">${product.stock === 0 ? "暫時缺貨" : stockLabel}</div>
           <button class="add-button" type="button" data-add="${escapeHtml(product.id)}" aria-label="${priced && product.stock > 0 ? `將${safeName}加入購物車` : !priced ? `${safeName}尚未設定 EC 價格` : `${safeName}暫時缺貨`}" ${product.stock === 0 || !priced ? "disabled" : ""}>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>
+            <img src="assets/icon/icon-add.png" alt="" aria-hidden="true">
           </button>
         </div>
       </div>
