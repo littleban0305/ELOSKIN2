@@ -16,7 +16,9 @@
 
 此專案使用 GitHub Actions 自動發布。將變更推送至 `main` 分支後，可在 GitHub repo 的 **Actions** 頁面查看發布狀態；首次成功發布後，網站網址會是 `https://littleban0305.github.io/ELOSKIN2/`。公開 Pages 網站任何人都能瀏覽，並看見網站上顯示的 Steam 交易連結。
 
-EC 匯率為暫定展示：1 EC = 0.1 Robux、1 EC = 1 SkinApe Coin、1 EC = NT$0.03。此台幣比值為參考標價，不代表現金兌換或付款功能已啟用。SkinApe 累積收益回饋目前展示 1,000 回饋 100 EC、10,000 回饋 1,000 EC，其餘級距仍待確認。EC 餘額、價格、Rivals 庫存和玩家刊登皆為展示資料，不是即時市場資料；CS2 庫存可按下文設定為讀取 Steam 公開庫存。
+SkinApe 累積收益回饋目前展示 1,000 回饋 100 EC、10,000 回饋 1,000 EC，其餘級距仍待確認。EC 餘額、價格、Rivals 庫存和玩家刊登皆為展示資料，不是即時市場資料；CS2 庫存可按下文設定為讀取 Steam 公開庫存。
+
+首頁精選區最多顯示 5 件官方商品；下方玩家寄售區展示的是玩家刊登範例。
 
 Roblox Rivals 商品仍為展示資料。CS2 商品名稱、圖示與庫存來自 Steam 公開物品庫；未設定 EC 價格的 CS2 物品會標示「需設定 EC 價格」，不能加入購物車。可於 `steam-config.js` 的 `ecPrices` 依 Steam `market_hash_name` 設定 EC 價格。Steam 庫存並非即時訂單保留，完成 Steam 交易後請重新讀取。
 
@@ -43,13 +45,14 @@ Steam 交易連結會公開在網站前端；任何能瀏覽網站的人都能�
 3. 在 Firebase Authentication 的授權網域加入 `littleban0305.github.io`（本機開發可加入 `localhost`）。使用 Google 登入時會開啟 Google 帳號選擇視窗。
 4. 從 `http://localhost` 或部署後的網站網址開啟，不要直接以 `file://` 開啟。
 5. Google 登入會顯示 Google 頭像；Steam 登入會讀取公開 Steam 頭像。自訂頭像會縮小後儲存在目前瀏覽器的本機空間，不需啟用 Firebase Storage 或升級 Blaze；它不會同步到其他裝置或瀏覽器。支援 JPG、PNG、WebP，原始圖片上限 5 MB。清除瀏覽器網站資料也會移除本機自訂頭像。
-6. Steam 登入會使用同一個 Cloudflare Worker 完成 Steam OpenID 驗證，並由 Firebase Custom Token 建立 `steam:<SteamID64>` 帳號。重新部署更新後的 `steam-inventory-worker.js`，再將以下三項設為 Worker 的 **Secret**（不可設為一般明文變數或提交到 Git）：
+6. Steam 登入會使用同一個 Cloudflare Worker 完成 Steam OpenID 驗證，並由 Firebase Custom Token 建立 `steam:<SteamID64>` 帳號。將最新版 `steam-inventory-worker.js` 全文部署到 Cloudflare Worker；只更新 GitHub Pages 不會更新 Worker。若登入失敗，網站會指出是 Steam 驗證服務或 Firebase Secret 的問題。Worker 登入功能需要以下三項 **Secret**（不可設為一般明文變數或提交到 Git）：
    - `FIREBASE_SERVICE_ACCOUNT_EMAIL`：Firebase Console → Project settings → Service accounts，使用 Firebase Admin SDK 服務帳號的 `client_email`。
    - `FIREBASE_PRIVATE_KEY`：同一服務帳號 JSON 檔中的 `private_key` 完整內容。金鑰只需留在本機與 Cloudflare Secret，不要傳給任何人或貼進程式碼。
    - `STEAM_STATE_SECRET`：自行產生至少 32 個隨機位元組的隨機字串，用於簽署 Steam 登入狀態 Cookie。
 
    可在 Cloudflare Dashboard → Workers & Pages → 選擇 `eloskin2` Worker → Settings → Variables and Secrets → Add → **Secret** 新增上述值。Worker 會用 HttpOnly、Secure、SameSite=Lax Cookie 綁定 Steam OpenID 回呼與原始網站，驗證成功後才簽發短效 Firebase Custom Token。`ALLOWED_ORIGINS` 必須包含 `https://littleban0305.github.io`；程式中的 `steam-config.js` 已設定 `authEndpoint` 指向此 Worker。設定 Secret 後重新部署 Worker。
+7. 管理者 `littleban0305@gmail.com` 可在個人頁面管理商品上／下架。要讓商品狀態同步給所有訪客，請在 Firebase Console → **Firestore Database** 建立資料庫（選擇免費 Spark 方案可用的區域），然後將 [firestore.rules](./firestore.rules) 貼入 Firestore Rules 並發布。管理者首次以 Email/Password 登入時，需先驗證該信箱；Google 登入使用已驗證的 Google 帳號。Firestore 免費方案不需 Blaze，但受 Firebase 免費配額限制。
 
 ELOSKIN2 的目標使用者是受邀朋友，但目前原型尚未設定朋友白名單或頁面存取限制；不要把它當作已啟用的私人網站。
 
-EC 餘額、Rivals 商品、玩家刊登及交易提案仍是前端展示資料。Steam 庫存同步僅用來顯示主要帳號目前的可交易 CS2 物品，不會自動估價、建立真實訂單、扣款或送出 Steam 交易。購物車庫存限制僅在目前頁面生效，不是即時庫存保留。要讓玩家刊登和交易在不同裝置間同步，還需要 Firestore、資料驗證規則及交易流程。
+EC 餘額、Rivals 商品、玩家刊登及交易提案仍是前端展示資料。Steam 庫存同步僅用來顯示主要帳號目前的可交易 CS2 物品，不會自動估價、建立真實訂單、扣款或送出 Steam 交易。購物車庫存限制僅在目前頁面生效，不是即時庫存保留。管理者商品上／下架狀態透過 Firestore 同步；管理介面每次最多顯示 100 筆搜尋結果。

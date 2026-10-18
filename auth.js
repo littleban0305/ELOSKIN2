@@ -11,6 +11,7 @@ const authTabs = document.querySelectorAll("[data-auth-mode]");
 const firebaseConfig = window.ELOSKIN_FIREBASE_CONFIG;
 const steamAuthConfig = window.ELOSKIN2_STEAM_CONFIG;
 const authText = window.eloText;
+const ADMIN_EMAIL = "littleban0305@gmail.com";
 const steamCallback = (() => {
   const parameters = new URLSearchParams(window.location.hash.slice(1));
   const token = parameters.get("steam-auth");
@@ -24,7 +25,11 @@ const steamCallback = (() => {
 })();
 let authMode = "login";
 let firebaseAuth = null;
+let firebaseDb = null;
 let firebaseReady = false;
+let catalogVisibilityReady = false;
+let catalogVisibilityError = "";
+const hiddenProductIds = new Set();
 
 function showAuthMessage(message, kind = "error") {
   authStatus.textContent = message;
@@ -108,8 +113,183 @@ function updateAccount(user) {
   document.querySelector(".auth-privacy").hidden = Boolean(user);
   document.querySelector("#auth-title").textContent = user ? authText("profile.signedInTitle") : authMode === "register" ? authText("profile.registerTitle") : authText("profile.loginTitle");
   document.querySelector("#auth-subtitle").textContent = user ? authText("profile.signedInDescription") : authMode === "register" ? authText("profile.registerDescription") : authText("profile.loginDescription");
+  const isAdmin = user?.email?.toLowerCase() === ADMIN_EMAIL;
+  const adminPanel = document.querySelector("#admin-panel");
+  adminPanel.hidden = !isAdmin;
+  document.querySelector("#admin-verify-email").hidden = !isAdmin || user.emailVerified;
+  if (isAdmin) renderAdminProductManager(user);
   if (!user) showAvatarMessage("");
 }
+
+function setCatalogStatus(message, kind = "") {
+  const status = document.querySelector("#admin-catalog-status");
+  status.textContent = message;
+  status.dataset.kind = kind;
+}
+
+function renderAdminProductManager(user) {
+  const list = document.querySelector("#admin-product-list");
+  const search = document.querySelector("#admin-product-search").value.trim().toLocaleLowerCase("zh-Hant");
+  if (!user.emailVerified) {
+    setCatalogStatus(authText("profile.adminEmailUnverified"), "error");
+    list.replaceChildren();
+    return;
+  }
+  if (catalogVisibilityError) {
+    setCatalogStatus(authText("profile.adminStatusError", { message: catalogVisibilityError }), "error");
+    list.replaceChildren();
+    return;
+  }
+  if (!catalogVisibilityReady) {
+    setCatalogStatus(authText("profile.adminStatusLoading"), "info");
+    list.replaceChildren();
+    return;
+  }
+
+  setCatalogStatus("");
+  const products = (window.eloProductCatalog || [])
+    .filter((product) => `${product.name} ${product.game} ${product.category}`.toLocaleLowerCase("zh-Hant").includes(search))
+    .slice(0, 100);
+  list.replaceChildren();
+  if (!products.length) {
+    setCatalogStatus(authText("profile.adminNoProducts"), "info");
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+  for (const product of products) {
+    const visibilityId = window.eloProductVisibilityId(product);
+    const hidden = hiddenProductIds.has(visibilityId);
+    const row = document.createElement("div");
+    row.className = "admin-product-row";
+    const details = document.createElement("div");
+    details.className = "admin-product-details";
+    const name = document.createElement("strong");
+    name.textContent = product.name;
+    const metadata = document.createElement("span");
+    metadata.textContent = `${product.game} · ${product.category} · ${hidden ? authText("profile.adminUnlisted") : authText("profile.adminListed")}`;
+    details.append(name, metadata);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "admin-toggle-button";
+    button.dataset.productVisibility = visibilityId;
+    button.textContent = hidden ? authText("profile.adminPublish") : authText("profile.adminTakeDown");
+    row.append(details, button);
+    fragment.append(row);
+  }
+  list.append(fragment);
+  if ((window.eloProductCatalog || []).filter((product) => `${product.name} ${product.game} ${product.category}`.toLocaleLowerCase("zh-Hant").includes(search)).length > 100) {
+    setCatalogStatus(authText("profile.adminShowingLimit"), "info");
+  }
+}
+
+function loadCatalogVisibility() {
+  if (!firebaseDb) {
+    catalogVisibilityReady = true;
+    catalogVisibilityError = authText("profile.adminNotConfigured");
+    window.dispatchEvent(new Event("catalogvisibilitychange"));
+    return;
+  }
+  try {
+    firebaseDb.doc("siteSettings/catalog").onSnapshot((snapshot) => {
+      const ids = snapshot.exists ? snapshot.data().hiddenProductIds : [];
+      if (!Array.isArray(ids) || ids.some((id) => typeof id !== "string")) {
+        catalogVisibilityError = "catalog_visibility_invalid";
+      } else {
+        hiddenProductIds.clear();
+        ids.forEach((id) => hiddenProductIds.add(id));
+        catalogVisibilityError = "";
+        window.eloHiddenProductIds = new Set(hiddenProductIds);
+      }
+      catalogVisibilityReady = true;
+      window.dispatchEvent(new Event("catalogvisibilitychange"));
+    }, (error) => {
+      catalogVisibilityReady = true;
+      catalogVisibilityError = ["unavailable", "permission-denied", "failed-precondition"].includes(error.code)
+        ? authText("profile.adminNotConfigured")
+        : error.message;
+      window.dispatchEvent(new Event("catalogvisibilitychange"));
+      if (window.eloAuthUser?.email?.toLowerCase() === ADMIN_EMAIL) {
+        setCatalogStatus(authText("profile.adminStatusError", { message: catalogVisibilityError }), "error");
+      }
+    });
+  } catch (error) {
+    catalogVisibilityReady = true;
+    catalogVisibilityError = error.message;
+    window.dispatchEvent(new Event("catalogvisibilitychange"));
+    if (window.eloAuthUser?.email?.toLowerCase() === ADMIN_EMAIL) {
+      setCatalogStatus(authText("profile.adminStatusError", { message: catalogVisibilityError }), "error");
+    }
+  }
+}
+
+async function updateProductVisibility(visibilityId) {
+  if (!firebaseDb || !catalogVisibilityReady || catalogVisibilityError) {
+    setCatalogStatus(authText("profile.adminNotConfigured"), "error");
+    return;
+  }
+  const buttons = document.querySelectorAll("[data-product-visibility]");
+  buttons.forEach((button) => { button.disabled = true; });
+  setCatalogStatus(authText("profile.adminSaving"), "info");
+  try {
+    const reference = firebaseDb.doc("siteSettings/catalog");
+    const nextIds = await firebaseDb.runTransaction(async (transaction) => {
+      const snapshot = await transaction.get(reference);
+      const currentIds = snapshot.exists ? snapshot.data().hiddenProductIds || [] : [];
+      if (!Array.isArray(currentIds) || currentIds.some((id) => typeof id !== "string")) {
+        throw new Error("catalog_visibility_invalid");
+      }
+      const next = new Set(currentIds);
+      if (next.has(visibilityId)) next.delete(visibilityId);
+      else {
+        if (next.size >= 2000) throw new Error("catalog_visibility_limit_reached");
+        next.add(visibilityId);
+      }
+      transaction.set(reference, { hiddenProductIds: [...next] });
+      return [...next];
+    });
+    hiddenProductIds.clear();
+    nextIds.forEach((id) => hiddenProductIds.add(id));
+    window.eloHiddenProductIds = new Set(hiddenProductIds);
+    setCatalogStatus("");
+    window.dispatchEvent(new Event("catalogvisibilitychange"));
+  } catch (error) {
+    const message = error.message === "catalog_visibility_limit_reached"
+      ? authText("profile.adminCatalogLimitReached")
+      : error.message === "catalog_visibility_invalid"
+        ? authText("profile.adminCatalogDataInvalid")
+        : authText("profile.adminSaveError", { message: error.message });
+    setCatalogStatus(message, "error");
+    buttons.forEach((button) => { button.disabled = false; });
+    return;
+  }
+  renderAdminProductManager(firebaseAuth.currentUser);
+}
+
+document.querySelector("#admin-product-search").addEventListener("input", () => {
+  if (firebaseAuth?.currentUser) renderAdminProductManager(firebaseAuth.currentUser);
+});
+
+document.querySelector("#admin-product-list").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-product-visibility]");
+  if (button) updateProductVisibility(button.dataset.productVisibility);
+});
+
+document.querySelector("#admin-verify-email").addEventListener("click", async () => {
+  try {
+    await firebaseAuth.currentUser.sendEmailVerification();
+    setCatalogStatus(authText("profile.adminVerificationSent"), "success");
+  } catch (error) {
+    setCatalogStatus(authText("profile.adminVerificationError", { message: error.message }), "error");
+  }
+});
+
+window.addEventListener("catalogvisibilitychange", () => {
+  if (firebaseAuth?.currentUser?.email?.toLowerCase() === ADMIN_EMAIL) renderAdminProductManager(firebaseAuth.currentUser);
+});
+window.addEventListener("catalogproductschange", () => {
+  if (firebaseAuth?.currentUser?.email?.toLowerCase() === ADMIN_EMAIL) renderAdminProductManager(firebaseAuth.currentUser);
+});
 
 function isConfigured(config) {
   return Boolean(config && config.apiKey && config.authDomain && config.projectId && config.appId);
@@ -141,10 +321,17 @@ async function initializeFirebase() {
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     firebaseAuth = firebase.auth();
     await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+    try {
+      await loadFirebaseScript(`https://www.gstatic.com/firebasejs/${version}/firebase-firestore-compat.js`);
+      firebaseDb = firebase.firestore();
+    } catch (error) {
+      catalogVisibilityError = error.message;
+    }
     firebaseAuth.onAuthStateChanged(updateAccount, (error) => {
       showAuthMessage(authText("profile.firebaseStateError", { message: error.message }));
     });
     firebaseReady = true;
+    loadCatalogVisibility();
     await completeSteamSignIn();
   } catch (error) {
     firebaseNotice.hidden = false;
@@ -182,7 +369,7 @@ authForm.addEventListener("submit", async (event) => {
       try {
         await firebaseAuth.signInWithEmailAndPassword(email, password);
       } catch (error) {
-        if (error.code !== "auth/invalid-credential" && error.code !== "auth/user-not-found") throw error;
+        if (!["auth/invalid-credential", "auth/invalid-login-credentials", "auth/user-not-found"].includes(error.code)) throw error;
         showAuthMessage(authText("profile.autoRegistering"), "info");
         await firebaseAuth.createUserWithEmailAndPassword(email, password);
         showAuthMessage(authText("profile.autoRegistered"), "success");
@@ -191,6 +378,7 @@ authForm.addEventListener("submit", async (event) => {
   } catch (error) {
     const messages = {
       "auth/invalid-credential": authText("profile.invalidCredential"),
+      "auth/invalid-login-credentials": authText("profile.invalidCredential"),
       "auth/wrong-password": authText("profile.invalidCredential"),
       "auth/user-not-found": authText("profile.invalidCredential"),
       "auth/invalid-email": authText("profile.invalidEmail"),
@@ -198,7 +386,8 @@ authForm.addEventListener("submit", async (event) => {
       "auth/too-many-requests": authText("profile.tooManyRequests"),
       "auth/network-request-failed": authText("profile.networkError"),
       "auth/email-already-in-use": authText("profile.emailInUse"),
-      "auth/weak-password": authText("profile.weakPassword")
+      "auth/weak-password": authText("profile.weakPassword"),
+      "auth/operation-not-allowed": authText("profile.emailPasswordProviderDisabled")
     };
     const message = error.code === "auth/email-already-in-use"
       ? authText(isLogin ? "profile.invalidCredential" : "profile.emailInUse")
@@ -279,7 +468,9 @@ async function completeSteamSignIn() {
       "not-configured": "profile.steamLoginNotConfigured",
       cancelled: "profile.steamLoginCancelled",
       "verification-failed": "profile.steamLoginVerificationFailed",
-      "service-unavailable": "profile.steamLoginUnavailable"
+      "service-unavailable": "profile.steamLoginUnavailable",
+      "steam-verification-unavailable": "profile.steamVerificationUnavailable",
+      "firebase-token-failed": "profile.steamFirebaseTokenFailed"
     };
     showAuthMessage(authText(messages[steamCallback.error] || "profile.steamLoginVerificationFailed"));
     return;

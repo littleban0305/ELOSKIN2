@@ -10,12 +10,12 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=14">
-    <script src="content.js?v=8" defer></script>
+    <link rel="stylesheet" href="styles.css?v=16">
+    <script src="content.js?v=10" defer></script>
     <script src="firebase-config.js?v=1" defer></script>
     <script src="steam-config.js?v=3" defer></script>
-    <script src="app.js?v=10" defer></script>
-    <script src="auth.js?v=11" defer></script>
+    <script src="app.js?v=11" defer></script>
+    <script src="auth.js?v=13" defer></script>
   </head>
   <body>
     <header class="site-header">
@@ -51,13 +51,6 @@
             </div>
           </div>
           <img class="hero-banner" src="assets/banner/banner.png" data-copy-alt="home.bannerAlt">
-        </section>
-        <section class="ec-info-strip" data-copy-aria="home.ecAria">
-          <span class="ec-strip-title"><span data-copy="home.marketLabel"></span> <strong data-copy="product.currency"></strong></span>
-          <span class="ec-rate"><span data-copy="home.ecRateRobux"></span> <small data-copy="home.provisional"></small></span>
-          <span class="ec-rate" data-copy="home.ecRateSkinApe"></span>
-          <span class="ec-rate"><span data-copy="home.cashValue"></span> <strong data-copy="home.cashValueUnset"></strong></span>
-          <span class="ec-strip-note" data-copy="home.friendsOnly"></span>
         </section>
         <section class="home-discovery section-wrap" data-copy-aria="home.searchAria">
           <form class="home-search" id="home-search-form">
@@ -194,6 +187,22 @@
             <p class="auth-privacy" data-copy="profile.accountPrivacy"></p>
           </section>
         </div>
+        <section class="admin-panel" id="admin-panel" hidden>
+          <div class="admin-panel-heading">
+            <div>
+              <div class="eyebrow section-eyebrow">ADMIN</div>
+              <h2 data-copy="profile.adminTitle"></h2>
+              <p data-copy="profile.adminDescription"></p>
+            </div>
+            <button class="admin-verify-button" id="admin-verify-email" type="button" hidden data-copy="profile.adminSendVerification"></button>
+          </div>
+          <p class="admin-catalog-status" id="admin-catalog-status" role="status" aria-live="polite"></p>
+          <label class="admin-search">
+            <span class="visually-hidden">搜尋商品</span>
+            <input id="admin-product-search" type="search" data-copy-placeholder="profile.adminSearchPlaceholder">
+          </label>
+          <div class="admin-product-list" id="admin-product-list"></div>
+        </section>
         <section class="account-safety-note"><span class="eyebrow section-eyebrow" data-copy="profile.accountSafetyEyebrow"></span><h2 data-copy="profile.accountSafetyTitle"></h2><p data-copy="profile.accountSafetyDescription"></p></section>
       </section>
     </main>
@@ -203,7 +212,7 @@
       <div class="footer-column"><strong data-copy="footer.explore"></strong><a href="#shop" data-copy="footer.shop"></a><a href="#trade" data-copy="footer.trade"></a><a href="#marketplace" data-home-anchor="marketplace" data-copy="footer.curated"></a></div>
       <div class="footer-column"><strong data-copy="footer.support"></strong><a href="#guide" data-home-anchor="guide" data-copy="footer.guide"></a><a href="#safety" data-home-anchor="safety" data-copy="footer.safety"></a><a href="#safety" data-home-anchor="safety" data-copy="footer.faq"></a></div>
       <div class="footer-column"><strong data-copy="footer.about"></strong><a href="#home" data-copy="footer.aboutSite"></a><a href="#profile" data-copy="footer.privacy"></a><a href="#safety" data-home-anchor="safety" data-copy="footer.prototype"></a></div>
-      <div class="footer-bottom"><span data-copy="footer.copyright"></span><span data-copy="footer.note"></span></div>
+      <div class="footer-bottom"><span data-copy="footer.copyright"></span></div>
     </footer>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>

@@ -284,15 +284,15 @@ async function steamLoginCallback(request, requestUrl, env) {
       cache: "no-store"
     });
   } catch {
-    return callbackError(returnUrl.href, "service-unavailable");
+    return callbackError(returnUrl.href, "steam-verification-unavailable");
   }
-  if (!verification.ok) return callbackError(returnUrl.href, "service-unavailable");
+  if (!verification.ok) return callbackError(returnUrl.href, "steam-verification-unavailable");
   let openIdVerified = false;
   try {
     const verificationBody = await verification.text();
     openIdVerified = verificationBody.split(/\r?\n/).some((line) => line.trim() === "is_valid:true");
   } catch {
-    return callbackError(returnUrl.href, "service-unavailable");
+    return callbackError(returnUrl.href, "steam-verification-unavailable");
   }
   if (!openIdVerified) {
     return callbackError(returnUrl.href, "verification-failed");
@@ -302,7 +302,7 @@ async function steamLoginCallback(request, requestUrl, env) {
   try {
     customToken = await createFirebaseCustomToken(steamMatch[1], env);
   } catch {
-    return callbackError(returnUrl.href, "service-unavailable");
+    return callbackError(returnUrl.href, "firebase-token-failed");
   }
   return authRedirect(returnUrl.href, "steam-auth", customToken, true);
 }

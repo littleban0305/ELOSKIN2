@@ -7,6 +7,14 @@ const products = copy.demoProducts.map((product) => ({
   game: "ROBLOX RIVALS",
   wear: copy.product.notApplicable
 }));
+window.eloProductCatalog = products;
+window.eloHiddenProductIds = new Set();
+window.eloProductVisibilityId = (product) => product.source === "steam"
+  ? `steam:${product.marketHashName}`
+  : product.id;
+function isProductPublished(product) {
+  return !window.eloHiddenProductIds.has(window.eloProductVisibilityId(product));
+}
 const playerListings = copy.playerListings;
 const categoryKeys = ["item", "case", "weapon", "competitor", "rifle", "sniper", "pistol", "knife", "gloves", "rivals"];
 const categories = [copy.categories.allItems, ...categoryKeys.map((key) => copy.categories[key])];
@@ -37,6 +45,7 @@ function renderFilters() {
 function visibleProducts() {
   const term = state.search.trim().toLocaleLowerCase("zh-Hant");
   const visible = products.filter((product) => {
+    if (!isProductPublished(product)) return false;
     const matchesCategory = state.category === copy.categories.allItems || product.category === state.category || product.kind === state.category;
     const matchesGame = state.game === "all" || product.game === state.game;
     const matchesSearch = !term || [product.name, product.game, product.category, product.description, product.wear].some((value) => value.toLocaleLowerCase("zh-Hant").includes(term));
@@ -185,7 +194,7 @@ function escapeHtml(value) {
 }
 
 function renderHomeProducts() {
-  let featured = products.filter((product) => product.game === "CS2");
+  let featured = products.filter((product) => product.game === "CS2" && isProductPublished(product));
   if (homeMarketMode === "latest") featured = featured.slice().reverse();
   if (homeMarketMode === "budget") featured = featured.filter((product) => Number.isFinite(product.price) && product.price <= 1500);
   const sorters = {
@@ -194,13 +203,13 @@ function renderHomeProducts() {
     "price-descending": (a, b) => (b.price ?? -Infinity) - (a.price ?? -Infinity)
   };
   featured.sort(sorters[state.sort] || sorters.featured);
+  featured = featured.slice(0, 5);
   $("#featured-grid").innerHTML = featured.map(productCardMarkup).join("");
-  const curated = products.filter((product) => product.game === "CS2").slice(0, 3);
-  $("#curated-grid").innerHTML = (curated.length ? curated : products.slice(0, 3)).map(productCardMarkup).join("");
+  $("#curated-grid").innerHTML = playerListings.slice(0, 3).map(playerListingMarkup).join("");
 }
 
-function renderPlayerListings() {
-  $("#trade-grid").innerHTML = playerListings.map((listing) => `
+function playerListingMarkup(listing) {
+  return `
     <article class="trade-card">
       <div class="trade-card-visual ${listing.tone}">
         <span class="trade-game">${escapeHtml(listing.game === "CS2" ? copy.games.cs2 : copy.games.rivals)} · ${escapeHtml(listing.category)}</span>
@@ -213,7 +222,11 @@ function renderPlayerListings() {
         <p>${escapeHtml(listing.detail)}</p>
         <div class="trade-card-bottom"><div><small>${escapeHtml(t("trade.conditions"))}</small><strong>${escapeHtml(listing.wants)}</strong></div><button class="offer-button" type="button" data-offer="${escapeHtml(listing.id)}">${escapeHtml(t("trade.makeOffer"))}</button></div>
       </div>
-    </article>`).join("");
+    </article>`;
+}
+
+function renderPlayerListings() {
+  $("#trade-grid").innerHTML = playerListings.map(playerListingMarkup).join("");
 }
 
 function renderCart() {
@@ -320,6 +333,7 @@ async function loadSteamInventory() {
     renderProducts();
     renderHomeProducts();
     renderCart();
+    window.dispatchEvent(new Event("catalogproductschange"));
 
     const updatedAt = new Intl.DateTimeFormat("zh-TW", { hour: "2-digit", minute: "2-digit" }).format(new Date());
     const totalQuantity = Number(data.tradableQuantity) || 0;
@@ -476,7 +490,7 @@ document.addEventListener("click", (event) => {
   if (!button) return;
   const id = button.dataset.add;
   const product = products.find((item) => item.id === id);
-  if (!product || product.stock === 0) {
+  if (!product || !isProductPublished(product) || product.stock === 0) {
     showToast(t("product.unavailable"));
     return;
   }
@@ -499,6 +513,20 @@ $("#trade-grid").addEventListener("click", (event) => {
     showToast(t("trade.proposalUnavailable"));
     return;
   }
+});
+
+$("#curated-grid").addEventListener("click", (event) => {
+  if (event.target.closest("[data-offer]")) showToast(t("trade.proposalUnavailable"));
+});
+
+window.addEventListener("catalogvisibilitychange", () => {
+  for (const [id] of state.cart) {
+    const product = products.find((item) => item.id === id);
+    if (product && !isProductPublished(product)) state.cart.delete(id);
+  }
+  renderProducts();
+  renderHomeProducts();
+  renderCart();
 });
 
 document.querySelectorAll("[data-requires-auth]").forEach((button) => {
