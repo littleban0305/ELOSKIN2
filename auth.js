@@ -1,6 +1,7 @@
 const authForm = document.querySelector("#auth-form");
 const authStatus = document.querySelector("#auth-status");
 const firebaseNotice = document.querySelector("#firebase-notice");
+const passwordReset = document.querySelector("#password-reset");
 const authTabs = document.querySelectorAll("[data-auth-mode]");
 const firebaseConfig = window.ELOSKIN_FIREBASE_CONFIG;
 const authText = window.eloText;
@@ -29,10 +30,22 @@ function setAuthMode(mode) {
   document.querySelector("#confirm-password-field").hidden = !registering;
   document.querySelector("#password").autocomplete = registering ? "new-password" : "current-password";
   document.querySelector("#confirm-password").required = registering;
+  passwordReset.hidden = registering;
   showAuthMessage("");
 }
 
 authTabs.forEach((tab) => tab.addEventListener("click", () => setAuthMode(tab.dataset.authMode)));
+
+document.querySelectorAll("[data-password-toggle]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const input = document.getElementById(button.dataset.passwordToggle);
+    const showing = input.type === "password";
+    input.type = showing ? "text" : "password";
+    button.textContent = authText(showing ? "profile.hidePassword" : "profile.showPassword");
+    button.setAttribute("aria-label", authText(showing ? "profile.hidePassword" : "profile.showPassword"));
+    button.setAttribute("aria-pressed", String(showing));
+  });
+});
 
 function updateAccount(user) {
   window.eloAuthUser = user;
@@ -124,9 +137,51 @@ authForm.addEventListener("submit", async (event) => {
       await firebaseAuth.signInWithEmailAndPassword(email, password);
     }
   } catch (error) {
-    showAuthMessage(error.message);
+    const messages = {
+      "auth/invalid-credential": authText("profile.invalidCredential"),
+      "auth/wrong-password": authText("profile.invalidCredential"),
+      "auth/user-not-found": authText("profile.invalidCredential"),
+      "auth/invalid-email": authText("profile.invalidEmail"),
+      "auth/user-disabled": authText("profile.userDisabled"),
+      "auth/too-many-requests": authText("profile.tooManyRequests"),
+      "auth/network-request-failed": authText("profile.networkError"),
+      "auth/email-already-in-use": authText("profile.emailInUse"),
+      "auth/weak-password": authText("profile.weakPassword")
+    };
+    showAuthMessage(messages[error.code] || authText("profile.authError", {
+      code: error.code || "unknown",
+      message: error.message
+    }));
   } finally {
     submit.disabled = false;
+  }
+});
+
+passwordReset.addEventListener("click", async () => {
+  if (!firebaseReady || !firebaseAuth) {
+    showAuthMessage(authText("profile.configureFirebase"));
+    return;
+  }
+
+  const email = document.querySelector("#email").value.trim();
+  if (!email) {
+    showAuthMessage(authText("profile.enterEmailForReset"));
+    document.querySelector("#email").focus();
+    return;
+  }
+
+  passwordReset.disabled = true;
+  showAuthMessage(authText("profile.passwordResetSending"), "info");
+  try {
+    await firebaseAuth.sendPasswordResetEmail(email);
+    showAuthMessage(authText("profile.passwordResetSent"), "success");
+  } catch (error) {
+    const message = error.code === "auth/invalid-email"
+      ? authText("profile.invalidEmail")
+      : error.message;
+    showAuthMessage(authText("profile.passwordResetError", { message }));
+  } finally {
+    passwordReset.disabled = false;
   }
 });
 

@@ -1306,6 +1306,34 @@ body {
   font-size: 10px;
 }
 
+.password-input-wrap {
+  position: relative;
+  display: block;
+}
+
+.password-input-wrap input {
+  padding-right: 58px;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 9px;
+  transform: translateY(-50%);
+  padding: 5px 4px;
+  border: 0;
+  background: transparent;
+  color: #405570;
+  font: inherit;
+  font-size: 9px;
+  cursor: pointer;
+}
+
+.password-toggle:hover,
+.password-reset:hover {
+  text-decoration: underline;
+}
+
 .auth-field input:focus {
   border-color: #727278;
   box-shadow: 0 0 0 3px rgba(0,0,0,.05);
@@ -1327,6 +1355,22 @@ body {
 .auth-submit:disabled {
   opacity: .55;
   cursor: wait;
+}
+
+.password-reset {
+  display: block;
+  margin: 11px 0 0 auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #405570;
+  font: inherit;
+  font-size: 9px;
+  cursor: pointer;
+}
+
+.password-reset[hidden] {
+  display: none;
 }
 
 .auth-status {
