@@ -3399,6 +3399,113 @@ button, a { transition-duration: .18s; }
   object-position: right center;
 }
 
+.header-utility-card {
+  gap: 9px;
+  min-height: 48px;
+  padding: 4px 7px;
+  background: rgba(255,255,255,.035);
+  border: 1px solid rgba(140,160,168,.2);
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.12);
+}
+
+.ec-balance[hidden] {
+  display: none !important;
+}
+
+.ec-balance {
+  min-width: 78px;
+  padding: 4px 7px;
+  border: 0;
+  background: transparent;
+}
+
+.ec-balance > span {
+  grid-row: 1;
+}
+
+.ec-balance small {
+  grid-column: 2;
+}
+
+.header-utility-card .cart-button {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  justify-content: center;
+  padding: 5px;
+}
+
+.header-utility-card .cart-count {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 16px;
+  height: 16px;
+  display: grid;
+  place-items: center;
+  padding: 0 4px;
+  border: 2px solid #111920;
+  border-radius: 999px;
+  font-size: 9px;
+  line-height: 1;
+}
+
+.header-utility-card .cart-count[hidden] {
+  display: none !important;
+}
+
+.header-utility-card .account-button {
+  min-width: 38px;
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 999px;
+}
+
+.header-utility-card .account-button.signed-in {
+  width: 38px;
+  padding: 0;
+}
+
+.steam-product-art {
+  width: 78%;
+  max-width: 170px;
+  height: 126px;
+  max-height: 126px;
+  object-fit: contain;
+}
+
+.product-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+@media (max-width: 720px) {
+  .product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .header-utility-card {
+    gap: 5px;
+    min-height: 42px;
+    padding: 3px 5px;
+  }
+  .header-utility-card .account-button {
+    min-height: 34px;
+    padding-inline: 9px;
+  }
+  .header-utility-card .account-button.signed-in {
+    width: 34px;
+  }
+  .header-utility-card .cart-button {
+    width: 34px;
+    height: 34px;
+  }
+  .steam-product-art {
+    width: 82%;
+    height: 105px;
+    max-height: 105px;
+  }
+}
+
 .hero h1 {
   font-size: clamp(32px, 3.5vw, 46px);
   text-shadow: 0 2px 16px rgba(0,0,0,.5);

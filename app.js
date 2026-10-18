@@ -1,18 +1,21 @@
-const products = [
-  { id: "rivals-blade", name: "Rivals | 星痕短刃", game: "ROBLOX RIVALS", category: "Rivals 道具", kind: "武器", description: "玩家刊登 · 近戰造型", price: 520, wear: "不適用", stock: 3, label: "RIVALS", art: "rivals", accent: "#77b8ff" },
-  { id: "rivals-rifle", name: "Rivals | 霓虹脈衝", game: "ROBLOX RIVALS", category: "Rivals 道具", kind: "商品", description: "玩家刊登 · 遠程造型", price: 760, wear: "不適用", stock: 2, label: "RIVALS", art: "sniper", accent: "#b779ff" },
-  { id: "rivals-gloves", name: "Rivals | 競技手套", game: "ROBLOX RIVALS", category: "Rivals 道具", kind: "商品", description: "玩家刊登 · 裝備造型", price: 390, wear: "不適用", stock: 0, label: "RIVALS", art: "gloves", accent: "#4edacb" },
-  { id: "rivals-rival", name: "Rivals | 競技者組合", game: "ROBLOX RIVALS", category: "競爭者", kind: "競爭者", description: "玩家刊登 · 競技主題外觀", price: 980, wear: "不適用", stock: 2, label: "RIVALS", art: "competitor", accent: "#7caeff" }
+const copy = window.ELOSKIN2_TEXT;
+const t = window.eloText;
+const products = copy.demoProducts.map((product) => ({
+  ...product,
+  category: copy.categories[product.category],
+  kind: copy.categories[product.kind],
+  game: "ROBLOX RIVALS",
+  wear: copy.product.notApplicable
+}));
+const playerListings = copy.playerListings;
+const categoryKeys = ["item", "case", "weapon", "competitor", "rifle", "sniper", "pistol", "knife", "gloves", "rivals"];
+const categories = [copy.categories.allItems, ...categoryKeys.map((key) => copy.categories[key])];
+const games = [
+  { id: "all", label: copy.games.all },
+  { id: "CS2", label: copy.games.cs2 },
+  { id: "ROBLOX RIVALS", label: copy.games.rivals }
 ];
-
-const playerListings = [
-  { id: "listing-ak", seller: "AK", name: "AK-47｜夜色行者", game: "CS2", category: "武器造型", wants: "1,200 EC", detail: "想換 Roblox Rivals 道具或 EC", tone: "tone-dark" },
-  { id: "listing-roblox", seller: "M", name: "星光披風", game: "ROBLOX RIVALS", category: "角色配件", wants: "800 EC", detail: "接受 CS2 物品或 EC 交換", tone: "tone-silver" },
-  { id: "listing-case", seller: "K", name: "午夜行動箱 × 3", game: "CS2", category: "收藏箱", wants: "交換同價值道具", detail: "可一起談，請提出你的條件", tone: "tone-soft" }
-];
-const categories = ["全部物品", "商品", "箱子", "武器", "競爭者", "步槍", "狙擊槍", "手槍", "刀具", "手套", "Rivals 道具"];
-const games = ["全部遊戲", "CS2", "ROBLOX RIVALS"];
-const state = { category: "全部物品", game: "全部遊戲", search: "", sort: "featured", cart: new Map(), favorites: new Set() };
+const state = { category: copy.categories.allItems, game: "all", search: "", sort: "featured", cart: new Map(), favorites: new Set() };
 let homeMarketMode = "featured";
 const steamConfig = window.ELOSKIN2_STEAM_CONFIG || {};
 const $ = (selector) => document.querySelector(selector);
@@ -24,18 +27,18 @@ let toastTimer;
 
 function renderFilters() {
   categoryFilters.innerHTML = categories.map((category) =>
-    `<button class="filter-button${state.category === category ? " active" : ""}" type="button" data-category="${category}" aria-pressed="${state.category === category}">${category}</button>`
+    `<button class="filter-button${state.category === category ? " active" : ""}" type="button" data-category="${escapeHtml(category)}" aria-pressed="${state.category === category}">${escapeHtml(category)}</button>`
   ).join("");
   gameFilters.innerHTML = games.map((game) =>
-    `<button class="game-button${state.game === game ? " active" : ""}" type="button" data-game="${game}" aria-pressed="${state.game === game}">${game}</button>`
+    `<button class="game-button${state.game === game.id ? " active" : ""}" type="button" data-game="${escapeHtml(game.id)}" aria-pressed="${state.game === game.id}">${escapeHtml(game.label)}</button>`
   ).join("");
 }
 
 function visibleProducts() {
   const term = state.search.trim().toLocaleLowerCase("zh-Hant");
   const visible = products.filter((product) => {
-    const matchesCategory = state.category === "全部物品" || product.category === state.category || product.kind === state.category;
-    const matchesGame = state.game === "全部遊戲" || product.game === state.game;
+    const matchesCategory = state.category === copy.categories.allItems || product.category === state.category || product.kind === state.category;
+    const matchesGame = state.game === "all" || product.game === state.game;
     const matchesSearch = !term || [product.name, product.game, product.category, product.description, product.wear].some((value) => value.toLocaleLowerCase("zh-Hant").includes(term));
     return matchesCategory && matchesGame && matchesSearch;
   });
@@ -59,24 +62,18 @@ function renderProducts() {
 }
 
 function renderHomeCategories() {
-  const categoryArt = {
-    商品: "ITEMS",
-    箱子: "CASE",
-    武器: "WEAPONS",
-    競爭者: "RIVALS",
-    步槍: "M4",
-    狙擊槍: "AWP",
-    手槍: "USP",
-    刀具: "KNIFE",
-    手套: "GLOVES",
-    "Rivals 道具": "RIVALS"
-  };
-  $("#home-categories").innerHTML = categories.slice(1).map((category) => `
-    <button class="category-tile" type="button" data-home-category="${category}">
-      <span class="category-symbol">${categoryArt[category]}</span>
-    <span><strong>${category}</strong><small>${["競爭者", "Rivals 道具"].includes(category) ? "ROBLOX RIVALS" : category === "商品" ? "CS2 · ROBLOX RIVALS" : "CS2 COLLECTION"}</small></span>
-      <span class="category-arrow" aria-hidden="true"><img src="assets/icon/icon-external-link.png" alt=""></span>
-    </button>`).join("");
+  const categoryArt = copy.categories.art;
+  $("#home-categories").innerHTML = categories.slice(1).map((category, index) => {
+    const categoryKey = categoryKeys[index];
+    const gameLabel = ["competitor", "rivals"].includes(categoryKey) ? copy.games.rivals
+      : categoryKey === "item" ? copy.games.combined : copy.games.collection;
+    return `
+      <button class="category-tile" type="button" data-home-category="${escapeHtml(category)}">
+        <span class="category-symbol">${escapeHtml(categoryArt[categoryKey] || "")}</span>
+        <span><strong>${escapeHtml(category)}</strong><small>${escapeHtml(gameLabel)}</small></span>
+        <span class="category-arrow" aria-hidden="true"><img src="assets/icon/icon-external-link.png" alt=""></span>
+      </button>`;
+  }).join("");
 }
 
 function productArtwork(product) {
@@ -135,8 +132,8 @@ function productArtwork(product) {
       <path d="M143 143q4-36 37-36t37 36m-7 0q4-36 37-36t37 36" fill="none" stroke="#1e354d" stroke-width="13"/>
       <path d="m196 111 14 14 15-14" fill="none" stroke="#fff" stroke-width="5"/>`
   }[product.art];
-  if (!silhouette) return `<span class="product-art-placeholder" aria-hidden="true">CS2</span>`;
-  return `<svg class="product-art" viewBox="0 0 420 180" role="img" aria-label="${product.name} 商品示意圖" focusable="false">${silhouette}</svg>`;
+  if (!silhouette) return `<span class="product-art-placeholder" aria-hidden="true">${copy.games.cs2}</span>`;
+  return `<svg class="product-art" viewBox="0 0 420 180" role="img" aria-label="${escapeHtml(t("product.artAlt", { name: product.name }))}" focusable="false">${silhouette}</svg>`;
 }
 
 function productCardMarkup(product) {
@@ -146,24 +143,30 @@ function productCardMarkup(product) {
   const artwork = product.iconUrl
     ? `<img class="product-art steam-product-art" src="${escapeHtml(product.iconUrl)}" alt="${safeName}" loading="lazy">`
     : productArtwork(product);
-  const stockLabel = product.source === "steam" ? `庫存 ${product.stock}` : product.wear === "不適用" ? `庫存 ${product.stock}` : `FLOAT ${escapeHtml(product.wear)}`;
+  const stockLabel = product.source === "steam" || product.wear === copy.product.notApplicable
+    ? escapeHtml(t("product.stock", { amount: product.stock }))
+    : escapeHtml(t("product.float", { wear: product.wear }));
+  const favoriteLabel = favorite ? t("product.favoriteRemove") : t("product.favoriteAdd");
+  const addLabel = priced && product.stock > 0
+    ? t("product.addToCart", { name: product.name })
+    : !priced ? t("product.unpriced", { name: product.name }) : t("product.outOfStock", { name: product.name });
   return `
     <article class="product-card">
       <div class="product-visual art-${product.art}">
         <span class="visual-type">${escapeHtml(product.label)}</span>
-        <button class="favorite-button${favorite ? " is-favorite" : ""}" type="button" data-favorite="${escapeHtml(product.id)}" aria-label="${favorite ? "取消收藏" : "加入收藏"}：${safeName}" aria-pressed="${favorite}">
+        <button class="favorite-button${favorite ? " is-favorite" : ""}" type="button" data-favorite="${escapeHtml(product.id)}" aria-label="${escapeHtml(favoriteLabel)}：${safeName}" aria-pressed="${favorite}">
           <img src="assets/icon/icon-heart.png" alt="" aria-hidden="true">
         </button>
         ${artwork}
       </div>
       <div class="product-info">
-        <div class="product-meta"><span>${escapeHtml(product.game)}</span><span class="product-category">${escapeHtml(product.category)}</span></div>
+        <div class="product-meta"><span>${escapeHtml(product.game === "CS2" ? copy.games.cs2 : copy.games.rivals)}</span><span class="product-category">${escapeHtml(product.category)}</span></div>
         <h3 title="${safeName}">${safeName}</h3>
-        <div class="product-description">${escapeHtml(product.description)}${product.wear === "不適用" ? "" : ` <span>／ ${escapeHtml(product.wear)}</span>`}</div>
+        <div class="product-description">${escapeHtml(product.description)}${product.wear === copy.product.notApplicable ? "" : ` <span>／ ${escapeHtml(product.wear)}</span>`}</div>
         <div class="product-bottom">
-          <div class="product-price">${priced ? `<span class="currency-symbol">EC</span>${product.price.toLocaleString()}` : `<span class="unpriced-label">需設定 EC 價格</span>`}</div>
-          <div class="product-stock">${product.stock === 0 ? "暫時缺貨" : stockLabel}</div>
-          <button class="add-button" type="button" data-add="${escapeHtml(product.id)}" aria-label="${priced && product.stock > 0 ? `將${safeName}加入購物車` : !priced ? `${safeName}尚未設定 EC 價格` : `${safeName}暫時缺貨`}" ${product.stock === 0 || !priced ? "disabled" : ""}>
+          <div class="product-price">${priced ? `<span class="currency-symbol">${escapeHtml(t("product.currency"))}</span>${product.price.toLocaleString()}` : `<span class="unpriced-label">${escapeHtml(t("product.noPrice"))}</span>`}</div>
+          <div class="product-stock">${product.stock === 0 ? escapeHtml(t("product.unavailable")) : stockLabel}</div>
+          <button class="add-button" type="button" data-add="${escapeHtml(product.id)}" aria-label="${escapeHtml(addLabel)}" ${product.stock === 0 || !priced ? "disabled" : ""}>
             <img src="assets/icon/icon-add.png" alt="" aria-hidden="true">
           </button>
         </div>
@@ -200,15 +203,15 @@ function renderPlayerListings() {
   $("#trade-grid").innerHTML = playerListings.map((listing) => `
     <article class="trade-card">
       <div class="trade-card-visual ${listing.tone}">
-        <span class="trade-game">${listing.game} · ${listing.category}</span>
+        <span class="trade-game">${escapeHtml(listing.game === "CS2" ? copy.games.cs2 : copy.games.rivals)} · ${escapeHtml(listing.category)}</span>
         <span class="trade-item-mark">${listing.game === "CS2" ? "CS" : "R"}</span>
-        <span class="trade-availability"><i></i> 開放提案</span>
+        <span class="trade-availability"><i></i> ${escapeHtml(t("trade.available"))}</span>
       </div>
       <div class="trade-card-content">
-        <div class="seller-line"><span class="seller-avatar">${listing.seller}</span><span><small>刊登玩家</small><strong>${listing.seller === "AK" ? "AK Collector" : listing.seller === "M" ? "Moonlight" : "Kaito"}</strong></span><span class="seller-rating">信譽良好</span></div>
-        <h2>${listing.name}</h2>
-        <p>${listing.detail}</p>
-        <div class="trade-card-bottom"><div><small>希望交易條件</small><strong>${listing.wants}</strong></div><button class="offer-button" type="button" data-offer="${listing.id}">提出交易</button></div>
+        <div class="seller-line"><span class="seller-avatar">${escapeHtml(listing.seller)}</span><span><small>${escapeHtml(t("trade.seller"))}</small><strong>${escapeHtml(listing.sellerName)}</strong></span><span class="seller-rating">${escapeHtml(t("trade.reputation"))}</span></div>
+        <h2>${escapeHtml(listing.name)}</h2>
+        <p>${escapeHtml(listing.detail)}</p>
+        <div class="trade-card-bottom"><div><small>${escapeHtml(t("trade.conditions"))}</small><strong>${escapeHtml(listing.wants)}</strong></div><button class="offer-button" type="button" data-offer="${escapeHtml(listing.id)}">${escapeHtml(t("trade.makeOffer"))}</button></div>
       </div>
     </article>`).join("");
 }
@@ -221,17 +224,18 @@ function renderCart() {
     return sum + (product ? product.price * quantity : 0);
   }, 0);
   $("#cart-count").textContent = count;
+  $("#cart-count").hidden = count === 0;
   $("#cart-total").textContent = total.toLocaleString();
   $("#cart-items").innerHTML = entries.map(([id, quantity]) => {
     const product = products.find((item) => item.id === id);
     return `<div class="cart-row">
-      <div class="cart-row-visual">${product.label}</div>
-      <div class="cart-row-info"><strong>${product.name}</strong><span>${product.game}${product.wear === "不適用" ? "" : ` · 磨損 ${product.wear}`}</span></div>
-      <strong class="cart-row-price">${product.price.toLocaleString()} EC</strong>
+      <div class="cart-row-visual">${escapeHtml(product.label)}</div>
+      <div class="cart-row-info"><strong>${escapeHtml(product.name)}</strong><span>${escapeHtml(product.game === "CS2" ? copy.games.cs2 : copy.games.rivals)}${product.wear === copy.product.notApplicable ? "" : ` · ${escapeHtml(product.wear)}`}</span></div>
+      <strong class="cart-row-price">${product.price.toLocaleString()} ${escapeHtml(t("product.currency"))}</strong>
       <div class="quantity-control">
-        <button type="button" data-quantity="${id}" data-change="-1" aria-label="減少${product.name}數量">-</button>
+        <button type="button" data-quantity="${id}" data-change="-1" aria-label="${escapeHtml(t("cart.remove", { name: product.name }))}">-</button>
         <span>${quantity}</span>
-        <button type="button" data-quantity="${id}" data-change="1" aria-label="增加${product.name}數量" ${quantity >= product.stock ? "disabled" : ""}>+</button>
+        <button type="button" data-quantity="${id}" data-change="1" aria-label="${escapeHtml(t("cart.increase", { name: product.name }))}" ${quantity >= product.stock ? "disabled" : ""}>+</button>
       </div>
     </div>`;
   }).join("");
@@ -243,15 +247,15 @@ function renderCart() {
 function steamInventoryProduct(item) {
   const type = String(item.type || "");
   const categoryName = `${item.name} ${type}`.toLocaleLowerCase("zh-Hant");
-  const category = /glove|手套/.test(categoryName) ? "手套"
-    : /knife|刀/.test(categoryName) ? "刀具"
-      : /sniper|狙擊/.test(categoryName) ? "狙擊槍"
-      : /rifle|步槍/.test(categoryName) ? "步槍"
-        : /pistol|手槍/.test(categoryName) ? "手槍"
-          : /case|container|箱/.test(categoryName) ? "箱子"
-            : /agent|探員|競爭者/.test(categoryName) ? "競爭者" : "CS2 物品";
+  const category = /glove|手套/.test(categoryName) ? copy.categories.gloves
+    : /knife|刀/.test(categoryName) ? copy.categories.knife
+      : /sniper|狙擊/.test(categoryName) ? copy.categories.sniper
+      : /rifle|步槍/.test(categoryName) ? copy.categories.rifle
+        : /pistol|手槍/.test(categoryName) ? copy.categories.pistol
+          : /case|container|箱/.test(categoryName) ? copy.categories.case
+            : /agent|探員|競爭者/.test(categoryName) ? copy.categories.competitor : copy.categories.cs2Items;
   const isWeapon = /knife|weapon|rifle|sniper|pistol|smg|shotgun|machine gun|刀|武器|步槍|狙擊|手槍/.test(categoryName);
-  const kind = category === "箱子" || category === "競爭者" ? category : isWeapon ? "武器" : "商品";
+  const kind = category === copy.categories.case || category === copy.categories.competitor ? category : isWeapon ? copy.categories.weapon : copy.categories.item;
   const configuredPrice = steamConfig.ecPrices?.[item.marketHashName];
   const price = Number.isInteger(Number(configuredPrice)) && Number(configuredPrice) > 0 ? Number(configuredPrice) : null;
   return {
@@ -263,9 +267,9 @@ function steamInventoryProduct(item) {
     game: "CS2",
     category,
     kind,
-    description: type || "Steam 可交易物品",
+    description: type || copy.shop.steamDescription,
     price,
-    wear: "不適用",
+    wear: copy.product.notApplicable,
     stock: item.amount,
     label: category.toUpperCase(),
     art: "steam",
@@ -279,32 +283,32 @@ async function loadSteamInventory() {
   const refreshButton = $("#refresh-steam-inventory");
   const endpoint = steamConfig.inventoryEndpoint;
   if (!endpoint) {
-    status.textContent = "尚未設定庫存代理網址。完成 Cloudflare Worker 部署並填入 steam-config.js 後即可讀取。";
+    status.textContent = t("shop.inventoryUnconfigured");
     return;
   }
 
   refreshButton.disabled = true;
-  refreshButton.textContent = "讀取中…";
-  status.textContent = "正在讀取 Steam 可交易物品…";
+  refreshButton.textContent = t("shop.refreshLoading");
+  status.textContent = t("shop.inventoryLoading");
   try {
     const response = await fetch(endpoint);
     let data;
     try {
       data = await response.json();
     } catch {
-      throw new Error("Steam 庫存服務回傳無法辨識的資料。");
+      throw new Error(t("shop.invalidWorkerResponse"));
     }
     if (!response.ok) {
       const errors = {
-        steam_rate_limited: "Steam 暫時限制了庫存讀取，請稍後再試。",
-        inventory_unavailable: "無法讀取物品庫；請確認 Steam 個人資料與物品庫設為公開。",
-        steam_unavailable: "Steam 暫時無法提供物品庫，請稍後再試。",
-        invalid_steam_response: "Steam 回傳的庫存資料格式無效。",
-        origin_not_allowed: "此網站來源尚未加入 Cloudflare Worker 的 ALLOWED_ORIGINS 設定。"
+        steam_rate_limited: t("shop.inventoryRateLimited"),
+        inventory_unavailable: t("shop.inventoryUnavailable"),
+        steam_unavailable: t("shop.steamUnavailable"),
+        invalid_steam_response: t("shop.invalidSteamResponse"),
+        origin_not_allowed: t("shop.corsNotAllowed")
       };
-      throw new Error(errors[data.error] || `庫存代理讀取失敗（HTTP ${response.status}）。`);
+      throw new Error(errors[data.error] || t("shop.workerHttpError", { status: response.status }));
     }
-    if (!Array.isArray(data.items)) throw new Error("庫存服務缺少物品清單。");
+    if (!Array.isArray(data.items)) throw new Error(t("shop.missingItems"));
 
     const liveProducts = data.items.map(steamInventoryProduct);
     products.splice(0, products.length, ...products.filter((product) => product.source !== "steam"), ...liveProducts);
@@ -320,15 +324,15 @@ async function loadSteamInventory() {
     const updatedAt = new Intl.DateTimeFormat("zh-TW", { hour: "2-digit", minute: "2-digit" }).format(new Date());
     const totalQuantity = Number(data.tradableQuantity) || 0;
     status.textContent = liveProducts.length
-      ? `同步完成：${liveProducts.length} 種可交易物品，共 ${totalQuantity} 件；更新時間 ${updatedAt}${data.truncated ? "（清單過長，僅顯示前 20,000 件）" : ""}。`
-      : "目前沒有可交易的 CS2 物品。";
+      ? t("shop.stockSynced", { types: liveProducts.length, amount: totalQuantity, time: updatedAt, truncated: data.truncated ? t("shop.inventoryTruncated") : "" })
+      : t("shop.inventoryEmpty");
   } catch (error) {
     status.textContent = error instanceof TypeError
-      ? "無法連線到庫存代理；請確認 Worker 網址、部署狀態與 CORS 網域設定。"
-      : error instanceof Error ? error.message : "讀取 Steam 物品庫失敗。";
+      ? t("shop.workerUnavailable")
+      : error instanceof Error ? error.message : t("shop.genericInventoryError");
   } finally {
     refreshButton.disabled = false;
-    refreshButton.textContent = "重新讀取庫存";
+    refreshButton.textContent = t("shop.inventoryRefresh");
   }
 }
 
@@ -425,8 +429,8 @@ $("#home-categories").addEventListener("click", (event) => {
   const button = event.target.closest("[data-home-category]");
   if (!button) return;
   state.category = button.dataset.homeCategory;
-  if (state.category === "商品") state.game = "全部遊戲";
-  else if (["Rivals 道具", "競爭者"].includes(state.category)) state.game = "ROBLOX RIVALS";
+  if (state.category === copy.categories.item) state.game = "all";
+  else if ([copy.categories.rivals, copy.categories.competitor].includes(state.category)) state.game = "ROBLOX RIVALS";
   else state.game = "CS2";
   renderFilters();
   history.pushState(null, "", "#shop");
@@ -464,7 +468,7 @@ document.addEventListener("click", (event) => {
     else state.favorites.add(id);
     renderProducts();
     renderHomeProducts();
-    showToast(state.favorites.has(id) ? "已加入收藏" : "已從收藏移除");
+    showToast(state.favorites.has(id) ? t("messages.favoriteAdded") : t("messages.favoriteRemoved"));
     return;
   }
 
@@ -473,26 +477,26 @@ document.addEventListener("click", (event) => {
   const id = button.dataset.add;
   const product = products.find((item) => item.id === id);
   if (!product || product.stock === 0) {
-    showToast("這件商品目前沒有庫存。");
+    showToast(t("product.unavailable"));
     return;
   }
   if (!Number.isFinite(product.price)) {
-    showToast("此物品尚未設定 EC 價格。");
+    showToast(t("shop.missingPrice"));
     return;
   }
   if ((state.cart.get(id) || 0) >= product.stock) {
-    showToast("購物車數量已達目前庫存。");
+    showToast(t("shop.maxCartStock"));
     return;
   }
   state.cart.set(id, (state.cart.get(id) || 0) + 1);
   renderCart();
-  showToast("已加入購物車");
+  showToast(t("messages.cartAdded"));
 });
 
 $("#trade-grid").addEventListener("click", (event) => {
   const offer = event.target.closest("[data-offer]");
   if (offer) {
-    showToast("交易提案功能尚未連接；目前不會送出真實提案。");
+    showToast(t("trade.proposalUnavailable"));
     return;
   }
 });
@@ -502,10 +506,10 @@ document.querySelectorAll("[data-requires-auth]").forEach((button) => {
     if (!window.eloAuthUser) {
       history.pushState(null, "", "#profile");
       navigateTo("profile");
-      window.showAuthMessage?.("登入或註冊後即可建立個人交易刊登。", "info");
+      window.showAuthMessage?.(t("trade.listingRequiresLogin"), "info");
       return;
     }
-    showToast("刊登功能尚未連接資料庫，尚未建立真實刊登。");
+    showToast(t("trade.listingNotConnected"));
   });
 });
 
@@ -552,7 +556,7 @@ $("#checkout").addEventListener("click", () => {
   state.cart.clear();
   renderCart();
   closeCart();
-  showToast("展示訂單已完成；沒有建立真實交易。");
+  showToast(t("cart.demoOrderComplete"));
 });
 
 renderFilters();

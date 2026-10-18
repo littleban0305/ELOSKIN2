@@ -3,6 +3,7 @@ const authStatus = document.querySelector("#auth-status");
 const firebaseNotice = document.querySelector("#firebase-notice");
 const authTabs = document.querySelectorAll("[data-auth-mode]");
 const firebaseConfig = window.ELOSKIN_FIREBASE_CONFIG;
+const authText = window.eloText;
 let authMode = "login";
 let firebaseAuth = null;
 let firebaseReady = false;
@@ -21,9 +22,9 @@ function setAuthMode(mode) {
   document.querySelector("#register-tab").classList.toggle("active", registering);
   document.querySelector("#login-tab").setAttribute("aria-selected", String(!registering));
   document.querySelector("#register-tab").setAttribute("aria-selected", String(registering));
-  document.querySelector("#auth-title").textContent = registering ? "建立你的帳號" : "歡迎回來";
-  document.querySelector("#auth-subtitle").textContent = registering ? "註冊 ELOSKIN2 玩家帳號。" : "使用電子郵件登入 ELOSKIN2。";
-  document.querySelector("#auth-submit").textContent = registering ? "建立帳號" : "登入";
+  document.querySelector("#auth-title").textContent = registering ? authText("profile.registerTitle") : authText("profile.loginTitle");
+  document.querySelector("#auth-subtitle").textContent = registering ? authText("profile.registerDescription") : authText("profile.loginDescription");
+  document.querySelector("#auth-submit").textContent = registering ? authText("profile.createAccount") : authText("profile.login");
   document.querySelector("#display-name-field").hidden = !registering;
   document.querySelector("#confirm-password-field").hidden = !registering;
   document.querySelector("#password").autocomplete = registering ? "new-password" : "current-password";
@@ -35,23 +36,24 @@ authTabs.forEach((tab) => tab.addEventListener("click", () => setAuthMode(tab.da
 
 function updateAccount(user) {
   window.eloAuthUser = user;
-  const name = user?.displayName || user?.email?.split("@")[0] || "訪客";
-  const initial = [...name.trim()][0]?.toLocaleUpperCase("zh-Hant") || "E";
-  document.querySelector("#profile-name").textContent = user ? name : "訪客";
-  document.querySelector("#profile-email").textContent = user?.email || "登入或註冊以使用個人帳號";
+  const name = user?.displayName || user?.email?.split("@")[0] || authText("profile.guest");
+  const initial = [...name.trim()][0]?.toLocaleUpperCase("zh-Hant") || authText("profile.fallbackInitial");
+  document.querySelector("#profile-name").textContent = user ? name : authText("profile.guest");
+  document.querySelector("#profile-email").textContent = user?.email || authText("profile.guestDescription");
   document.querySelector("#profile-avatar").textContent = initial;
   document.querySelector("#profile-avatar").classList.toggle("signed-in", Boolean(user));
-  document.querySelector("#profile-shortcut").textContent = user ? initial : "登入 / 註冊";
-  document.querySelector("#profile-shortcut").setAttribute("aria-label", user ? "個人頁面" : "登入或註冊");
+  document.querySelector("#profile-shortcut").textContent = user ? initial : authText("nav.account");
+  document.querySelector("#profile-shortcut").setAttribute("aria-label", user ? authText("nav.profileAria") : authText("nav.accountAria"));
   document.querySelector("#profile-shortcut").classList.toggle("signed-in", Boolean(user));
+  document.querySelector("#ec-balance-wrapper").hidden = !user;
   document.querySelector("#sign-out").hidden = !user;
   document.querySelector("#auth-form").hidden = Boolean(user);
   document.querySelector(".auth-tabs").hidden = Boolean(user);
   document.querySelector("#firebase-notice").hidden = Boolean(user);
   document.querySelector(".auth-privacy").hidden = Boolean(user);
-  document.querySelector("#auth-title").textContent = user ? "已登入" : authMode === "register" ? "建立你的帳號" : "歡迎回來";
-  document.querySelector("#auth-subtitle").textContent = user ? "你的 Firebase 帳號已連線。" : authMode === "register" ? "註冊 ELOSKIN2 玩家帳號。" : "使用電子郵件登入 ELOSKIN2。";
-  if (user) showAuthMessage("帳號已安全登入。", "success");
+  document.querySelector("#auth-title").textContent = user ? authText("profile.signedInTitle") : authMode === "register" ? authText("profile.registerTitle") : authText("profile.loginTitle");
+  document.querySelector("#auth-subtitle").textContent = user ? authText("profile.signedInDescription") : authMode === "register" ? authText("profile.registerDescription") : authText("profile.loginDescription");
+  if (user) showAuthMessage(authText("profile.signedInMessage"), "success");
 }
 
 function isConfigured(config) {
@@ -63,42 +65,42 @@ function loadFirebaseScript(source) {
     const script = document.createElement("script");
     script.src = source;
     script.onload = resolve;
-    script.onerror = () => reject(new Error(`無法載入 Firebase SDK：${source}`));
+    script.onerror = () => reject(new Error(authText("profile.firebaseSdkError", { source })));
     document.head.append(script);
   });
 }
 
 async function initializeFirebase() {
   if (!isConfigured(firebaseConfig)) {
-    firebaseNotice.textContent = "尚未設定 Firebase。填入 firebase-config.js 並啟用 Email/Password 驗證後，即可開放登入與註冊。";
+    firebaseNotice.textContent = authText("profile.firebaseMissing");
     return;
   }
 
-  firebaseNotice.textContent = "正在連線 Firebase Authentication…";
+  firebaseNotice.textContent = authText("profile.firebaseConnecting");
   try {
     const version = "10.14.1";
     await loadFirebaseScript(`https://www.gstatic.com/firebasejs/${version}/firebase-app-compat.js`);
     await loadFirebaseScript(`https://www.gstatic.com/firebasejs/${version}/firebase-auth-compat.js`);
     const firebase = window.firebase;
-    if (!firebase) throw new Error("Firebase SDK 載入後未提供 firebase 物件。");
+    if (!firebase) throw new Error(authText("profile.firebaseMissingObject"));
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     firebaseAuth = firebase.auth();
     await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
     firebaseAuth.onAuthStateChanged(updateAccount, (error) => {
-      showAuthMessage(`帳號狀態更新失敗：${error.message}`);
+      showAuthMessage(authText("profile.firebaseStateError", { message: error.message }));
     });
     firebaseReady = true;
-    firebaseNotice.textContent = "Firebase 已連線。請使用你的電子郵件與密碼登入或註冊。";
+    firebaseNotice.textContent = authText("profile.firebaseConnected");
   } catch (error) {
-    firebaseNotice.textContent = `Firebase 初始化失敗：${error.message}`;
-    showAuthMessage(`Firebase 初始化失敗：${error.message}`);
+    firebaseNotice.textContent = authText("profile.firebaseInitError", { message: error.message });
+    showAuthMessage(authText("profile.firebaseInitError", { message: error.message }));
   }
 }
 
 authForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!firebaseReady || !firebaseAuth) {
-    showAuthMessage("尚未設定 Firebase，請先填入 firebase-config.js 的專案設定。");
+    showAuthMessage(authText("profile.configureFirebase"));
     return;
   }
 
@@ -107,13 +109,13 @@ authForm.addEventListener("submit", async (event) => {
   const displayName = document.querySelector("#display-name").value.trim();
   const confirmPassword = document.querySelector("#confirm-password").value;
   if (authMode === "register" && password !== confirmPassword) {
-    showAuthMessage("兩次輸入的密碼不一致。");
+    showAuthMessage(authText("profile.passwordMismatch"));
     return;
   }
 
   const submit = document.querySelector("#auth-submit");
   submit.disabled = true;
-  showAuthMessage(authMode === "register" ? "正在建立帳號…" : "正在登入…", "info");
+  showAuthMessage(authMode === "register" ? authText("profile.creatingAccount") : authText("profile.loggingIn"), "info");
   try {
     if (authMode === "register") {
       const credential = await firebaseAuth.createUserWithEmailAndPassword(email, password);
@@ -132,9 +134,9 @@ document.querySelector("#sign-out").addEventListener("click", async () => {
   if (!firebaseAuth) return;
   try {
     await firebaseAuth.signOut();
-    showAuthMessage("已登出。", "success");
+    showAuthMessage(authText("profile.signOutSuccess"), "success");
   } catch (error) {
-    showAuthMessage(`登出失敗：${error.message}`);
+    showAuthMessage(authText("profile.signOutError", { message: error.message }));
   }
 });
 

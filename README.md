@@ -2,11 +2,21 @@
 
 首頁依 ELOSKIN2 的獨立版型呈現 CS2 與 Roblox Rivals 商店、玩家交換、新手指南及交易安全說明。商店以 ELOCoin（EC）標價；CS2 商品庫存可從主要 Steam 帳號讀取，只列出可交易物品。商品搜尋、類別／遊戲篩選、排序、收藏與購物車在前端運作。
 
+## 編輯網站文字
+
+網站介面文案集中在 `content.js`。導覽、首頁、商店、玩家刊登、登入註冊、狀態提示、商品範例與篩選分類都從此檔讀取：
+
+- 直接編輯對應區塊中的文字值；商品範例與玩家刊登資料也在此檔。
+- `index.html` 的 `data-copy`、`data-copy-aria`、`data-copy-placeholder`、`data-copy-alt` 和 `data-copy-content` 屬性連到文案鍵。
+- `app.js` 與 `auth.js` 用 `t("區塊.鍵名")` 讀取動態訊息，例如 `t("shop.empty")`。
+- 新增文案時，先在 `content.js` 對應區塊新增鍵，再於 HTML 或 JavaScript 使用該鍵。缺少的鍵會明確拋出錯誤，方便定位。
+- Steam 即時庫存名稱、Firebase 驗證服務回傳的錯誤內容，以及使用者的顯示名稱不是網站靜態文案，因此仍由服務或使用者提供。
+
 ## GitHub Pages 部署
 
 此專案使用 GitHub Actions 自動發布。將變更推送至 `main` 分支後，可在 GitHub repo 的 **Actions** 頁面查看發布狀態；首次成功發布後，網站網址會是 `https://littleban0305.github.io/ELOSKIN2/`。公開 Pages 網站任何人都能瀏覽，並看見網站上顯示的 Steam 交易連結。
 
-EC 匯率僅為暫定展示：1 EC = 0.1 Robux、1 EC = 1 SkinApe Coin；EC 的現金價值尚未設定。SkinApe 累積收益回饋目前展示 1,000 回饋 100 EC、10,000 回饋 1,000 EC，其餘級距仍待確認。EC 餘額、價格、Rivals 庫存和玩家刊登皆為展示資料，不是即時市場資料；CS2 庫存可按下文設定為讀取 Steam 公開庫存。
+EC 匯率為暫定展示：1 EC = 0.1 Robux、1 EC = 1 SkinApe Coin、1 EC = NT$0.03。此台幣比值為參考標價，不代表現金兌換或付款功能已啟用。SkinApe 累積收益回饋目前展示 1,000 回饋 100 EC、10,000 回饋 1,000 EC，其餘級距仍待確認。EC 餘額、價格、Rivals 庫存和玩家刊登皆為展示資料，不是即時市場資料；CS2 庫存可按下文設定為讀取 Steam 公開庫存。
 
 Roblox Rivals 商品仍為展示資料。CS2 商品名稱、圖示與庫存來自 Steam 公開物品庫；未設定 EC 價格的 CS2 物品會標示「需設定 EC 價格」，不能加入購物車。可於 `steam-config.js` 的 `ecPrices` 依 Steam `market_hash_name` 設定 EC 價格。Steam 庫存並非即時訂單保留，完成 Steam 交易後請重新讀取。
 
