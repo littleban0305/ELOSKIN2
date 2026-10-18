@@ -3297,6 +3297,30 @@ button, a { transition-duration: .18s; }
     font-size: 8px;
   }
 }
+
+.brand-logo {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  object-fit: contain;
+  background: #090d12;
+}
+
+.footer-brand .brand-logo {
+  width: 34px;
+  height: 34px;
+}
+
+@media (max-width: 720px) {
+  .brand-logo {
+    width: 36px;
+    height: 36px;
+  }
+  .footer-brand .brand-logo {
+    width: 32px;
+    height: 32px;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
