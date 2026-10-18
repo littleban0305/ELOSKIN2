@@ -24,7 +24,7 @@ Roblox Rivals 商品仍為展示資料。CS2 商品名稱、圖示與庫存來�
 
 GitHub Pages 是靜態網站，不能直接讀取 Steam 庫存 API（Steam 不開放瀏覽器跨來源請求）。使用 Cloudflare Worker 作為只讀代理：
 
-1. 在 Cloudflare 建立 Worker，將 `steam-inventory-worker.js` 全文貼入 Worker 編輯器並部署。
+1. 在 Cloudflare Dashboard 開啟現有 `eloskin2` Worker，將本專案更新後的 `steam-inventory-worker.js` 全文貼入 Worker 編輯器並部署。原有 `/inventory` 庫存讀取路由會保留。
 2. 在 Worker 設定環境變數 `ALLOWED_ORIGINS`。這是「允許哪個網站呼叫 Worker」的安全名單，填 ELOSKIN2 網站網址的開頭（協定 + 網域），不是 Worker 網址：
    - 若 GitHub Pages 網址是 `https://alice.github.io/ELOSKIN2/`，填 `https://alice.github.io`。把 `alice` 換成你的 GitHub 使用者名稱；不要加 `/ELOSKIN2/`。
    - 若也要在本機測試，另外加上本機網址的來源，例如 `http://localhost:8000`。用逗號分隔，不能加空格：`https://alice.github.io,http://localhost:8000`。
@@ -42,7 +42,13 @@ Steam 交易連結會公開在網站前端；任何能瀏覽網站的人都能�
 2. 將 Firebase Web App 設定的 `apiKey`、`authDomain`、`projectId`、`appId` 填入 `firebase-config.js`。這些是 Firebase 用戶端設定；不要在前端放置服務帳號金鑰。
 3. 在 Firebase Authentication 的授權網域加入 `littleban0305.github.io`（本機開發可加入 `localhost`）。使用 Google 登入時會開啟 Google 帳號選擇視窗。
 4. 從 `http://localhost` 或部署後的網站網址開啟，不要直接以 `file://` 開啟。
+5. Steam 登入會使用同一個 Cloudflare Worker 完成 Steam OpenID 驗證，並由 Firebase Custom Token 建立 `steam:<SteamID64>` 帳號。重新部署更新後的 `steam-inventory-worker.js`，再將以下三項設為 Worker 的 **Secret**（不可設為一般明文變數或提交到 Git）：
+   - `FIREBASE_SERVICE_ACCOUNT_EMAIL`：Firebase Console → Project settings → Service accounts，使用 Firebase Admin SDK 服務帳號的 `client_email`。
+   - `FIREBASE_PRIVATE_KEY`：同一服務帳號 JSON 檔中的 `private_key` 完整內容。金鑰只需留在本機與 Cloudflare Secret，不要傳給任何人或貼進程式碼。
+   - `STEAM_STATE_SECRET`：自行產生至少 32 個隨機位元組的隨機字串，用於簽署 Steam 登入狀態 Cookie。
 
-Steam 登入需要 Steam OpenID 驗證服務及伺服器端 Firebase Custom Token 簽發；GitHub Pages 前端不能安全地自行驗證 Steam 身分或簽發登入權杖。尚未設定該後端前，不提供 Steam 登入。ELOSKIN2 的目標使用者是受邀朋友，但目前原型尚未設定朋友白名單或頁面存取限制；不要把它當作已啟用的私人網站。
+   可在 Cloudflare Dashboard → Workers & Pages → 選擇 `eloskin2` Worker → Settings → Variables and Secrets → Add → **Secret** 新增上述值。Worker 會用 HttpOnly、Secure、SameSite=Lax Cookie 綁定 Steam OpenID 回呼與原始網站，驗證成功後才簽發短效 Firebase Custom Token。`ALLOWED_ORIGINS` 必須包含 `https://littleban0305.github.io`；程式中的 `steam-config.js` 已設定 `authEndpoint` 指向此 Worker。設定 Secret 後重新部署 Worker。
+
+ELOSKIN2 的目標使用者是受邀朋友，但目前原型尚未設定朋友白名單或頁面存取限制；不要把它當作已啟用的私人網站。
 
 EC 餘額、Rivals 商品、玩家刊登及交易提案仍是前端展示資料。Steam 庫存同步僅用來顯示主要帳號目前的可交易 CS2 物品，不會自動估價、建立真實訂單、扣款或送出 Steam 交易。購物車庫存限制僅在目前頁面生效，不是即時庫存保留。要讓玩家刊登和交易在不同裝置間同步，還需要 Firestore、資料驗證規則及交易流程。

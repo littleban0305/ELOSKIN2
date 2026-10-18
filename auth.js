@@ -3,9 +3,22 @@ const authStatus = document.querySelector("#auth-status");
 const firebaseNotice = document.querySelector("#firebase-notice");
 const passwordReset = document.querySelector("#password-reset");
 const googleAuthButton = document.querySelector("#google-auth");
+const steamAuthButton = document.querySelector("#steam-auth");
 const authTabs = document.querySelectorAll("[data-auth-mode]");
 const firebaseConfig = window.ELOSKIN_FIREBASE_CONFIG;
+const steamAuthConfig = window.ELOSKIN2_STEAM_CONFIG;
 const authText = window.eloText;
+const steamCallback = (() => {
+  const parameters = new URLSearchParams(window.location.hash.slice(1));
+  const token = parameters.get("steam-auth");
+  const error = parameters.get("steam-error");
+  if (!token && !error) return null;
+  const cleanUrl = new URL(window.location.href);
+  cleanUrl.hash = "#profile";
+  window.history.replaceState(window.history.state, "", cleanUrl.href);
+  window.dispatchEvent(new Event("hashchange"));
+  return { token, error };
+})();
 let authMode = "login";
 let firebaseAuth = null;
 let firebaseReady = false;
@@ -50,10 +63,11 @@ document.querySelectorAll("[data-password-toggle]").forEach((button) => {
 
 function updateAccount(user) {
   window.eloAuthUser = user;
-  const name = user?.displayName || user?.email?.split("@")[0] || authText("profile.guest");
+  const steamId = user?.uid?.startsWith("steam:") ? user.uid.slice("steam:".length) : "";
+  const name = user?.displayName || user?.email?.split("@")[0] || (steamId ? `Steam ${steamId}` : authText("profile.guest"));
   const initial = [...name.trim()][0]?.toLocaleUpperCase("zh-Hant") || authText("profile.fallbackInitial");
   document.querySelector("#profile-name").textContent = user ? name : authText("profile.guest");
-  document.querySelector("#profile-email").textContent = user?.email || authText("profile.guestDescription");
+  document.querySelector("#profile-email").textContent = user?.email || (steamId ? `Steam ID ${steamId}` : authText("profile.guestDescription"));
   document.querySelector("#profile-avatar").textContent = initial;
   document.querySelector("#profile-avatar").classList.toggle("signed-in", Boolean(user));
   document.querySelector("#profile-shortcut").textContent = user ? initial : authText("nav.account");
@@ -105,6 +119,7 @@ async function initializeFirebase() {
     });
     firebaseReady = true;
     firebaseNotice.textContent = authText("profile.firebaseConnected");
+    await completeSteamSignIn();
   } catch (error) {
     firebaseNotice.textContent = authText("profile.firebaseInitError", { message: error.message });
     showAuthMessage(authText("profile.firebaseInitError", { message: error.message }));
@@ -151,7 +166,6 @@ authForm.addEventListener("submit", async (event) => {
       "auth/invalid-credential": authText("profile.invalidCredential"),
       "auth/wrong-password": authText("profile.invalidCredential"),
       "auth/user-not-found": authText("profile.invalidCredential"),
-      "auth/email-already-in-use": authText("profile.invalidCredential"),
       "auth/invalid-email": authText("profile.invalidEmail"),
       "auth/user-disabled": authText("profile.userDisabled"),
       "auth/too-many-requests": authText("profile.tooManyRequests"),
@@ -159,10 +173,13 @@ authForm.addEventListener("submit", async (event) => {
       "auth/email-already-in-use": authText("profile.emailInUse"),
       "auth/weak-password": authText("profile.weakPassword")
     };
-    showAuthMessage(messages[error.code] || authText("profile.authError", {
-      code: error.code || "unknown",
-      message: error.message
-    }));
+    const message = error.code === "auth/email-already-in-use"
+      ? authText(isLogin ? "profile.invalidCredential" : "profile.emailInUse")
+      : messages[error.code] || authText("profile.authError", {
+        code: error.code || "unknown",
+        message: error.message
+      });
+    showAuthMessage(message);
   } finally {
     submit.disabled = false;
     googleAuthButton.disabled = false;
@@ -188,6 +205,7 @@ googleAuthButton.addEventListener("click", async () => {
       "auth/popup-closed-by-user": authText("profile.googleLoginCancelled"),
       "auth/cancelled-popup-request": authText("profile.googleLoginCancelled"),
       "auth/popup-blocked": authText("profile.googlePopupBlocked"),
+      "auth/unauthorized-domain": authText("profile.googleDomainNotAuthorized"),
       "auth/account-exists-with-different-credential": authText("profile.googleAccountConflict")
     };
     showAuthMessage(messages[error.code] || authText("profile.authError", {
@@ -199,6 +217,57 @@ googleAuthButton.addEventListener("click", async () => {
     document.querySelector("#auth-submit").disabled = false;
   }
 });
+
+steamAuthButton.addEventListener("click", () => {
+  if (!firebaseReady || !firebaseAuth) {
+    showAuthMessage(authText("profile.configureFirebase"));
+    return;
+  }
+
+  try {
+    const endpoint = new URL(steamAuthConfig?.authEndpoint || "");
+    if (endpoint.protocol !== "https:" && endpoint.hostname !== "localhost" && endpoint.hostname !== "127.0.0.1") {
+      throw new Error(authText("profile.steamLoginNotConfigured"));
+    }
+    endpoint.pathname = "/auth/steam/start";
+    endpoint.search = "";
+    endpoint.searchParams.set("returnUrl", `${window.location.origin}${window.location.pathname}${window.location.search}`);
+    steamAuthButton.disabled = true;
+    googleAuthButton.disabled = true;
+    document.querySelector("#auth-submit").disabled = true;
+    showAuthMessage(authText("profile.steamLoginProgress"), "info");
+    window.location.assign(endpoint.href);
+  } catch (error) {
+    steamAuthButton.disabled = false;
+    googleAuthButton.disabled = false;
+    document.querySelector("#auth-submit").disabled = false;
+    showAuthMessage(error.message || authText("profile.steamLoginNotConfigured"));
+  }
+});
+
+async function completeSteamSignIn() {
+  if (!steamCallback) return;
+  if (steamCallback.error) {
+    const messages = {
+      "not-configured": "profile.steamLoginNotConfigured",
+      cancelled: "profile.steamLoginCancelled",
+      "verification-failed": "profile.steamLoginVerificationFailed",
+      "service-unavailable": "profile.steamLoginUnavailable"
+    };
+    showAuthMessage(authText(messages[steamCallback.error] || "profile.steamLoginVerificationFailed"));
+    return;
+  }
+  if (!steamCallback.token) {
+    showAuthMessage(authText("profile.steamLoginVerificationFailed"));
+    return;
+  }
+
+  try {
+    await firebaseAuth.signInWithCustomToken(steamCallback.token);
+  } catch (error) {
+    showAuthMessage(authText("profile.steamLoginFirebaseFailed", { message: error.message }));
+  }
+}
 
 passwordReset.addEventListener("click", async () => {
   if (!firebaseReady || !firebaseAuth) {
