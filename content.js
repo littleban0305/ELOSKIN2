@@ -20,7 +20,13 @@ window.ELOSKIN2_TEXT = {
     mainNavAria: "主要選單"
   },
   home: {
-    bannerAlt: "ELOSKIN2 首頁橫幅"
+    bannerAlt: "ELOSKIN2 CS2 與 Roblox 遊戲物品首頁橫幅",
+    heroTitleLead: "使用最新的ELOSKIN2",
+    heroTitleAccent: "交易、買賣",
+    heroTitleTail: "CS2、Roblox物品",
+    heroDescription: "ELOSKIN2提供了完整的買賣、交易系統，讓您可以把不要的遊戲物品交易出去，或是買進自己最喜歡的遊戲物品。",
+    shopCta: "進入商店",
+    tradeCta: "立即交易"
   },
   categories: {
     allItems: "全部物品",
