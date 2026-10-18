@@ -1357,6 +1357,39 @@ body {
   cursor: wait;
 }
 
+.google-auth-button {
+  width: 100%;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  margin-top: 10px;
+  border: 1px solid #d8e3f1;
+  border-radius: 8px;
+  background: #fff;
+  color: #23364e;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.google-auth-button:hover {
+  background: #f5f9ff;
+}
+
+.google-auth-button:disabled {
+  opacity: .55;
+  cursor: wait;
+}
+
+.google-auth-mark {
+  color: #4285f4;
+  font-size: 15px;
+  font-weight: 700;
+}
+
 .password-reset {
   display: block;
   margin: 11px 0 0 auto;

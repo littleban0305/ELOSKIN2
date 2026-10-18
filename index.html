@@ -10,12 +10,12 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=11">
-    <script src="content.js?v=3" defer></script>
+    <link rel="stylesheet" href="styles.css?v=12">
+    <script src="content.js?v=4" defer></script>
     <script src="firebase-config.js?v=1" defer></script>
     <script src="steam-config.js?v=2" defer></script>
     <script src="app.js?v=10" defer></script>
-    <script src="auth.js?v=5" defer></script>
+    <script src="auth.js?v=6" defer></script>
   </head>
   <body>
     <header class="site-header">
@@ -183,6 +183,7 @@
               <label class="auth-field"><span data-copy="profile.password"></span><span class="password-input-wrap"><input id="password" name="password" type="password" autocomplete="current-password" minlength="6" required data-copy-placeholder="profile.passwordPlaceholder"><button class="password-toggle" type="button" data-password-toggle="password" aria-pressed="false" data-copy="profile.showPassword" data-copy-aria="profile.showPassword"></button></span></label>
               <label class="auth-field" id="confirm-password-field" hidden><span data-copy="profile.confirmPassword"></span><span class="password-input-wrap"><input id="confirm-password" name="confirmPassword" type="password" autocomplete="new-password" minlength="6" data-copy-placeholder="profile.confirmPasswordPlaceholder"><button class="password-toggle" type="button" data-password-toggle="confirm-password" aria-pressed="false" data-copy="profile.showPassword" data-copy-aria="profile.showPassword"></button></span></label>
               <button class="auth-submit" id="auth-submit" type="submit" data-copy="profile.login"></button>
+              <button class="google-auth-button" id="google-auth" type="button"><span class="google-auth-mark" aria-hidden="true">G</span><span data-copy="profile.googleLogin"></span></button>
               <button class="password-reset" id="password-reset" type="button" data-copy="profile.passwordReset"></button>
               <p class="auth-status" id="auth-status" role="status" aria-live="polite"></p>
             </form>

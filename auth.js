@@ -2,6 +2,7 @@ const authForm = document.querySelector("#auth-form");
 const authStatus = document.querySelector("#auth-status");
 const firebaseNotice = document.querySelector("#firebase-notice");
 const passwordReset = document.querySelector("#password-reset");
+const googleAuthButton = document.querySelector("#google-auth");
 const authTabs = document.querySelectorAll("[data-auth-mode]");
 const firebaseConfig = window.ELOSKIN_FIREBASE_CONFIG;
 const authText = window.eloText;
@@ -127,20 +128,30 @@ authForm.addEventListener("submit", async (event) => {
   }
 
   const submit = document.querySelector("#auth-submit");
+  const isLogin = authMode === "login";
   submit.disabled = true;
-  showAuthMessage(authMode === "register" ? authText("profile.creatingAccount") : authText("profile.loggingIn"), "info");
+  googleAuthButton.disabled = true;
+  showAuthMessage(isLogin ? authText("profile.loggingIn") : authText("profile.creatingAccount"), "info");
   try {
-    if (authMode === "register") {
+    if (!isLogin) {
       const credential = await firebaseAuth.createUserWithEmailAndPassword(email, password);
       if (displayName) await credential.user.updateProfile({ displayName });
     } else {
-      await firebaseAuth.signInWithEmailAndPassword(email, password);
+      try {
+        await firebaseAuth.signInWithEmailAndPassword(email, password);
+      } catch (error) {
+        if (error.code !== "auth/invalid-credential" && error.code !== "auth/user-not-found") throw error;
+        showAuthMessage(authText("profile.autoRegistering"), "info");
+        await firebaseAuth.createUserWithEmailAndPassword(email, password);
+        showAuthMessage(authText("profile.autoRegistered"), "success");
+      }
     }
   } catch (error) {
     const messages = {
       "auth/invalid-credential": authText("profile.invalidCredential"),
       "auth/wrong-password": authText("profile.invalidCredential"),
       "auth/user-not-found": authText("profile.invalidCredential"),
+      "auth/email-already-in-use": authText("profile.invalidCredential"),
       "auth/invalid-email": authText("profile.invalidEmail"),
       "auth/user-disabled": authText("profile.userDisabled"),
       "auth/too-many-requests": authText("profile.tooManyRequests"),
@@ -154,6 +165,38 @@ authForm.addEventListener("submit", async (event) => {
     }));
   } finally {
     submit.disabled = false;
+    googleAuthButton.disabled = false;
+  }
+});
+
+googleAuthButton.addEventListener("click", async () => {
+  if (!firebaseReady || !firebaseAuth) {
+    showAuthMessage(authText("profile.configureFirebase"));
+    return;
+  }
+
+  googleAuthButton.disabled = true;
+  document.querySelector("#auth-submit").disabled = true;
+  showAuthMessage(authText("profile.googleLoginProgress"), "info");
+  try {
+    const provider = new window.firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: "select_account" });
+    await firebaseAuth.signInWithPopup(provider);
+  } catch (error) {
+    const messages = {
+      "auth/operation-not-allowed": authText("profile.googleProviderDisabled"),
+      "auth/popup-closed-by-user": authText("profile.googleLoginCancelled"),
+      "auth/cancelled-popup-request": authText("profile.googleLoginCancelled"),
+      "auth/popup-blocked": authText("profile.googlePopupBlocked"),
+      "auth/account-exists-with-different-credential": authText("profile.googleAccountConflict")
+    };
+    showAuthMessage(messages[error.code] || authText("profile.authError", {
+      code: error.code || "unknown",
+      message: error.message
+    }));
+  } finally {
+    googleAuthButton.disabled = false;
+    document.querySelector("#auth-submit").disabled = false;
   }
 });
 

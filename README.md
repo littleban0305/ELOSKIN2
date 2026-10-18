@@ -38,10 +38,11 @@ Steam 交易連結會公開在網站前端；任何能瀏覽網站的人都能�
 
 ## 啟用 Firebase 登入／註冊
 
-1. 在 Firebase Console 建立 Web App，並於 Authentication 啟用 Email/Password 登入方式。
+1. 在 Firebase Console 的 Authentication 啟用 Email/Password 與 Google 登入方式。登入時若電子郵件尚無密碼帳號，網站會用該郵件和輸入的密碼自動建立帳號。
 2. 將 Firebase Web App 設定的 `apiKey`、`authDomain`、`projectId`、`appId` 填入 `firebase-config.js`。這些是 Firebase 用戶端設定；不要在前端放置服務帳號金鑰。
-3. 從 `http://localhost` 或部署後的網站網址開啟，不要直接以 `file://` 開啟；並在 Firebase Authentication 的授權網域加入使用的網域。
+3. 在 Firebase Authentication 的授權網域加入 `littleban0305.github.io`（本機開發可加入 `localhost`）。使用 Google 登入時會開啟 Google 帳號選擇視窗。
+4. 從 `http://localhost` 或部署後的網站網址開啟，不要直接以 `file://` 開啟。
 
-ELOSKIN2 的目標使用者是受邀朋友，但目前原型尚未設定朋友白名單或頁面存取限制；Firebase 登入設定也尚未填入。不要把它當作已啟用的私人網站。
+Steam 登入需要 Steam OpenID 驗證服務及伺服器端 Firebase Custom Token 簽發；GitHub Pages 前端不能安全地自行驗證 Steam 身分或簽發登入權杖。尚未設定該後端前，不提供 Steam 登入。ELOSKIN2 的目標使用者是受邀朋友，但目前原型尚未設定朋友白名單或頁面存取限制；不要把它當作已啟用的私人網站。
 
 EC 餘額、Rivals 商品、玩家刊登及交易提案仍是前端展示資料。Steam 庫存同步僅用來顯示主要帳號目前的可交易 CS2 物品，不會自動估價、建立真實訂單、扣款或送出 Steam 交易。購物車庫存限制僅在目前頁面生效，不是即時庫存保留。要讓玩家刊登和交易在不同裝置間同步，還需要 Firestore、資料驗證規則及交易流程。
