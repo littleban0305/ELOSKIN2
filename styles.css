@@ -3468,8 +3468,8 @@ button, a { transition-duration: .18s; }
 }
 
 .steam-product-art {
-  width: 78%;
-  max-width: 170px;
+  width: 160px;
+  max-width: 78%;
   height: 126px;
   max-height: 126px;
   object-fit: contain;
@@ -3500,7 +3500,8 @@ button, a { transition-duration: .18s; }
     height: 34px;
   }
   .steam-product-art {
-    width: 82%;
+    width: 150px;
+    max-width: 82%;
     height: 105px;
     max-height: 105px;
   }
