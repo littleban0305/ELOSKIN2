@@ -4397,7 +4397,7 @@ body :is(h2, h3, h4, h5, h6) * {
 }
 
 .hero-banner {
-  animation: banner-float 7s ease-in-out infinite alternate;
+  animation: banner-float 6.2s ease-in-out infinite alternate;
   will-change: transform;
 }
 
@@ -4411,14 +4411,14 @@ body :is(h2, h3, h4, h5, h6) * {
   position: absolute;
   z-index: 0;
   top: -55%;
-  left: -45%;
-  width: 24%;
+  left: -35%;
+  width: 26%;
   height: 210%;
   background: linear-gradient(90deg, transparent, rgba(255,255,255,.82), transparent);
   content: "";
   pointer-events: none;
-  transform: translateX(-180%) rotate(24deg);
-  animation: button-glint 3.6s ease-in-out infinite;
+  transform: skewX(-24deg);
+  animation: button-glint 2.5s linear infinite;
 }
 
 .hero-actions .primary-button span {
@@ -4436,8 +4436,8 @@ body :is(h2, h3, h4, h5, h6) * {
 }
 
 @keyframes button-glint {
-  from { transform: translateX(-180%) rotate(24deg); }
-  to { transform: translateX(620%) rotate(24deg); }
+  from { left: -35%; }
+  to { left: 140%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
