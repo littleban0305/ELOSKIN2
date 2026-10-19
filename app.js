@@ -264,7 +264,6 @@ function renderTradeItems() {
       <span class="trade-item-art art-${escapeHtml(product.art)}">${productArtwork(product)}</span>
       <span class="trade-item-info"><span class="trade-item-name">${escapeHtml(product.name)}</span><span class="trade-item-price">${product.price.toLocaleString()} <small>${escapeHtml(copy.product.currency)}</small></span></span>
       <span class="trade-item-action">${escapeHtml(selected ? copy.trade.selectedItem : copy.trade.chooseItem)}</span>
-      <span class="trade-item-demo">DEMO</span>
     </button>`;
   }).join("");
   $("#trade-empty").hidden = visibleItems.length > 0;
