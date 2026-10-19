@@ -80,9 +80,6 @@ window.ELOSKIN2_TEXT = {
     float: "FLOAT: {wear}",
     categoryItems: "CS2 道具",
     steamDescription: "Steam 可交易物品",
-    demoDescription: "展示資料 · 非實際庫存",
-    demoBadge: "展示商品",
-    demoStock: "非實際庫存",
     demoUnavailable: "展示商品無法購買",
     artAlt: "{name} 示意圖",
     favoriteAdd: "收藏",
@@ -237,7 +234,6 @@ window.ELOSKIN2_TEXT = {
     loggingIn: "正在登入…"
   },
   cart: {
-    eyebrow: "YOUR SELECTION",
     title: "購物車",
     closeAria: "關閉購物車",
     empty: "購物車還沒有物品。",

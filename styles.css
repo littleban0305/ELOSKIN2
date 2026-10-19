@@ -4395,3 +4395,55 @@ body :is(h2, h3, h4, h5, h6) * {
     --site-subheading-size: clamp(17px, 4.6vw, 20px);
   }
 }
+
+.hero-banner {
+  animation: banner-float 7s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+.hero-actions .primary-button {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.hero-actions .primary-button::after {
+  position: absolute;
+  z-index: 0;
+  top: -55%;
+  left: -45%;
+  width: 24%;
+  height: 210%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.82), transparent);
+  content: "";
+  pointer-events: none;
+  transform: translateX(-180%) rotate(24deg);
+  animation: button-glint 3.6s ease-in-out infinite;
+}
+
+.hero-actions .primary-button span {
+  position: relative;
+  z-index: 1;
+}
+
+.cart-button img {
+  filter: brightness(0) invert(1) drop-shadow(0 0 4px rgba(80,219,197,.45)) !important;
+}
+
+@keyframes banner-float {
+  from { transform: translateY(-7px); }
+  to { transform: translateY(7px); }
+}
+
+@keyframes button-glint {
+  from { transform: translateX(-180%) rotate(24deg); }
+  to { transform: translateX(620%) rotate(24deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-banner,
+  .hero-actions .primary-button::after {
+    animation: none !important;
+    will-change: auto;
+  }
+}

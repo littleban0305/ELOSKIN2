@@ -2,11 +2,11 @@ const copy = window.ELOSKIN2_TEXT;
 const t = window.eloText;
 const products = [];
 const demoProducts = [
-  { id: "demo-ak47-rust", name: "AK-47 | 赤砂", game: "CS2", category: copy.categories.rifle, kind: copy.categories.weapon, description: copy.product.demoDescription, price: 4260, stock: 3, art: "rifle", accent: "#c77955" },
-  { id: "demo-awp-frost", name: "AWP | 冬痕", game: "CS2", category: copy.categories.sniper, kind: copy.categories.weapon, description: copy.product.demoDescription, price: 12800, stock: 1, art: "sniper", accent: "#86b9aa" },
-  { id: "demo-knife-ember", name: "折刃刀 | 餘燼", game: "CS2", category: copy.categories.knife, kind: copy.categories.weapon, description: copy.product.demoDescription, price: 9360, stock: 2, art: "knife", accent: "#d58b58" },
-  { id: "demo-gloves-moss", name: "手套 | 苔色", game: "CS2", category: copy.categories.gloves, kind: copy.categories.item, description: copy.product.demoDescription, price: 6450, stock: 2, art: "gloves", accent: "#88a968" },
-  { id: "demo-case-night", name: "夜行武器箱", game: "CS2", category: copy.categories.case, kind: copy.categories.case, description: copy.product.demoDescription, price: 520, stock: 8, art: "case", accent: "#6b86a3" }
+  { id: "demo-ak47-rust", name: "AK-47 | 赤砂", game: "CS2", category: copy.categories.rifle, kind: copy.categories.weapon, description: "", price: 4260, stock: 3, art: "rifle", accent: "#c77955" },
+  { id: "demo-awp-frost", name: "AWP | 冬痕", game: "CS2", category: copy.categories.sniper, kind: copy.categories.weapon, description: "", price: 12800, stock: 1, art: "sniper", accent: "#86b9aa" },
+  { id: "demo-knife-ember", name: "折刃刀 | 餘燼", game: "CS2", category: copy.categories.knife, kind: copy.categories.weapon, description: "", price: 9360, stock: 2, art: "knife", accent: "#d58b58" },
+  { id: "demo-gloves-moss", name: "手套 | 苔色", game: "CS2", category: copy.categories.gloves, kind: copy.categories.item, description: "", price: 6450, stock: 2, art: "gloves", accent: "#88a968" },
+  { id: "demo-case-night", name: "夜行武器箱", game: "CS2", category: copy.categories.case, kind: copy.categories.case, description: "", price: 520, stock: 8, art: "case", accent: "#6b86a3" }
 ].map((product) => ({
   ...product,
   source: "demo",
@@ -166,9 +166,7 @@ function productCardMarkup(product) {
   const artwork = product.iconUrl
     ? `<img class="product-art steam-product-art" src="${escapeHtml(product.iconUrl)}" alt="${safeName}" loading="lazy">`
     : productArtwork(product);
-  const stockLabel = isDemo
-    ? escapeHtml(t("product.demoStock"))
-    : product.source === "steam" || product.wear === copy.product.notApplicable
+  const stockLabel = product.source === "steam" || product.wear === copy.product.notApplicable
     ? escapeHtml(t("product.stock", { amount: product.stock }))
     : escapeHtml(t("product.float", { wear: product.wear }));
   const favoriteLabel = favorite ? t("product.favoriteRemove") : t("product.favoriteAdd");
@@ -180,7 +178,6 @@ function productCardMarkup(product) {
   return `
     <article class="product-card">
       <div class="product-visual art-${product.art}">
-        ${isDemo ? `<span class="product-demo-badge">${escapeHtml(t("product.demoBadge"))}</span>` : ""}
         <button class="favorite-button${favorite ? " is-favorite" : ""}" type="button" data-favorite="${escapeHtml(product.id)}" aria-label="${escapeHtml(favoriteLabel)}：${safeName}" aria-pressed="${favorite}">
           <img src="assets/icon_new/${favoriteIcon}" alt="" aria-hidden="true">
         </button>
@@ -188,11 +185,11 @@ function productCardMarkup(product) {
       </div>
       <div class="product-info">
         <h3 title="${safeName}">${safeName}</h3>
-        <div class="product-description">${escapeHtml(product.description)}${product.wear === copy.product.notApplicable ? "" : ` <span>／ ${escapeHtml(product.wear)}</span>`}</div>
+        ${isDemo ? "" : `<div class="product-description">${escapeHtml(product.description)}${product.wear === copy.product.notApplicable ? "" : ` <span>／ ${escapeHtml(product.wear)}</span>`}</div>`}
         <div class="product-favorite-count">${escapeHtml(t("home.marketFavoriteCount", { count: favoriteCount }))}</div>
         <div class="product-bottom">
           <div class="product-price">${priced ? `<span class="currency-symbol">${escapeHtml(t("product.currency"))}</span>${product.price.toLocaleString()}` : `<span class="unpriced-label">${escapeHtml(t("product.noPrice"))}</span>`}</div>
-          <div class="product-stock">${product.stock === 0 ? escapeHtml(t("product.unavailable")) : stockLabel}</div>
+          ${isDemo ? "" : `<div class="product-stock">${product.stock === 0 ? escapeHtml(t("product.unavailable")) : stockLabel}</div>`}
           <button class="add-button" type="button" data-add="${escapeHtml(product.id)}" aria-label="${escapeHtml(addLabel)}" ${isDemo || product.stock === 0 || !priced ? "disabled" : ""}>
             <img src="assets/icon_new/add_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="" aria-hidden="true">
           </button>
