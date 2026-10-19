@@ -33,6 +33,8 @@ const state = { category: copy.categories.allItems, game: "all", search: "", sor
 const favoriteCounts = new Map();
 const favoriteStatusChecks = new Set();
 let homeMarketMode = "popular";
+const selectedTradeItems = new Set();
+let tradeSearchTerm = "";
 const steamConfig = window.ELOSKIN2_STEAM_CONFIG || {};
 const $ = (selector) => document.querySelector(selector);
 const productGrid = $("#product-grid");
@@ -248,6 +250,28 @@ function renderHomeProducts() {
       }).catch(() => favoriteStatusChecks.delete(key));
     }
   }
+}
+
+function renderTradeItems() {
+  const term = tradeSearchTerm.trim().toLocaleLowerCase("zh-Hant");
+  const visibleItems = products.filter((product) => product.source === "demo"
+    && isProductPublished(product)
+    && product.name.toLocaleLowerCase("zh-Hant").includes(term));
+  $("#trade-item-count").textContent = visibleItems.length;
+  $("#trade-grid").innerHTML = visibleItems.map((product) => {
+    const selected = selectedTradeItems.has(product.id);
+    return `<button class="trade-item${selected ? " is-selected" : ""}" type="button" data-trade-item="${escapeHtml(product.id)}" aria-pressed="${selected}">
+      <span class="trade-item-art art-${escapeHtml(product.art)}">${productArtwork(product)}</span>
+      <span class="trade-item-info"><span class="trade-item-name">${escapeHtml(product.name)}</span><span class="trade-item-price">${product.price.toLocaleString()} <small>${escapeHtml(copy.product.currency)}</small></span></span>
+      <span class="trade-item-action">${escapeHtml(selected ? copy.trade.selectedItem : copy.trade.chooseItem)}</span>
+      <span class="trade-item-demo">DEMO</span>
+    </button>`;
+  }).join("");
+  $("#trade-empty").hidden = visibleItems.length > 0;
+  $("#trade-receive-total").textContent = products
+    .filter((product) => selectedTradeItems.has(product.id))
+    .reduce((total, product) => total + product.price, 0)
+    .toLocaleString();
 }
 
 function renderCart() {
@@ -499,6 +523,20 @@ document.querySelectorAll("[data-market-mode]").forEach((button) => {
   });
 });
 
+$("#trade-search").addEventListener("input", (event) => {
+  tradeSearchTerm = event.target.value;
+  renderTradeItems();
+});
+
+$("#trade-grid").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-trade-item]");
+  if (!button) return;
+  const id = button.dataset.tradeItem;
+  if (selectedTradeItems.has(id)) selectedTradeItems.delete(id);
+  else selectedTradeItems.add(id);
+  renderTradeItems();
+});
+
 document.querySelectorAll(".home-faq-trigger").forEach((button) => {
   button.addEventListener("click", () => {
     const expanded = button.getAttribute("aria-expanded") !== "true";
@@ -573,14 +611,6 @@ document.addEventListener("click", (event) => {
   showToast(t("messages.cartAdded"));
 });
 
-$("#trade-grid").addEventListener("click", (event) => {
-  const offer = event.target.closest("[data-offer]");
-  if (offer) {
-    showToast(t("trade.proposalUnavailable"));
-    return;
-  }
-});
-
 window.addEventListener("catalogvisibilitychange", () => {
   for (const [id] of state.cart) {
     const product = products.find((item) => item.id === id);
@@ -588,6 +618,7 @@ window.addEventListener("catalogvisibilitychange", () => {
   }
   renderProducts();
   renderHomeProducts();
+  renderTradeItems();
   renderCart();
 });
 
