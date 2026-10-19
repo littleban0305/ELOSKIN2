@@ -10,11 +10,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=23">
-    <script src="content.js?v=15" defer></script>
+    <link rel="stylesheet" href="styles.css?v=24">
+    <script src="content.js?v=16" defer></script>
     <script src="firebase-config.js?v=1" defer></script>
     <script src="steam-config.js?v=3" defer></script>
-    <script src="app.js?v=16" defer></script>
+    <script src="app.js?v=17" defer></script>
     <script src="auth.js?v=14" defer></script>
   </head>
   <body>
@@ -64,7 +64,6 @@
               <img src="assets/icon_new/arrow_forward_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="" aria-hidden="true">
             </button>
           </div>
-          <p class="home-market-status" id="home-market-status" role="status" aria-live="polite" data-copy="home.marketLoading"></p>
         </section>
         <section class="home-discovery section-wrap" hidden>
           <form class="home-search" id="home-search-form">
@@ -80,18 +79,6 @@
           <div><h1 data-copy="shop.title"></h1></div>
           <label class="search-box"><img src="assets/icon_new/search_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="" aria-hidden="true"><input id="search" type="search" data-copy-placeholder="shop.searchPlaceholder" data-copy-aria="shop.searchAria"><span class="search-shortcut">⌕</span></label>
         </div>
-        <section class="steam-stock-panel" aria-labelledby="steam-stock-title">
-          <div>
-            <div class="eyebrow section-eyebrow" data-copy="shop.inventoryEyebrow"></div>
-            <h2 id="steam-stock-title" data-copy="shop.inventoryTitle"></h2>
-            <p id="steam-inventory-status" role="status" aria-live="polite" data-copy="shop.inventoryInitialStatus"></p>
-            <small data-copy="shop.inventoryHint"></small>
-          </div>
-          <div class="steam-stock-actions">
-            <button class="secondary-button" id="refresh-steam-inventory" type="button" data-copy="shop.inventoryRefresh"></button>
-            <a class="primary-button" id="steam-trade-link" href="https://steamcommunity.com/tradeoffer/new/?partner=1923602505&amp;token=_h1a31-A" target="_blank" rel="noopener noreferrer"><span data-copy="shop.steamTrade"></span> <img class="button-icon" src="assets/icon_new/arrow_insert_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="" aria-hidden="true"></a>
-          </div>
-        </section>
         <div class="store-controls">
           <div class="filter-list" id="category-filters" data-copy-aria="shop.categoriesAria"></div>
           <div class="game-filters" id="game-filters" data-copy-aria="shop.gamesAria"></div>
@@ -107,7 +94,7 @@
         </div>
         <div class="product-grid" id="product-grid" aria-live="polite"></div>
         <div class="empty-state" id="empty-state" hidden data-copy="shop.empty"></div>
-        <div class="catalog-foot"><span><span data-copy="shop.countPrefix"></span> <strong id="product-total">0</strong> <span data-copy="shop.countSuffix"></span></span><span data-copy="shop.catalogNote"></span></div>
+        <div class="catalog-foot"><span><span data-copy="shop.countPrefix"></span> <strong id="product-total">0</strong> <span data-copy="shop.countSuffix"></span></span></div>
       </section>
 
       <section class="page-view section-wrap trade-page" id="page-trade" data-page-view="trade" hidden>
@@ -120,7 +107,8 @@
       </section>
 
       <section class="page-view section-wrap profile-page" id="page-profile" data-page-view="profile" hidden>
-        <div class="page-heading"><div><h1 data-copy="profile.title"></h1><p data-copy="profile.description"></p></div></div>
+        <div class="page-heading"><div><h1 data-copy="profile.title"></h1></div></div>
+        <div hidden>
         <div class="profile-layout">
           <section class="profile-card">
             <div class="profile-avatar" id="profile-avatar" data-copy-aria="profile.avatarAria"><span class="profile-avatar-initial" id="profile-avatar-initial">E</span><img class="profile-avatar-image" id="profile-avatar-image" alt="" hidden></div>
@@ -167,6 +155,7 @@
           </label>
           <div class="admin-product-list" id="admin-product-list"></div>
         </section>
+        </div>
       </section>
     </main>
 
@@ -179,7 +168,7 @@
       <section class="cart-modal" role="dialog" aria-modal="true" aria-labelledby="cart-title">
         <div class="cart-head"><div><div class="eyebrow section-eyebrow" data-copy="cart.eyebrow"></div><h2 id="cart-title" data-copy="cart.title"></h2></div><button class="close-button" id="close-cart" type="button" data-copy-aria="cart.closeAria"><img src="assets/icon_new/close_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="" aria-hidden="true"></button></div>
         <div class="cart-items" id="cart-items"></div><div class="cart-empty" id="cart-empty" data-copy="cart.empty"></div>
-        <div class="cart-footer"><div class="cart-total"><span data-copy="cart.total"></span><strong><span class="currency-symbol" data-copy="product.currency"></span><span id="cart-total">0</span></strong></div><button class="checkout-button" id="checkout" type="button" data-copy="cart.checkout"></button><p data-copy="cart.note"></p></div>
+        <div class="cart-footer"><div class="cart-total"><span data-copy="cart.total"></span><strong><span class="currency-symbol" data-copy="product.currency"></span><span id="cart-total">0</span></strong></div><button class="checkout-button" id="checkout" type="button" data-copy="cart.checkout"></button></div>
       </section>
     </div>
   </body>

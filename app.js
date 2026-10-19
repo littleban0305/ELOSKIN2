@@ -238,9 +238,6 @@ function renderHomeProducts() {
   const featured = uniqueProducts.sort((a, b) => sorter(a, b) || a.name.localeCompare(b.name, "zh-Hant")).slice(0, 5);
   $("#featured-grid").innerHTML = featured.map(productCardMarkup).join("");
   $("#featured-grid").hidden = featured.length === 0;
-  $("#home-market-status").textContent = featured.length
-    ? homeMarketMode === "popular" ? "" : t("home.marketUnpriced")
-    : t("home.marketEmpty");
   if (typeof window.eloGetProductFavorite === "function") {
     for (const product of featured) {
       const key = productFavoriteKey(product);
@@ -319,20 +316,12 @@ function steamInventoryProduct(item) {
 }
 
 async function loadSteamInventory() {
-  const status = $("#steam-inventory-status");
-  const refreshButton = $("#refresh-steam-inventory");
-  const homeStatus = $("#home-market-status");
   const endpoint = steamConfig.inventoryEndpoint;
   if (!endpoint) {
-    status.textContent = t("shop.inventoryUnconfigured");
-    homeStatus.textContent = t("home.marketUnavailable");
+    console.warn("Steam inventory sync skipped: inventory endpoint is not configured.");
     return;
   }
 
-  refreshButton.disabled = true;
-  refreshButton.textContent = t("shop.refreshLoading");
-  status.textContent = t("shop.inventoryLoading");
-  homeStatus.textContent = t("home.marketLoading");
   try {
     const response = await fetch(endpoint);
     let data;
@@ -343,7 +332,6 @@ async function loadSteamInventory() {
     }
     if (!response.ok) {
       const errors = {
-        steam_rate_limited: t("shop.inventoryRateLimited"),
         inventory_unavailable: t("shop.inventoryUnavailable"),
         steam_unavailable: t("shop.steamUnavailable"),
         invalid_steam_response: t("shop.invalidSteamResponse"),
@@ -364,26 +352,11 @@ async function loadSteamInventory() {
     renderHomeProducts();
     renderCart();
     window.dispatchEvent(new Event("catalogproductschange"));
-
-    const updatedAt = new Intl.DateTimeFormat("zh-TW", { hour: "2-digit", minute: "2-digit" }).format(new Date());
-    const totalQuantity = Number(data.tradableQuantity) || 0;
-    status.textContent = liveProducts.length
-      ? t("shop.stockSynced", { types: liveProducts.length, amount: totalQuantity, time: updatedAt, truncated: data.truncated ? t("shop.inventoryTruncated") : "" })
-      : t("shop.inventoryEmpty");
-    if (!liveProducts.length) homeStatus.textContent = products.some((product) => product.source === "demo")
-      ? t("home.marketDemoNotice")
-      : t("home.marketEmpty");
   } catch (error) {
     const message = error instanceof TypeError
       ? t("shop.workerUnavailable")
       : error instanceof Error ? error.message : t("shop.genericInventoryError");
-    status.textContent = message;
-    homeStatus.textContent = products.some((product) => product.source === "demo")
-      ? `${message} ${t("home.marketDemoNotice")}`
-      : message;
-  } finally {
-    refreshButton.disabled = false;
-    refreshButton.textContent = t("shop.inventoryRefresh");
+    console.warn(`Steam inventory sync failed: ${message}`, error);
   }
 }
 
@@ -609,14 +582,6 @@ $("#open-cart").addEventListener("click", () => {
   cartModal.hidden = false;
   $("#close-cart").focus();
 });
-
-$("#refresh-steam-inventory").addEventListener("click", loadSteamInventory);
-const steamTradeLink = $("#steam-trade-link");
-if (typeof steamConfig.tradeOfferUrl === "string" && steamConfig.tradeOfferUrl.startsWith("https://steamcommunity.com/tradeoffer/")) {
-  steamTradeLink.href = steamConfig.tradeOfferUrl;
-} else {
-  steamTradeLink.hidden = true;
-}
 
 function closeCart() {
   cartModal.hidden = true;
