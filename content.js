@@ -36,7 +36,9 @@ window.ELOSKIN2_TEXT = {
     marketMoreAria: "前往商店瀏覽全部商品",
     marketUnavailable: "暫時無法載入商品，請稍後再試。",
     marketFavoriteCount: "{count} 人收藏",
-    marketSectionAria: "首頁商品推薦"
+    marketSectionAria: "首頁商品推薦",
+    faqTitle: "常見問題",
+    faqSubtitle: "在這裡找到各種問題的解答。"
   },
   categories: {
     allItems: "全部物品",
