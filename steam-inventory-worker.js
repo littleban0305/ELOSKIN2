@@ -3,6 +3,7 @@ const APP_ID = "730";
 const CONTEXT_ID = "2";
 const PAGE_SIZE = 2000;
 const MAX_PAGES = 10;
+const INVENTORY_CACHE_TTL_SECONDS = 300;
 const ICON_BASE = "https://community.cloudflare.steamstatic.com/economy/image/";
 const STEAM_OPENID_URL = "https://steamcommunity.com/openid/login";
 const FIREBASE_CUSTOM_TOKEN_AUDIENCE = "https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit";
@@ -499,6 +500,13 @@ export default {
       return jsonResponse({ error: "method_not_allowed" }, 405, corsHeaders);
     }
 
+    const cacheKey = new Request(new URL("/__cache/inventory-v1", requestUrl.origin), { method: "GET" });
+    const cache = caches.default;
+    const cachedResponse = await cache.match(cacheKey);
+    if (cachedResponse) {
+      return jsonResponse(await cachedResponse.json(), 200, corsHeaders);
+    }
+
     let result;
     try {
       result = await fetchSteamInventory();
@@ -508,11 +516,18 @@ export default {
     if (result.error) {
       return jsonResponse({ error: result.error }, result.error === "steam_rate_limited" ? 429 : 502, corsHeaders);
     }
-    return jsonResponse({
+    const inventory = {
       items: result.items,
       totalInventoryCount: result.totalInventoryCount,
       tradableQuantity: result.items.reduce((total, item) => total + item.amount, 0),
       truncated: result.truncated
-    }, 200, corsHeaders);
+    };
+    await cache.put(cacheKey, new Response(JSON.stringify(inventory), {
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": `public, max-age=${INVENTORY_CACHE_TTL_SECONDS}`
+      }
+    }));
+    return jsonResponse(inventory, 200, corsHeaders);
   }
 };
