@@ -110,6 +110,7 @@ function updateAccount(user) {
   document.querySelector("#profile-shortcut").textContent = user ? initial : authText("nav.account");
   document.querySelector("#profile-shortcut").setAttribute("aria-label", user ? authText("nav.profileAria") : authText("nav.accountAria"));
   document.querySelector("#profile-shortcut").classList.toggle("signed-in", Boolean(user));
+  document.querySelector("#open-cart").hidden = !user;
   document.querySelector("#sign-out").hidden = !user;
   avatarUploadButton.hidden = !user;
   document.querySelector("#auth-form").hidden = Boolean(user);

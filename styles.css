@@ -4527,7 +4527,7 @@ body :is(h2, h3, h4, h5, h6) * {
 .home-faq-copy {
   grid-column: 1;
   align-self: start;
-  padding-left: clamp(56px, 8vw, 112px);
+  padding-left: 0;
 }
 
 .home-faq-copy h2 {
@@ -4656,10 +4656,6 @@ body :is(h2, h3, h4, h5, h6) * {
     grid-template-columns: 1fr;
     min-height: 150px;
     padding-block: 24px 48px;
-  }
-
-  .home-faq-copy {
-    padding-left: clamp(24px, 8vw, 40px);
   }
 
   .home-faq-list {
