@@ -4366,5 +4366,22 @@ html {
     width: 42px;
     border-radius: 10px;
   }
+}
 
+.account-button,
+.product-favorite-count,
+.auth-tab,
+.cart-total > span:first-child,
+.checkout-button {
+  font-size: 14px;
+}
+
+.page-heading h1 {
+  font-size: clamp(32px, 3.4vw, 48px);
+}
+
+@media (max-width: 720px) {
+  .page-heading h1 {
+    font-size: clamp(30px, 7vw, 42px);
+  }
 }
