@@ -4527,9 +4527,9 @@ body :is(h2, h3, h4, h5, h6) * {
 .home-faq-copy {
   grid-column: 1;
   align-self: start;
-  justify-self: center;
+  justify-self: start;
   width: max-content;
-  padding-left: 0;
+  margin-left: clamp(36px, 6vw, 76px);
 }
 
 .home-faq-copy h2 {
