@@ -1,6 +1,6 @@
 # ELOSKIN2
 
-ELOSKIN2 是供朋友使用的 CS2 與 Roblox 道具交易網站。目前介面暫時精簡：首頁顯示 banner 與 Steam 庫存商品推薦列，商店只保留標題和搜尋欄，交易頁只保留標題；商品與玩家刊登範例已移除。登入、註冊及管理者商品上／下架功能仍保留。
+ELOSKIN2 是供朋友使用的 CS2 與 Roblox 道具交易網站。目前首頁及商店會顯示一組明確標示的 CS2 展示商品；展示商品沒有實際庫存，不能加入購物車。Steam 即時庫存成功載入時會取代這組展示商品。交易頁暫時只保留標題；登入、註冊及管理者商品上／下架功能仍保留。
 
 ## 編輯網站文字
 
@@ -20,7 +20,7 @@ ELOSKIN2 是供朋友使用的 CS2 與 Roblox 道具交易網站。目前介面�
 
 此專案使用 GitHub Actions 自動發布。將變更推送至 `main` 分支後，可在 GitHub repo 的 **Actions** 頁面查看發布狀態；首次成功發布後，網站網址會是 `https://littleban0305.github.io/ELOSKIN2/`。公開 Pages 網站任何人都能瀏覽，並看見網站上顯示的 Steam 交易連結。
 
-首頁會自動讀取 Worker 提供的 CS2 可交易庫存，並依全站收藏數、EC 價格排序。EC 價格需在 `steam-config.js` 的 `ecPrices` 設定；未定價商品仍會顯示，但不能加入購物車。商店商品清單與交易刊登仍未恢復，也不會建立真實訂單。
+首頁與商店會讀取 Worker 提供的 CS2 可交易庫存，並依全站收藏數、EC 價格排序。Steam 無法連線或限流時會顯示展示商品作為暫用畫面；這些假商品會標示「展示商品」，不代表真實庫存，也不能購買。Steam 庫存成功載入後會取代展示商品。EC 價格需在 `steam-config.js` 的 `ecPrices` 設定；未定價的實際商品仍會顯示，但不能加入購物車。網站不會建立真實訂單。
 
 ## 啟用 Steam 庫存讀取
 
@@ -32,9 +32,9 @@ GitHub Pages 是靜態網站，不能直接讀取 Steam 庫存 API（Steam 不�
    - 若也要在本機測試，另外加上本機網址的來源，例如 `http://localhost:8000`。用逗號分隔，不能加空格：`https://alice.github.io,http://localhost:8000`。
    - 設定位置：Cloudflare Dashboard → Workers & Pages → 選擇你的 Worker → Settings → Variables and Secrets → Add variable。名稱填 `ALLOWED_ORIGINS`，值填上面整理好的網址，儲存後重新部署／生效。
    - 如果網站使用自訂網域，填自訂網域的開頭，例如 `https://skins.example.com`。不要填 `file://` 開啟的本機檔案網址。
-3. 確認 Steam 個人資料及物品庫設為公開。此 Worker 固定讀取 Steam ID `76561199883868233` 的 CS2（App 730）物品庫，只回傳可交易物品，最多讀取 20,000 件；Steam 上游回應會由 Cloudflare 快取 60 秒。
+3. 確認 Steam 個人資料及物品庫設為公開。此 Worker 固定讀取 Steam ID `76561199883868233` 的 CS2（App 730）物品庫，只回傳可交易物品，最多讀取 20,000 件；Steam 上游分頁回應會由 Cloudflare 快取 60 秒，成功取得的完整庫存會快取 5 分鐘。
 4. Worker 網址已接入 `steam-config.js`：`https://eloskin2.littleban0305.workers.dev/inventory`。目前 `ALLOWED_ORIGINS` 已允許 `https://littleban0305.github.io`。
-5. 目前庫存面板與同步按鈕已隱藏，網站不會在介面顯示 Steam 庫存。若日後恢復商店功能，可在 `steam-config.js` 的 `ecPrices` 依 Steam 市場名稱填入正整數 EC。
+5. 庫存面板、同步按鈕與商店商品列表會顯示在商店頁。可在 `steam-config.js` 的 `ecPrices` 依 Steam 市場名稱填入正整數 EC。
 
 Steam 交易連結會公開在網站前端；任何能瀏覽網站的人都能看到該連結。不要將 Steam 密碼、API 金鑰或登入 Cookie 放進 Worker 或前端。
 

@@ -1,6 +1,19 @@
 const copy = window.ELOSKIN2_TEXT;
 const t = window.eloText;
 const products = [];
+const demoProducts = [
+  { id: "demo-ak47-rust", name: "AK-47 | 赤砂", game: "CS2", category: copy.categories.rifle, kind: copy.categories.weapon, description: copy.product.demoDescription, price: 4260, stock: 3, art: "rifle", accent: "#c77955" },
+  { id: "demo-awp-frost", name: "AWP | 冬痕", game: "CS2", category: copy.categories.sniper, kind: copy.categories.weapon, description: copy.product.demoDescription, price: 12800, stock: 1, art: "sniper", accent: "#86b9aa" },
+  { id: "demo-knife-ember", name: "折刃刀 | 餘燼", game: "CS2", category: copy.categories.knife, kind: copy.categories.weapon, description: copy.product.demoDescription, price: 9360, stock: 2, art: "knife", accent: "#d58b58" },
+  { id: "demo-gloves-moss", name: "手套 | 苔色", game: "CS2", category: copy.categories.gloves, kind: copy.categories.item, description: copy.product.demoDescription, price: 6450, stock: 2, art: "gloves", accent: "#88a968" },
+  { id: "demo-case-night", name: "夜行武器箱", game: "CS2", category: copy.categories.case, kind: copy.categories.case, description: copy.product.demoDescription, price: 520, stock: 8, art: "case", accent: "#6b86a3" }
+].map((product) => ({
+  ...product,
+  source: "demo",
+  wear: copy.product.notApplicable,
+  label: product.category.toUpperCase()
+}));
+products.push(...demoProducts);
 window.eloProductCatalog = products;
 window.eloHiddenProductIds = new Set();
 window.eloProductVisibilityId = (product) => product.source === "steam"
@@ -149,19 +162,25 @@ function productCardMarkup(product) {
     ? "heart_minus_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png"
     : "heart_plus_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png";
   const priced = Number.isFinite(product.price) && product.price > 0;
+  const isDemo = product.source === "demo";
   const artwork = product.iconUrl
     ? `<img class="product-art steam-product-art" src="${escapeHtml(product.iconUrl)}" alt="${safeName}" loading="lazy">`
     : productArtwork(product);
-  const stockLabel = product.source === "steam" || product.wear === copy.product.notApplicable
+  const stockLabel = isDemo
+    ? escapeHtml(t("product.demoStock"))
+    : product.source === "steam" || product.wear === copy.product.notApplicable
     ? escapeHtml(t("product.stock", { amount: product.stock }))
     : escapeHtml(t("product.float", { wear: product.wear }));
   const favoriteLabel = favorite ? t("product.favoriteRemove") : t("product.favoriteAdd");
-  const addLabel = priced && product.stock > 0
+  const addLabel = isDemo
+    ? t("product.demoUnavailable")
+    : priced && product.stock > 0
     ? t("product.addToCart", { name: product.name })
     : !priced ? t("product.unpriced", { name: product.name }) : t("product.outOfStock", { name: product.name });
   return `
     <article class="product-card">
       <div class="product-visual art-${product.art}">
+        ${isDemo ? `<span class="product-demo-badge">${escapeHtml(t("product.demoBadge"))}</span>` : ""}
         <button class="favorite-button${favorite ? " is-favorite" : ""}" type="button" data-favorite="${escapeHtml(product.id)}" aria-label="${escapeHtml(favoriteLabel)}：${safeName}" aria-pressed="${favorite}">
           <img src="assets/icon_new/${favoriteIcon}" alt="" aria-hidden="true">
         </button>
@@ -174,7 +193,7 @@ function productCardMarkup(product) {
         <div class="product-bottom">
           <div class="product-price">${priced ? `<span class="currency-symbol">${escapeHtml(t("product.currency"))}</span>${product.price.toLocaleString()}` : `<span class="unpriced-label">${escapeHtml(t("product.noPrice"))}</span>`}</div>
           <div class="product-stock">${product.stock === 0 ? escapeHtml(t("product.unavailable")) : stockLabel}</div>
-          <button class="add-button" type="button" data-add="${escapeHtml(product.id)}" aria-label="${escapeHtml(addLabel)}" ${product.stock === 0 || !priced ? "disabled" : ""}>
+          <button class="add-button" type="button" data-add="${escapeHtml(product.id)}" aria-label="${escapeHtml(addLabel)}" ${isDemo || product.stock === 0 || !priced ? "disabled" : ""}>
             <img src="assets/icon_new/add_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="" aria-hidden="true">
           </button>
         </div>
@@ -335,7 +354,7 @@ async function loadSteamInventory() {
     if (!Array.isArray(data.items)) throw new Error(t("shop.missingItems"));
 
     const liveProducts = data.items.map(steamInventoryProduct);
-    products.splice(0, products.length, ...products.filter((product) => product.source !== "steam"), ...liveProducts);
+    products.splice(0, products.length, ...products.filter((product) => product.source !== "steam" && (!liveProducts.length || product.source !== "demo")), ...liveProducts);
     for (const [id, quantity] of state.cart) {
       const currentProduct = products.find((product) => product.id === id);
       if (!currentProduct || currentProduct.stock < quantity || !Number.isFinite(currentProduct.price)) state.cart.delete(id);
@@ -351,13 +370,17 @@ async function loadSteamInventory() {
     status.textContent = liveProducts.length
       ? t("shop.stockSynced", { types: liveProducts.length, amount: totalQuantity, time: updatedAt, truncated: data.truncated ? t("shop.inventoryTruncated") : "" })
       : t("shop.inventoryEmpty");
-    if (!liveProducts.length) homeStatus.textContent = t("home.marketEmpty");
+    if (!liveProducts.length) homeStatus.textContent = products.some((product) => product.source === "demo")
+      ? t("home.marketDemoNotice")
+      : t("home.marketEmpty");
   } catch (error) {
     const message = error instanceof TypeError
       ? t("shop.workerUnavailable")
       : error instanceof Error ? error.message : t("shop.genericInventoryError");
     status.textContent = message;
-    homeStatus.textContent = message;
+    homeStatus.textContent = products.some((product) => product.source === "demo")
+      ? `${message} ${t("home.marketDemoNotice")}`
+      : message;
   } finally {
     refreshButton.disabled = false;
     refreshButton.textContent = t("shop.inventoryRefresh");

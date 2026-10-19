@@ -10,11 +10,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=22">
-    <script src="content.js?v=14" defer></script>
+    <link rel="stylesheet" href="styles.css?v=23">
+    <script src="content.js?v=15" defer></script>
     <script src="firebase-config.js?v=1" defer></script>
     <script src="steam-config.js?v=3" defer></script>
-    <script src="app.js?v=15" defer></script>
+    <script src="app.js?v=16" defer></script>
     <script src="auth.js?v=14" defer></script>
   </head>
   <body>
@@ -80,7 +80,6 @@
           <div><h1 data-copy="shop.title"></h1></div>
           <label class="search-box"><img src="assets/icon_new/search_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="" aria-hidden="true"><input id="search" type="search" data-copy-placeholder="shop.searchPlaceholder" data-copy-aria="shop.searchAria"><span class="search-shortcut">⌕</span></label>
         </div>
-        <div hidden>
         <section class="steam-stock-panel" aria-labelledby="steam-stock-title">
           <div>
             <div class="eyebrow section-eyebrow" data-copy="shop.inventoryEyebrow"></div>
@@ -109,7 +108,6 @@
         <div class="product-grid" id="product-grid" aria-live="polite"></div>
         <div class="empty-state" id="empty-state" hidden data-copy="shop.empty"></div>
         <div class="catalog-foot"><span><span data-copy="shop.countPrefix"></span> <strong id="product-total">0</strong> <span data-copy="shop.countSuffix"></span></span><span data-copy="shop.catalogNote"></span></div>
-        </div>
       </section>
 
       <section class="page-view section-wrap trade-page" id="page-trade" data-page-view="trade" hidden>
