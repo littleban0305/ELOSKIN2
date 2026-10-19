@@ -9,6 +9,43 @@
   --green: #c4f06d;
   --green-dark: #24351d;
   --font: "DM Sans", "Noto Sans TC", sans-serif;
+  position: relative;
+}
+
+main::before,
+main::after {
+  position: fixed;
+  z-index: 0;
+  top: 92px;
+  bottom: 28px;
+  width: clamp(20px, 2.4vw, 36px);
+  border: 1px solid rgba(148, 160, 168, .12);
+  background-image:
+    linear-gradient(rgba(148, 160, 168, .1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 160, 168, .1) 1px, transparent 1px);
+  background-size: 32px 32px;
+  content: "";
+  pointer-events: none;
+}
+
+main::before {
+  left: 10px;
+}
+
+main::after {
+  right: 10px;
+}
+
+@media (max-width: 720px) {
+  main::before,
+  main::after {
+    display: none;
+  }
+}
+
+main > .page-view {
+  position: relative;
+  z-index: 1;
 }
 
 * { box-sizing: border-box; }
