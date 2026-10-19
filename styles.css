@@ -4481,14 +4481,14 @@ body :is(h2, h3, h4, h5, h6) * {
 .home-market-more {
   position: absolute;
   z-index: 3;
-  top: -24px;
+  top: 0;
   right: 0;
   width: 42px;
-  transform: translateY(-50%);
+  transform: translateY(calc(-100% - 6px));
 }
 
 .home-market-more:hover {
-  transform: translate(2px, -50%);
+  transform: translate(2px, calc(-100% - 6px));
 }
 
 @media (max-width: 720px) {
@@ -4501,11 +4501,12 @@ body :is(h2, h3, h4, h5, h6) * {
   }
 
   .home-market-more {
-    top: -20px;
+    top: 0;
     width: 38px;
+    transform: translateY(calc(-100% - 6px));
   }
 
   .home-market-more:hover {
-    transform: translate(2px, -50%);
+    transform: translate(2px, calc(-100% - 6px));
   }
 }
