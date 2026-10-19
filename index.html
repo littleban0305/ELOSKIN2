@@ -10,11 +10,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=45">
+    <link rel="stylesheet" href="styles.css?v=46">
     <script src="content.js?v=16" defer></script>
     <script src="firebase-config.js?v=1" defer></script>
     <script src="steam-config.js?v=3" defer></script>
-    <script src="app.js?v=18" defer></script>
+    <script src="app.js?v=19" defer></script>
     <script src="auth.js?v=15" defer></script>
   </head>
   <body>
@@ -27,6 +27,7 @@
         <a class="nav-link active" href="#home" data-page-link="home" data-copy="nav.home"></a>
         <a class="nav-link" href="#shop" data-page-link="shop" data-copy="nav.shop"></a>
         <a class="nav-link" href="#trade" data-page-link="trade" data-copy="nav.trade"></a>
+        <span class="nav-active-indicator" aria-hidden="true"></span>
       </nav>
       <div class="header-actions header-utility-card">
         <button class="cart-button" id="open-cart" type="button" data-copy-aria="nav.cartAria" hidden>
@@ -71,36 +72,42 @@
             <p data-copy="home.faqSubtitle"></p>
           </div>
           <div class="home-faq-list">
-            <details class="home-faq-item" open>
-              <summary>
+            <div class="home-faq-item is-open">
+              <button class="home-faq-trigger" type="button" aria-expanded="true" aria-controls="faq-answer-purchase">
                 <span data-copy="home.faqItems.purchase.question"></span>
                 <span class="home-faq-icons" aria-hidden="true">
                   <img class="home-faq-icon-add" src="assets/icon_new/add_circle_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="">
                   <img class="home-faq-icon-minus" src="assets/icon_new/minus_circle_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="">
                 </span>
-              </summary>
-              <p data-copy="home.faqItems.purchase.answer"></p>
-            </details>
-            <details class="home-faq-item">
-              <summary>
+              </button>
+              <div class="home-faq-answer" id="faq-answer-purchase" aria-hidden="false">
+                <div class="home-faq-answer-inner"><p data-copy="home.faqItems.purchase.answer"></p></div>
+              </div>
+            </div>
+            <div class="home-faq-item">
+              <button class="home-faq-trigger" type="button" aria-expanded="false" aria-controls="faq-answer-demo">
                 <span data-copy="home.faqItems.demo.question"></span>
                 <span class="home-faq-icons" aria-hidden="true">
                   <img class="home-faq-icon-add" src="assets/icon_new/add_circle_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="">
                   <img class="home-faq-icon-minus" src="assets/icon_new/minus_circle_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="">
                 </span>
-              </summary>
-              <p data-copy="home.faqItems.demo.answer"></p>
-            </details>
-            <details class="home-faq-item">
-              <summary>
+              </button>
+              <div class="home-faq-answer" id="faq-answer-demo" aria-hidden="true" inert>
+                <div class="home-faq-answer-inner"><p data-copy="home.faqItems.demo.answer"></p></div>
+              </div>
+            </div>
+            <div class="home-faq-item">
+              <button class="home-faq-trigger" type="button" aria-expanded="false" aria-controls="faq-answer-trade">
                 <span data-copy="home.faqItems.trade.question"></span>
                 <span class="home-faq-icons" aria-hidden="true">
                   <img class="home-faq-icon-add" src="assets/icon_new/add_circle_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="">
                   <img class="home-faq-icon-minus" src="assets/icon_new/minus_circle_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="">
                 </span>
-              </summary>
-              <p data-copy="home.faqItems.trade.answer"></p>
-            </details>
+              </button>
+              <div class="home-faq-answer" id="faq-answer-trade" aria-hidden="true" inert>
+                <div class="home-faq-answer-inner"><p data-copy="home.faqItems.trade.answer"></p></div>
+              </div>
+            </div>
           </div>
         </section>
         <section class="home-discovery section-wrap" hidden>

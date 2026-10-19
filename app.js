@@ -365,6 +365,23 @@ function showToast(message) {
   toastTimer = window.setTimeout(() => toast.classList.remove("visible"), 2400);
 }
 
+function updateNavIndicator() {
+  const nav = document.querySelector(".main-nav");
+  const activeLink = nav?.querySelector(".nav-link.active");
+  const indicator = nav?.querySelector(".nav-active-indicator");
+  if (!activeLink || !indicator) return;
+  indicator.style.width = `${activeLink.offsetWidth}px`;
+  indicator.style.transform = `translateX(${activeLink.offsetLeft}px)`;
+}
+
+function updateMarketIndicator() {
+  const tabs = document.querySelector(".market-tabs");
+  const activeTab = tabs?.querySelector(".market-tab.active");
+  if (!tabs || !activeTab) return;
+  tabs.style.setProperty("--active-tab-left", `${activeTab.offsetLeft}px`);
+  tabs.style.setProperty("--active-tab-width", `${activeTab.offsetWidth}px`);
+}
+
 function navigateTo(page, shouldScroll = true) {
   const validPages = ["home", "shop", "trade", "profile"];
   const destination = validPages.includes(page) ? page : "home";
@@ -379,6 +396,7 @@ function navigateTo(page, shouldScroll = true) {
     if (active) link.setAttribute("aria-current", "page");
     else link.removeAttribute("aria-current");
   });
+  updateNavIndicator();
   if (shouldScroll) window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -414,6 +432,10 @@ window.addEventListener("hashchange", () => {
   const destination = location.hash.slice(1);
   if (["guide", "safety", "marketplace"].includes(destination)) showHomeAnchor(destination);
   else navigateTo(destination);
+});
+window.addEventListener("resize", () => {
+  updateNavIndicator();
+  updateMarketIndicator();
 });
 
 categoryFilters.addEventListener("click", (event) => {
@@ -472,7 +494,20 @@ document.querySelectorAll("[data-market-mode]").forEach((button) => {
       tab.classList.toggle("active", active);
       tab.setAttribute("aria-pressed", String(active));
     });
+    updateMarketIndicator();
     renderHomeProducts();
+  });
+});
+
+document.querySelectorAll(".home-faq-trigger").forEach((button) => {
+  button.addEventListener("click", () => {
+    const expanded = button.getAttribute("aria-expanded") !== "true";
+    const item = button.closest(".home-faq-item");
+    const answer = document.getElementById(button.getAttribute("aria-controls"));
+    button.setAttribute("aria-expanded", String(expanded));
+    item.classList.toggle("is-open", expanded);
+    answer.setAttribute("aria-hidden", String(!expanded));
+    answer.inert = !expanded;
   });
 });
 
@@ -618,6 +653,7 @@ renderHomeCategories();
 renderProducts();
 renderHomeProducts();
 renderCart();
+updateMarketIndicator();
 const initialDestination = location.hash.slice(1) || "home";
 if (["guide", "safety", "marketplace"].includes(initialDestination)) showHomeAnchor(initialDestination);
 else {
