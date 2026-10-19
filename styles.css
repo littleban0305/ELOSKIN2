@@ -4472,7 +4472,7 @@ body :is(h2, h3, h4, h5, h6) * {
 
 .home-faq-copy h2 {
   margin: 0 0 12px;
-  font-size: var(--site-heading-size);
+  font-size: var(--site-heading-size) !important;
   font-weight: 600;
   letter-spacing: -.045em;
 }
