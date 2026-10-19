@@ -4371,6 +4371,7 @@ html {
 :root {
   --site-copy-size: 15px;
   --site-heading-size: clamp(32px, 3.4vw, 48px);
+  --site-subheading-size: clamp(18px, 1.6vw, 22px);
 }
 
 body * {
@@ -4382,9 +4383,15 @@ body :is(h1, h2, h3, h4, h5, h6) * {
   font-size: var(--site-heading-size) !important;
 }
 
+body :is(h2, h3, h4, h5, h6),
+body :is(h2, h3, h4, h5, h6) * {
+  font-size: var(--site-subheading-size) !important;
+}
+
 @media (max-width: 720px) {
   :root {
     --site-copy-size: 14px;
     --site-heading-size: clamp(30px, 7vw, 42px);
+    --site-subheading-size: clamp(17px, 4.6vw, 20px);
   }
 }
