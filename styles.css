@@ -4482,6 +4482,74 @@ body :is(h2, h3, h4, h5, h6) * {
   color: #a2aaa1;
 }
 
+.home-faq-list {
+  grid-column: 2;
+  align-self: start;
+}
+
+.home-faq-item {
+  position: relative;
+  padding-block: 16px;
+}
+
+.home-faq-item::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 1px;
+  background: rgba(255, 255, 255, .12);
+  content: "";
+}
+
+.home-faq-item:first-child {
+  padding-top: 0;
+}
+
+.home-faq-item summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  color: #eef3f4;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+
+.home-faq-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.home-faq-icons {
+  display: grid;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+}
+
+.home-faq-icons img {
+  grid-area: 1 / 1;
+  width: 24px;
+  height: 24px;
+}
+
+.home-faq-icon-minus,
+.home-faq-item[open] .home-faq-icon-add {
+  display: none;
+}
+
+.home-faq-item[open] .home-faq-icon-minus {
+  display: block;
+}
+
+.home-faq-item > p {
+  margin: 12px 44px 0 0;
+  color: #a2aaa1;
+  line-height: 1.8;
+}
+
 .featured-grid {
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
@@ -4524,6 +4592,10 @@ body :is(h2, h3, h4, h5, h6) * {
     grid-template-columns: 1fr;
     min-height: 150px;
     padding-block: 24px 48px;
+  }
+
+  .home-faq-list {
+    grid-column: 1;
   }
 
   .featured-grid {

@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=34">
+    <link rel="stylesheet" href="styles.css?v=35">
     <script src="content.js?v=16" defer></script>
     <script src="firebase-config.js?v=1" defer></script>
     <script src="steam-config.js?v=3" defer></script>
@@ -69,6 +69,38 @@
           <div class="home-faq-copy">
             <h2 id="home-faq-title" data-copy="home.faqTitle"></h2>
             <p data-copy="home.faqSubtitle"></p>
+          </div>
+          <div class="home-faq-list">
+            <details class="home-faq-item" open>
+              <summary>
+                <span data-copy="home.faqItems.purchase.question"></span>
+                <span class="home-faq-icons" aria-hidden="true">
+                  <img class="home-faq-icon-add" src="assets/icon_new/add_circle_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="">
+                  <img class="home-faq-icon-minus" src="assets/icon_new/minus_circle_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="">
+                </span>
+              </summary>
+              <p data-copy="home.faqItems.purchase.answer"></p>
+            </details>
+            <details class="home-faq-item">
+              <summary>
+                <span data-copy="home.faqItems.demo.question"></span>
+                <span class="home-faq-icons" aria-hidden="true">
+                  <img class="home-faq-icon-add" src="assets/icon_new/add_circle_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="">
+                  <img class="home-faq-icon-minus" src="assets/icon_new/minus_circle_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="">
+                </span>
+              </summary>
+              <p data-copy="home.faqItems.demo.answer"></p>
+            </details>
+            <details class="home-faq-item">
+              <summary>
+                <span data-copy="home.faqItems.trade.question"></span>
+                <span class="home-faq-icons" aria-hidden="true">
+                  <img class="home-faq-icon-add" src="assets/icon_new/add_circle_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="">
+                  <img class="home-faq-icon-minus" src="assets/icon_new/minus_circle_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="">
+                </span>
+              </summary>
+              <p data-copy="home.faqItems.trade.answer"></p>
+            </details>
           </div>
         </section>
         <section class="home-discovery section-wrap" hidden>

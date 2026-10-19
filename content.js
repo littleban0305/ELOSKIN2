@@ -38,7 +38,21 @@ window.ELOSKIN2_TEXT = {
     marketFavoriteCount: "{count} 人收藏",
     marketSectionAria: "首頁商品推薦",
     faqTitle: "常見問題",
-    faqSubtitle: "在這裡找到各種問題的解答。"
+    faqSubtitle: "在這裡找到各種問題的解答。",
+    faqItems: {
+      purchase: {
+        question: "如何購買商品？",
+        answer: "選擇喜歡的商品加入購物車，再依頁面指示完成購買流程。"
+      },
+      demo: {
+        question: "展示商品可以直接購買嗎？",
+        answer: "目前展示商品僅供瀏覽，尚不能直接購買。"
+      },
+      trade: {
+        question: "如何查看交易進度？",
+        answer: "登入後可前往個人頁面查看相關交易與訂單狀態。"
+      }
+    }
   },
   categories: {
     allItems: "全部物品",
