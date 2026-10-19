@@ -4533,10 +4533,9 @@ body :is(h2, h3, h4, h5, h6) * {
 .home-faq-copy {
   grid-column: 1;
   align-self: start;
-  justify-self: center;
+  justify-self: start;
   width: max-content;
-  margin-left: 0;
-  text-align: center;
+  margin-left: clamp(36px, 6vw, 76px);
 }
 
 .home-faq-copy h2 {
@@ -4554,6 +4553,8 @@ body :is(h2, h3, h4, h5, h6) * {
 .home-faq-list {
   grid-column: 2;
   align-self: start;
+  justify-self: center;
+  width: 90%;
 }
 
 .home-faq-item {
@@ -4669,6 +4670,8 @@ body :is(h2, h3, h4, h5, h6) * {
 
   .home-faq-list {
     grid-column: 1;
+    justify-self: stretch;
+    width: 100%;
   }
 
   .featured-grid {
