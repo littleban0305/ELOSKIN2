@@ -30,34 +30,35 @@ const games = [
   { id: "ROBLOX RIVALS", label: copy.games.rivals }
 ];
 const state = { category: copy.categories.allItems, game: "all", search: "", sort: "featured", cart: new Map(), favorites: new Set() };
+const tradeState = { category: copy.categories.allItems, game: "all", search: "", sort: "featured", side: "offer", offer: [], receive: [] };
 const favoriteCounts = new Map();
 const favoriteStatusChecks = new Set();
 let homeMarketMode = "popular";
-const selectedTradeItems = new Set();
-let tradeSearchTerm = "";
 const steamConfig = window.ELOSKIN2_STEAM_CONFIG || {};
 const $ = (selector) => document.querySelector(selector);
 const productGrid = $("#product-grid");
 const categoryFilters = $("#category-filters");
 const gameFilters = $("#game-filters");
+const tradeCategoryFilters = $("#trade-category-filters");
+const tradeGameFilters = $("#trade-game-filters");
 const cartModal = $("#cart-modal");
 let toastTimer;
 
-function renderFilters() {
-  categoryFilters.innerHTML = categories.map((category) =>
-    `<button class="filter-button${state.category === category ? " active" : ""}" type="button" data-category="${escapeHtml(category)}" aria-pressed="${state.category === category}">${escapeHtml(category)}</button>`
+function renderFilters(categoryContainer = categoryFilters, gameContainer = gameFilters, filterState = state) {
+  categoryContainer.innerHTML = categories.map((category) =>
+    `<button class="filter-button${filterState.category === category ? " active" : ""}" type="button" data-category="${escapeHtml(category)}" aria-pressed="${filterState.category === category}">${escapeHtml(category)}</button>`
   ).join("");
-  gameFilters.innerHTML = games.map((game) =>
-    `<button class="game-button${state.game === game.id ? " active" : ""}" type="button" data-game="${escapeHtml(game.id)}" aria-pressed="${state.game === game.id}">${escapeHtml(game.label)}</button>`
+  gameContainer.innerHTML = games.map((game) =>
+    `<button class="game-button${filterState.game === game.id ? " active" : ""}" type="button" data-game="${escapeHtml(game.id)}" aria-pressed="${filterState.game === game.id}">${escapeHtml(game.label)}</button>`
   ).join("");
 }
 
-function visibleProducts() {
-  const term = state.search.trim().toLocaleLowerCase("zh-Hant");
+function visibleProducts(filterState = state) {
+  const term = filterState.search.trim().toLocaleLowerCase("zh-Hant");
   const visible = products.filter((product) => {
     if (!isProductPublished(product)) return false;
-    const matchesCategory = state.category === copy.categories.allItems || product.category === state.category || product.kind === state.category;
-    const matchesGame = state.game === "all" || product.game === state.game;
+    const matchesCategory = filterState.category === copy.categories.allItems || product.category === filterState.category || product.kind === filterState.category;
+    const matchesGame = filterState.game === "all" || product.game === filterState.game;
     const matchesSearch = !term || [product.name, product.game, product.category, product.description, product.wear].some((value) => value.toLocaleLowerCase("zh-Hant").includes(term));
     return matchesCategory && matchesGame && matchesSearch;
   });
@@ -68,7 +69,7 @@ function visibleProducts() {
     "stock-descending": (a, b) => b.stock - a.stock,
     "name-ascending": (a, b) => a.name.localeCompare(b.name, "zh-Hant")
   };
-  const sorter = sorters[state.sort] || sorters.featured;
+  const sorter = sorters[filterState.sort] || sorters.featured;
   return visible.sort(sorter);
 }
 
@@ -155,7 +156,7 @@ function productArtwork(product) {
   return `<svg class="product-art" viewBox="0 0 420 180" role="img" aria-label="${escapeHtml(t("product.artAlt", { name: product.name }))}" focusable="false">${silhouette}</svg>`;
 }
 
-function productCardMarkup(product) {
+function productCardMarkup(product, tradeMode = false) {
   const favoriteKey = productFavoriteKey(product);
   const favorite = state.favorites.has(favoriteKey);
   const favoriteCount = favoriteCounts.get(favoriteDocumentId(product)) || 0;
@@ -177,6 +178,11 @@ function productCardMarkup(product) {
     : priced && product.stock > 0
     ? t("product.addToCart", { name: product.name })
     : !priced ? t("product.unpriced", { name: product.name }) : t("product.outOfStock", { name: product.name });
+  const tradeSelected = tradeMode && (tradeState.offer.includes(product.id) || tradeState.receive.includes(product.id));
+  const tradeActionLabel = tradeSelected ? t("trade.selectedItemLabel") : t(tradeState.side === "offer" ? "trade.addToOffer" : "trade.addToReceive");
+  const actionButton = tradeMode
+    ? `<button class="add-button" type="button" data-trade-add="${escapeHtml(product.id)}" aria-label="${escapeHtml(tradeActionLabel)}：${safeName}" ${tradeSelected || product.stock === 0 || !priced ? "disabled" : ""}><img src="assets/icon_new/add_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="" aria-hidden="true"></button>`
+    : `<button class="add-button" type="button" data-add="${escapeHtml(product.id)}" aria-label="${escapeHtml(addLabel)}" ${isDemo || product.stock === 0 || !priced ? "disabled" : ""}><img src="assets/icon_new/add_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="" aria-hidden="true"></button>`;
   return `
     <article class="product-card">
       <div class="product-visual art-${product.art}">
@@ -192,9 +198,7 @@ function productCardMarkup(product) {
         <div class="product-bottom">
           <div class="product-price">${priced ? `<span class="currency-symbol">${escapeHtml(t("product.currency"))}</span>${product.price.toLocaleString()}` : `<span class="unpriced-label">${escapeHtml(t("product.noPrice"))}</span>`}</div>
           ${isDemo ? "" : `<div class="product-stock">${product.stock === 0 ? escapeHtml(t("product.unavailable")) : stockLabel}</div>`}
-          <button class="add-button" type="button" data-add="${escapeHtml(product.id)}" aria-label="${escapeHtml(addLabel)}" ${isDemo || product.stock === 0 || !priced ? "disabled" : ""}>
-            <img src="assets/icon_new/add_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="" aria-hidden="true">
-          </button>
+          ${actionButton}
         </div>
       </div>
     </article>`;
@@ -252,25 +256,44 @@ function renderHomeProducts() {
   }
 }
 
-function renderTradeItems() {
-  const term = tradeSearchTerm.trim().toLocaleLowerCase("zh-Hant");
-  const visibleItems = products.filter((product) => product.source === "demo"
-    && isProductPublished(product)
-    && product.name.toLocaleLowerCase("zh-Hant").includes(term));
-  $("#trade-item-count").textContent = visibleItems.length;
-  $("#trade-grid").innerHTML = visibleItems.map((product) => {
-    const selected = selectedTradeItems.has(product.id);
-    return `<button class="trade-item${selected ? " is-selected" : ""}" type="button" data-trade-item="${escapeHtml(product.id)}" aria-pressed="${selected}">
-      <span class="trade-item-art art-${escapeHtml(product.art)}">${productArtwork(product)}</span>
-      <span class="trade-item-info"><span class="trade-item-name">${escapeHtml(product.name)}</span><span class="trade-item-price">${product.price.toLocaleString()} <small>${escapeHtml(copy.product.currency)}</small></span></span>
-      <span class="trade-item-action">${escapeHtml(selected ? copy.trade.selectedItem : copy.trade.chooseItem)}</span>
-    </button>`;
+function tradeTotal(side) {
+  return tradeState[side].reduce((total, id) => {
+    const product = products.find((item) => item.id === id);
+    return total + (Number.isFinite(product?.price) ? product.price : 0);
+  }, 0);
+}
+
+function renderTradeSide(side, container, emptyKey, totalElement) {
+  const selected = tradeState[side];
+  const selectedMarkup = selected.map((id) => {
+    const product = products.find((item) => item.id === id);
+    if (!product) return "";
+    const art = product.iconUrl
+      ? `<img src="${escapeHtml(product.iconUrl)}" alt="" loading="lazy">`
+      : productArtwork(product);
+    const removeLabel = t(side === "offer" ? "trade.removeOffer" : "trade.removeReceive", { name: product.name });
+    return `<div class="trade-selected-item"><div class="trade-selected-art">${art}</div><div class="trade-selected-info"><strong title="${escapeHtml(product.name)}">${escapeHtml(product.name)}</strong><small>${product.price.toLocaleString()} EC</small></div><button type="button" data-trade-remove="${escapeHtml(id)}" data-trade-side="${side}" aria-label="${escapeHtml(removeLabel)}">×</button></div>`;
   }).join("");
+  const placeholders = Array.from({ length: Math.max(0, 4 - selected.length) }, () =>
+    `<div class="trade-slot"><span aria-hidden="true">+</span><small>${escapeHtml(t(emptyKey))}</small></div>`
+  ).join("");
+  container.innerHTML = selectedMarkup + placeholders;
+  totalElement.textContent = tradeTotal(side).toLocaleString();
+}
+
+function renderTrade() {
+  renderTradeSide("offer", $("#trade-offer-items"), "trade.emptyOffer", $("#trade-your-total"));
+  renderTradeSide("receive", $("#trade-receive-items"), "trade.emptyReceive", $("#trade-receive-total"));
+  const difference = tradeTotal("receive") - tradeTotal("offer");
+  $("#trade-balance-value").textContent = `${difference > 0 ? "+" : ""}${difference.toLocaleString()} EC`;
+}
+
+function renderTradeItems() {
+  const visibleItems = visibleProducts(tradeState).filter((product) => Number.isFinite(product.price) && product.price > 0 && product.stock > 0);
+  $("#trade-item-count").textContent = visibleItems.length;
+  $("#trade-grid").innerHTML = visibleItems.map((product) => productCardMarkup(product, true)).join("");
   $("#trade-empty").hidden = visibleItems.length > 0;
-  $("#trade-receive-total").textContent = products
-    .filter((product) => selectedTradeItems.has(product.id))
-    .reduce((total, product) => total + product.price, 0)
-    .toLocaleString();
+  $("#trade-grid").hidden = visibleItems.length === 0;
 }
 
 function renderCart() {
@@ -369,6 +392,12 @@ async function loadSteamInventory() {
     }
     renderFilters();
     renderProducts();
+    renderFilters(tradeCategoryFilters, tradeGameFilters, tradeState);
+    for (const side of ["offer", "receive"]) {
+      tradeState[side] = tradeState[side].filter((id) => products.some((product) => product.id === id && isProductPublished(product)));
+    }
+    renderTrade();
+    renderTradeItems();
     renderHomeProducts();
     renderCart();
     window.dispatchEvent(new Event("catalogproductschange"));
@@ -477,6 +506,44 @@ gameFilters.addEventListener("click", (event) => {
   renderProducts();
 });
 
+tradeCategoryFilters.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-category]");
+  if (!button) return;
+  tradeState.category = button.dataset.category;
+  renderFilters(tradeCategoryFilters, tradeGameFilters, tradeState);
+  renderTradeItems();
+});
+
+tradeGameFilters.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-game]");
+  if (!button) return;
+  tradeState.game = button.dataset.game;
+  renderFilters(tradeCategoryFilters, tradeGameFilters, tradeState);
+  renderTradeItems();
+});
+
+$("#trade-search").addEventListener("input", (event) => {
+  tradeState.search = event.target.value;
+  renderTradeItems();
+});
+
+$("#trade-sort").addEventListener("change", (event) => {
+  tradeState.sort = event.target.value;
+  renderTradeItems();
+});
+
+document.querySelectorAll(".trade-direction-switch [data-trade-side]").forEach((button) => {
+  button.addEventListener("click", () => {
+    tradeState.side = button.dataset.tradeSide;
+    document.querySelectorAll(".trade-direction-switch [data-trade-side]").forEach((option) => {
+      const active = option === button;
+      option.classList.toggle("active", active);
+      option.setAttribute("aria-pressed", String(active));
+    });
+    renderTradeItems();
+  });
+});
+
 $("#search").addEventListener("input", (event) => {
   state.search = event.target.value;
   renderProducts();
@@ -522,18 +589,43 @@ document.querySelectorAll("[data-market-mode]").forEach((button) => {
   });
 });
 
-$("#trade-search").addEventListener("input", (event) => {
-  tradeSearchTerm = event.target.value;
+$("#trade-grid").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-trade-add]");
+  if (!button) return;
+  const product = products.find((item) => item.id === button.dataset.tradeAdd);
+  if (!product || !isProductPublished(product) || product.stock === 0 || !Number.isFinite(product.price)) return;
+  if (tradeState.offer.includes(product.id) || tradeState.receive.includes(product.id)) {
+    showToast(t("trade.alreadySelected"));
+    return;
+  }
+  const selected = tradeState[tradeState.side];
+  if (selected.length >= 4) {
+    showToast(t("trade.selectionLimit"));
+    return;
+  }
+  selected.push(product.id);
+  renderTrade();
   renderTradeItems();
 });
 
-$("#trade-grid").addEventListener("click", (event) => {
-  const button = event.target.closest("[data-trade-item]");
-  if (!button) return;
-  const id = button.dataset.tradeItem;
-  if (selectedTradeItems.has(id)) selectedTradeItems.delete(id);
-  else selectedTradeItems.add(id);
-  renderTradeItems();
+for (const side of ["offer", "receive"]) {
+  $(`#trade-${side}-items`).addEventListener("click", (event) => {
+    const button = event.target.closest("[data-trade-remove]");
+    if (!button) return;
+    const selected = tradeState[button.dataset.tradeSide];
+    const index = selected.indexOf(button.dataset.tradeRemove);
+    if (index !== -1) selected.splice(index, 1);
+    renderTrade();
+    renderTradeItems();
+  });
+}
+
+$("#trade-submit").addEventListener("click", () => {
+  if (!tradeState.offer.length || !tradeState.receive.length) {
+    showToast(t("trade.itemsRequired"));
+    return;
+  }
+  showToast(t("trade.proposalUnavailable"));
 });
 
 document.querySelectorAll(".home-faq-trigger").forEach((button) => {
@@ -566,6 +658,7 @@ document.addEventListener("click", (event) => {
     if (shouldFavorite) state.favorites.add(key);
     else state.favorites.delete(key);
     renderProducts();
+    renderTradeItems();
     renderHomeProducts();
     showToast(shouldFavorite ? t("messages.favoriteAdded") : t("messages.favoriteRemoved"));
     const toggleFavorite = window.eloToggleProductFavorite;
@@ -576,12 +669,14 @@ document.addEventListener("click", (event) => {
           else state.favorites.delete(key);
           favoriteCounts.set(favoriteDocumentId(product), result.count);
           renderProducts();
+          renderTradeItems();
           renderHomeProducts();
         }
       }).catch(() => {
         if (shouldFavorite) state.favorites.delete(key);
         else state.favorites.add(key);
         renderProducts();
+        renderTradeItems();
         renderHomeProducts();
         showToast(t("home.marketUnavailable"));
       });
@@ -615,8 +710,12 @@ window.addEventListener("catalogvisibilitychange", () => {
     const product = products.find((item) => item.id === id);
     if (product && !isProductPublished(product)) state.cart.delete(id);
   }
+  for (const side of ["offer", "receive"]) {
+    tradeState[side] = tradeState[side].filter((id) => products.some((product) => product.id === id && isProductPublished(product)));
+  }
   renderProducts();
   renderHomeProducts();
+  renderTrade();
   renderTradeItems();
   renderCart();
 });
@@ -625,6 +724,7 @@ window.addEventListener("favoritecountschanged", (event) => {
   favoriteCounts.clear();
   for (const [id, count] of Object.entries(event.detail || {})) favoriteCounts.set(id, count);
   renderProducts();
+  renderTradeItems();
   renderHomeProducts();
 });
 
@@ -679,8 +779,11 @@ $("#checkout").addEventListener("click", () => {
 });
 
 renderFilters();
+renderFilters(tradeCategoryFilters, tradeGameFilters, tradeState);
 renderHomeCategories();
 renderProducts();
+renderTrade();
+renderTradeItems();
 renderHomeProducts();
 renderCart();
 updateMarketIndicator();
