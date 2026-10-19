@@ -4460,7 +4460,7 @@ body :is(h2, h3, h4, h5, h6) * {
 
 .home-faq {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1.1fr .9fr;
   min-height: 190px;
   padding-block: 30px 72px;
 }
@@ -4468,7 +4468,7 @@ body :is(h2, h3, h4, h5, h6) * {
 .home-faq-copy {
   grid-column: 1;
   align-self: start;
-  padding-left: clamp(32px, 4vw, 56px);
+  padding-left: clamp(56px, 8vw, 112px);
 }
 
 .home-faq-copy h2 {
@@ -4516,6 +4516,10 @@ body :is(h2, h3, h4, h5, h6) * {
   font-weight: 600;
   cursor: pointer;
   list-style: none;
+}
+
+.home-faq-item summary > span:first-child {
+  font-size: var(--site-subheading-size) !important;
 }
 
 .home-faq-item summary::-webkit-details-marker {
@@ -4593,6 +4597,10 @@ body :is(h2, h3, h4, h5, h6) * {
     grid-template-columns: 1fr;
     min-height: 150px;
     padding-block: 24px 48px;
+  }
+
+  .home-faq-copy {
+    padding-left: clamp(24px, 8vw, 40px);
   }
 
   .home-faq-list {
