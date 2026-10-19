@@ -38,7 +38,8 @@ window.ELOSKIN2_TEXT = {
     marketEmpty: "目前沒有可顯示的商品。",
     marketUnavailable: "暫時無法載入商品，請稍後再試。",
     marketFavoriteCount: "{count} 人收藏",
-    marketUnpriced: "未定價商品會排在已定價商品之後。"
+    marketUnpriced: "未定價商品會排在已定價商品之後。",
+    marketSectionAria: "首頁商品推薦"
   },
   categories: {
     allItems: "全部物品",

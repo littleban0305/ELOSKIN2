@@ -216,7 +216,7 @@ function renderHomeProducts() {
     cheap: (a, b) => comparePrice(a, b, 1)
   };
   const sorter = sorters[homeMarketMode] || sorters.popular;
-  const featured = uniqueProducts.sort((a, b) => sorter(a, b) || a.name.localeCompare(b.name, "zh-Hant")).slice(0, 3);
+  const featured = uniqueProducts.sort((a, b) => sorter(a, b) || a.name.localeCompare(b.name, "zh-Hant")).slice(0, 5);
   $("#featured-grid").innerHTML = featured.map(productCardMarkup).join("");
   $("#featured-grid").hidden = featured.length === 0;
   $("#home-market-status").textContent = featured.length
@@ -353,10 +353,11 @@ async function loadSteamInventory() {
       : t("shop.inventoryEmpty");
     if (!liveProducts.length) homeStatus.textContent = t("home.marketEmpty");
   } catch (error) {
-    status.textContent = error instanceof TypeError
+    const message = error instanceof TypeError
       ? t("shop.workerUnavailable")
       : error instanceof Error ? error.message : t("shop.genericInventoryError");
-    homeStatus.textContent = t("home.marketUnavailable");
+    status.textContent = message;
+    homeStatus.textContent = message;
   } finally {
     refreshButton.disabled = false;
     refreshButton.textContent = t("shop.inventoryRefresh");

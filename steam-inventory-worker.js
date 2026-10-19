@@ -427,7 +427,10 @@ async function fetchSteamInventory() {
 
     const response = await fetch(url, {
       headers: { "User-Agent": "ELOSKIN2 inventory reader" },
-      cf: { cacheTtl: 60, cacheEverything: true }
+      cf: {
+        cacheEverything: true,
+        cacheTtlByStatus: { "200-299": 60, "400-599": 0 }
+      }
     });
     if (!response.ok) {
       return { error: response.status === 429 ? "steam_rate_limited" : "steam_unavailable", status: response.status };
@@ -503,7 +506,7 @@ export default {
       return jsonResponse({ error: "steam_unavailable" }, 502, corsHeaders);
     }
     if (result.error) {
-      return jsonResponse({ error: result.error }, 502, corsHeaders);
+      return jsonResponse({ error: result.error }, result.error === "steam_rate_limited" ? 429 : 502, corsHeaders);
     }
     return jsonResponse({
       items: result.items,
