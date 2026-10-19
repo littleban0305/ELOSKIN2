@@ -4368,20 +4368,23 @@ html {
   }
 }
 
-.account-button,
-.product-favorite-count,
-.auth-tab,
-.cart-total > span:first-child,
-.checkout-button {
-  font-size: 14px;
+:root {
+  --site-copy-size: 15px;
+  --site-heading-size: clamp(32px, 3.4vw, 48px);
 }
 
-.page-heading h1 {
-  font-size: clamp(32px, 3.4vw, 48px);
+body * {
+  font-size: var(--site-copy-size) !important;
+}
+
+body :is(h1, h2, h3, h4, h5, h6),
+body :is(h1, h2, h3, h4, h5, h6) * {
+  font-size: var(--site-heading-size) !important;
 }
 
 @media (max-width: 720px) {
-  .page-heading h1 {
-    font-size: clamp(30px, 7vw, 42px);
+  :root {
+    --site-copy-size: 14px;
+    --site-heading-size: clamp(30px, 7vw, 42px);
   }
 }
