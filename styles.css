@@ -4406,9 +4406,25 @@ html {
 }
 
 :root {
+  --content-width: min(1240px, 92%);
+  --content-gutter: max(4vw, calc((100vw - 1240px) / 2));
   --site-copy-size: 15px;
   --site-heading-size: clamp(32px, 3.4vw, 48px);
   --site-subheading-size: clamp(18px, 1.6vw, 22px);
+}
+
+.site-header,
+.site-footer {
+  padding-inline: var(--content-gutter);
+}
+
+.section-wrap {
+  width: var(--content-width);
+}
+
+.hero-copy {
+  width: 100%;
+  padding-inline: var(--content-gutter);
 }
 
 body * {
@@ -4427,9 +4443,15 @@ body :is(h2, h3, h4, h5, h6) * {
 
 @media (max-width: 720px) {
   :root {
+    --content-width: 92%;
+    --content-gutter: 4%;
     --site-copy-size: 14px;
     --site-heading-size: clamp(30px, 7vw, 42px);
     --site-subheading-size: clamp(17px, 4.6vw, 20px);
+  }
+
+  .hero-copy {
+    padding-inline: 7%;
   }
 }
 
