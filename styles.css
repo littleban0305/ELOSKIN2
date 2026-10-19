@@ -4183,6 +4183,12 @@ html {
 .hero-copy > p {
   max-width: 590px;
   margin: 0;
+}
+
+.hero-actions .primary-button,
+.hero-actions .hero-trade-button {
+  min-width: 148px;
+  justify-content: center;
   color: #a3adb5;
   font-size: 15px;
   line-height: 1.85;
@@ -4527,9 +4533,10 @@ body :is(h2, h3, h4, h5, h6) * {
 .home-faq-copy {
   grid-column: 1;
   align-self: start;
-  justify-self: start;
+  justify-self: center;
   width: max-content;
-  margin-left: clamp(36px, 6vw, 76px);
+  margin-left: 0;
+  text-align: center;
 }
 
 .home-faq-copy h2 {
