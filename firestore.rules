@@ -2,6 +2,14 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    function favoriteCountPath(productId) {
+      return /databases/$(database)/documents/productFavoriteCounts/$(productId);
+    }
+
+    function favoriteVoterPath(productId, userId) {
+      return /databases/$(database)/documents/productFavorites/$(productId)/voters/$(userId);
+    }
+
     match /siteSettings/catalog {
       allow read: if true;
       allow create, update: if request.auth != null
@@ -12,6 +20,54 @@ service cloud.firestore {
         && request.resource.data.hiddenProductIds is list
         && request.resource.data.hiddenProductIds.size() <= 2000;
       allow delete: if false;
+    }
+
+    match /productFavoriteCounts/{productId} {
+      allow read: if true;
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(["count"])
+        && request.resource.data.count is int
+        && request.resource.data.count == 1
+        && existsAfter(favoriteVoterPath(productId, request.auth.uid))
+        && getAfter(favoriteVoterPath(productId, request.auth.uid)).data.uid == request.auth.uid;
+      allow update: if request.auth != null
+        && request.resource.data.keys().hasOnly(["count"])
+        && request.resource.data.count is int
+        && resource.data.count is int
+        && (
+          (request.resource.data.count == resource.data.count + 1
+            && !exists(favoriteVoterPath(productId, request.auth.uid))
+            && existsAfter(favoriteVoterPath(productId, request.auth.uid))
+            && getAfter(favoriteVoterPath(productId, request.auth.uid)).data.uid == request.auth.uid)
+          ||
+          (request.resource.data.count == resource.data.count - 1
+            && exists(favoriteVoterPath(productId, request.auth.uid))
+            && get(favoriteVoterPath(productId, request.auth.uid)).data.uid == request.auth.uid
+            && !existsAfter(favoriteVoterPath(productId, request.auth.uid)))
+        );
+      allow delete: if false;
+    }
+
+    match /productFavorites/{productId}/voters/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly(["uid"])
+        && request.resource.data.uid == request.auth.uid
+        && (
+          (!exists(favoriteCountPath(productId))
+            && existsAfter(favoriteCountPath(productId))
+            && getAfter(favoriteCountPath(productId)).data.count == 1)
+          ||
+          (exists(favoriteCountPath(productId))
+            && getAfter(favoriteCountPath(productId)).data.count == get(favoriteCountPath(productId)).data.count + 1)
+        );
+      allow delete: if request.auth != null
+        && request.auth.uid == userId
+        && exists(favoriteCountPath(productId))
+        && get(favoriteCountPath(productId)).data.count is int
+        && getAfter(favoriteCountPath(productId)).data.count == get(favoriteCountPath(productId)).data.count - 1;
+      allow update: if false;
     }
 
     match /{document=**} {

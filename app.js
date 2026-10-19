@@ -17,7 +17,9 @@ const games = [
   { id: "ROBLOX RIVALS", label: copy.games.rivals }
 ];
 const state = { category: copy.categories.allItems, game: "all", search: "", sort: "featured", cart: new Map(), favorites: new Set() };
-let homeMarketMode = "featured";
+const favoriteCounts = new Map();
+const favoriteStatusChecks = new Set();
+let homeMarketMode = "popular";
 const steamConfig = window.ELOSKIN2_STEAM_CONFIG || {};
 const $ = (selector) => document.querySelector(selector);
 const productGrid = $("#product-grid");
@@ -139,7 +141,9 @@ function productArtwork(product) {
 }
 
 function productCardMarkup(product) {
-  const favorite = state.favorites.has(product.id);
+  const favoriteKey = productFavoriteKey(product);
+  const favorite = state.favorites.has(favoriteKey);
+  const favoriteCount = favoriteCounts.get(favoriteDocumentId(product)) || 0;
   const safeName = escapeHtml(product.name);
   const favoriteIcon = favorite
     ? "heart_minus_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png"
@@ -166,6 +170,7 @@ function productCardMarkup(product) {
       <div class="product-info">
         <h3 title="${safeName}">${safeName}</h3>
         <div class="product-description">${escapeHtml(product.description)}${product.wear === copy.product.notApplicable ? "" : ` <span>／ ${escapeHtml(product.wear)}</span>`}</div>
+        <div class="product-favorite-count">${escapeHtml(t("home.marketFavoriteCount", { count: favoriteCount }))}</div>
         <div class="product-bottom">
           <div class="product-price">${priced ? `<span class="currency-symbol">${escapeHtml(t("product.currency"))}</span>${product.price.toLocaleString()}` : `<span class="unpriced-label">${escapeHtml(t("product.noPrice"))}</span>`}</div>
           <div class="product-stock">${product.stock === 0 ? escapeHtml(t("product.unavailable")) : stockLabel}</div>
@@ -187,21 +192,49 @@ function escapeHtml(value) {
   })[character]);
 }
 
+function productFavoriteKey(product) {
+  return product.source === "steam" ? `steam:${product.marketHashName}` : product.id;
+}
+
+function favoriteDocumentId(product) {
+  return encodeURIComponent(productFavoriteKey(product));
+}
+
 function renderHomeProducts() {
-  const published = products.filter(isProductPublished);
-  let featured = published.filter((product) => product.game === "CS2");
-  if (!featured.length) featured = published;
-  if (homeMarketMode === "latest") featured = featured.slice().reverse();
-  if (homeMarketMode === "budget") featured = featured.filter((product) => Number.isFinite(product.price) && product.price <= 1500);
-  const sorters = {
-    featured: (a, b) => products.indexOf(a) - products.indexOf(b),
-    "price-ascending": (a, b) => (a.price ?? Infinity) - (b.price ?? Infinity),
-    "price-descending": (a, b) => (b.price ?? -Infinity) - (a.price ?? -Infinity)
+  const uniqueProducts = [...new Map(products
+    .filter(isProductPublished)
+    .map((product) => [productFavoriteKey(product), product])).values()];
+  const comparePrice = (a, b, direction) => {
+    const aPriced = Number.isFinite(a.price);
+    const bPriced = Number.isFinite(b.price);
+    if (aPriced !== bPriced) return aPriced ? -1 : 1;
+    return aPriced ? direction * (a.price - b.price) : 0;
   };
-  featured.sort(sorters[state.sort] || sorters.featured);
-  featured = featured.slice(0, 5);
+  const sorters = {
+    popular: (a, b) => (favoriteCounts.get(favoriteDocumentId(b)) || 0) - (favoriteCounts.get(favoriteDocumentId(a)) || 0),
+    expensive: (a, b) => comparePrice(a, b, -1),
+    cheap: (a, b) => comparePrice(a, b, 1)
+  };
+  const sorter = sorters[homeMarketMode] || sorters.popular;
+  const featured = uniqueProducts.sort((a, b) => sorter(a, b) || a.name.localeCompare(b.name, "zh-Hant")).slice(0, 3);
   $("#featured-grid").innerHTML = featured.map(productCardMarkup).join("");
-  $("#curated-grid").replaceChildren();
+  $("#featured-grid").hidden = featured.length === 0;
+  $("#home-market-status").textContent = featured.length
+    ? homeMarketMode === "popular" ? "" : t("home.marketUnpriced")
+    : t("home.marketEmpty");
+  if (typeof window.eloGetProductFavorite === "function") {
+    for (const product of featured) {
+      const key = productFavoriteKey(product);
+      if (favoriteStatusChecks.has(key)) continue;
+      favoriteStatusChecks.add(key);
+      window.eloGetProductFavorite(product).then((isFavorite) => {
+        if (isFavorite) state.favorites.add(key);
+        else state.favorites.delete(key);
+        renderProducts();
+        renderHomeProducts();
+      }).catch(() => favoriteStatusChecks.delete(key));
+    }
+  }
 }
 
 function renderCart() {
@@ -269,15 +302,18 @@ function steamInventoryProduct(item) {
 async function loadSteamInventory() {
   const status = $("#steam-inventory-status");
   const refreshButton = $("#refresh-steam-inventory");
+  const homeStatus = $("#home-market-status");
   const endpoint = steamConfig.inventoryEndpoint;
   if (!endpoint) {
     status.textContent = t("shop.inventoryUnconfigured");
+    homeStatus.textContent = t("home.marketUnavailable");
     return;
   }
 
   refreshButton.disabled = true;
   refreshButton.textContent = t("shop.refreshLoading");
   status.textContent = t("shop.inventoryLoading");
+  homeStatus.textContent = t("home.marketLoading");
   try {
     const response = await fetch(endpoint);
     let data;
@@ -315,10 +351,12 @@ async function loadSteamInventory() {
     status.textContent = liveProducts.length
       ? t("shop.stockSynced", { types: liveProducts.length, amount: totalQuantity, time: updatedAt, truncated: data.truncated ? t("shop.inventoryTruncated") : "" })
       : t("shop.inventoryEmpty");
+    if (!liveProducts.length) homeStatus.textContent = t("home.marketEmpty");
   } catch (error) {
     status.textContent = error instanceof TypeError
       ? t("shop.workerUnavailable")
       : error instanceof Error ? error.message : t("shop.genericInventoryError");
+    homeStatus.textContent = t("home.marketUnavailable");
   } finally {
     refreshButton.disabled = false;
     refreshButton.textContent = t("shop.inventoryRefresh");
@@ -432,11 +470,6 @@ $("#sort-products").addEventListener("change", (event) => {
   renderProducts();
 });
 
-$("#home-sort").addEventListener("change", (event) => {
-  state.sort = event.target.value;
-  renderHomeProducts();
-});
-
 document.querySelectorAll("[data-market-mode]").forEach((button) => {
   button.addEventListener("click", () => {
     homeMarketMode = button.dataset.marketMode;
@@ -449,15 +482,44 @@ document.querySelectorAll("[data-market-mode]").forEach((button) => {
   });
 });
 
+$("#home-more-products").addEventListener("click", () => {
+  $("#search").value = "";
+  state.search = "";
+  history.pushState(null, "", "#shop");
+  navigateTo("shop");
+  renderProducts();
+});
+
 document.addEventListener("click", (event) => {
   const favorite = event.target.closest("[data-favorite]");
   if (favorite) {
-    const id = favorite.dataset.favorite;
-    if (state.favorites.has(id)) state.favorites.delete(id);
-    else state.favorites.add(id);
+    const product = products.find((item) => item.id === favorite.dataset.favorite);
+    if (!product) return;
+    const key = productFavoriteKey(product);
+    const shouldFavorite = !state.favorites.has(key);
+    if (shouldFavorite) state.favorites.add(key);
+    else state.favorites.delete(key);
     renderProducts();
     renderHomeProducts();
-    showToast(state.favorites.has(id) ? t("messages.favoriteAdded") : t("messages.favoriteRemoved"));
+    showToast(shouldFavorite ? t("messages.favoriteAdded") : t("messages.favoriteRemoved"));
+    const toggleFavorite = window.eloToggleProductFavorite;
+    if (typeof toggleFavorite === "function") {
+      toggleFavorite(product, shouldFavorite).then((result) => {
+        if (result) {
+          if (result.isFavorite) state.favorites.add(key);
+          else state.favorites.delete(key);
+          favoriteCounts.set(favoriteDocumentId(product), result.count);
+          renderProducts();
+          renderHomeProducts();
+        }
+      }).catch(() => {
+        if (shouldFavorite) state.favorites.delete(key);
+        else state.favorites.add(key);
+        renderProducts();
+        renderHomeProducts();
+        showToast(t("home.marketUnavailable"));
+      });
+    }
     return;
   }
 
@@ -490,10 +552,6 @@ $("#trade-grid").addEventListener("click", (event) => {
   }
 });
 
-$("#curated-grid").addEventListener("click", (event) => {
-  if (event.target.closest("[data-offer]")) showToast(t("trade.proposalUnavailable"));
-});
-
 window.addEventListener("catalogvisibilitychange", () => {
   for (const [id] of state.cart) {
     const product = products.find((item) => item.id === id);
@@ -502,6 +560,13 @@ window.addEventListener("catalogvisibilitychange", () => {
   renderProducts();
   renderHomeProducts();
   renderCart();
+});
+
+window.addEventListener("favoritecountschanged", (event) => {
+  favoriteCounts.clear();
+  for (const [id, count] of Object.entries(event.detail || {})) favoriteCounts.set(id, count);
+  renderProducts();
+  renderHomeProducts();
 });
 
 document.querySelectorAll("[data-requires-auth]").forEach((button) => {
@@ -572,3 +637,4 @@ if (["guide", "safety", "marketplace"].includes(initialDestination)) showHomeAnc
 else {
   navigateTo(initialDestination);
 }
+loadSteamInventory();

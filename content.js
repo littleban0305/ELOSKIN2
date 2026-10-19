@@ -26,7 +26,19 @@ window.ELOSKIN2_TEXT = {
     heroTitleTail: "CS2、Roblox物品",
     heroDescription: "ELOSKIN2提供了完整的買賣、交易系統，讓您可以把不要的遊戲物品交易出去，或是買進自己最喜歡的遊戲物品。",
     shopCta: "進入商店",
-    tradeCta: "立即交易"
+    tradeCta: "立即交易",
+    marketEyebrow: "THE COLLECTION",
+    marketTitle: "探索商品",
+    marketModesAria: "商品排序方式",
+    marketPopular: "最流行",
+    marketExpensive: "最貴",
+    marketCheap: "最便宜",
+    marketMoreAria: "前往商店瀏覽全部商品",
+    marketLoading: "正在載入 Steam 商品庫存…",
+    marketEmpty: "目前沒有可顯示的商品。",
+    marketUnavailable: "暫時無法載入商品，請稍後再試。",
+    marketFavoriteCount: "{count} 人收藏",
+    marketUnpriced: "未定價商品會排在已定價商品之後。"
   },
   categories: {
     allItems: "全部物品",

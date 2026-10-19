@@ -26,7 +26,11 @@ const steamCallback = (() => {
 let authMode = "login";
 let firebaseAuth = null;
 let firebaseDb = null;
+let favoriteAuth = null;
+let favoriteDb = null;
+let favoriteAuthReady = Promise.resolve();
 let firebaseReady = false;
+let anonymousSignInPromise = null;
 let catalogVisibilityReady = false;
 let catalogVisibilityError = "";
 const hiddenProductIds = new Set();
@@ -76,6 +80,7 @@ document.querySelectorAll("[data-password-toggle]").forEach((button) => {
 });
 
 function updateAccount(user) {
+  if (user?.isAnonymous) user = null;
   window.eloAuthUser = user;
   const steamId = user?.uid?.startsWith("steam:") ? user.uid.slice("steam:".length) : "";
   const name = user?.displayName || user?.email?.split("@")[0] || (steamId ? `Steam ${steamId}` : authText("profile.guest"));
@@ -221,6 +226,74 @@ function loadCatalogVisibility() {
   }
 }
 
+function favoriteDocumentId(product) {
+  const productKey = product.source === "steam" ? `steam:${product.marketHashName}` : product.id;
+  return encodeURIComponent(productKey);
+}
+
+function ensureFavoriteUser() {
+  if (!favoriteAuth) return Promise.reject(new Error("firebase_auth_unavailable"));
+  if (!anonymousSignInPromise) {
+    anonymousSignInPromise = favoriteAuthReady.then(() => {
+      if (favoriteAuth.currentUser) return favoriteAuth.currentUser;
+      return favoriteAuth.signInAnonymously().then((credential) => credential.user);
+    })
+      .finally(() => { anonymousSignInPromise = null; });
+  }
+  return anonymousSignInPromise;
+}
+
+function installFavoriteFeatures() {
+  if (!favoriteDb || !favoriteAuth) return;
+  favoriteDb.collection("productFavoriteCounts").onSnapshot((snapshot) => {
+    const counts = {};
+    snapshot.forEach((document) => {
+      const count = document.data().count;
+      if (Number.isInteger(count) && count >= 0) counts[document.id] = count;
+    });
+    window.dispatchEvent(new CustomEvent("favoritecountschanged", { detail: counts }));
+  });
+
+  window.eloGetProductFavorite = async (product) => {
+    const user = await ensureFavoriteUser();
+    const reference = favoriteDb.doc(`productFavorites/${favoriteDocumentId(product)}/voters/${user.uid}`);
+    return (await reference.get()).exists;
+  };
+
+  window.eloToggleProductFavorite = async (product, shouldFavorite) => {
+    const user = await ensureFavoriteUser();
+    const productId = favoriteDocumentId(product);
+    const countReference = favoriteDb.doc(`productFavoriteCounts/${productId}`);
+    const voteReference = favoriteDb.doc(`productFavorites/${productId}/voters/${user.uid}`);
+    let count = 0;
+    let isFavorite = shouldFavorite;
+
+    await firebaseDb.runTransaction(async (transaction) => {
+      const vote = await transaction.get(voteReference);
+      const counter = await transaction.get(countReference);
+      count = counter.exists ? counter.data().count : 0;
+      isFavorite = vote.exists;
+      if (vote.exists === shouldFavorite) return;
+      if (shouldFavorite) {
+        transaction.set(voteReference, { uid: user.uid });
+        if (counter.exists) transaction.update(countReference, { count: count + 1 });
+        else transaction.set(countReference, { count: 1 });
+        count += 1;
+        isFavorite = true;
+      } else {
+        if (!counter.exists || !Number.isInteger(count) || count < 1) {
+          throw new Error("favorite_count_invalid");
+        }
+        transaction.delete(voteReference);
+        transaction.update(countReference, { count: count - 1 });
+        count -= 1;
+        isFavorite = false;
+      }
+    });
+    return { isFavorite, count };
+  };
+}
+
 async function updateProductVisibility(visibilityId) {
   if (!firebaseDb || !catalogVisibilityReady || catalogVisibilityError) {
     setCatalogStatus(authText("profile.adminNotConfigured"), "error");
@@ -322,6 +395,21 @@ async function initializeFirebase() {
     try {
       await loadFirebaseScript(`https://www.gstatic.com/firebasejs/${version}/firebase-firestore-compat.js`);
       firebaseDb = firebase.firestore();
+      const favoriteApp = firebase.apps.find((app) => app.name === "ELOSKIN2_FAVORITES")
+        || firebase.initializeApp(firebaseConfig, "ELOSKIN2_FAVORITES");
+      favoriteAuth = favoriteApp.auth();
+      favoriteDb = favoriteApp.firestore();
+      favoriteAuthReady = favoriteAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+        .catch(() => {})
+        .then(() => new Promise((resolve) => {
+          const unsubscribe = favoriteAuth.onAuthStateChanged(() => {
+            unsubscribe();
+            resolve();
+          }, () => {
+            unsubscribe();
+            resolve();
+          });
+        }));
     } catch (error) {
       catalogVisibilityError = error.message;
     }
@@ -330,6 +418,7 @@ async function initializeFirebase() {
     });
     firebaseReady = true;
     loadCatalogVisibility();
+    installFavoriteFeatures();
     await completeSteamSignIn();
   } catch (error) {
     firebaseNotice.hidden = false;

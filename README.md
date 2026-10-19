@@ -1,6 +1,6 @@
 # ELOSKIN2
 
-ELOSKIN2 是供朋友使用的 CS2 與 Roblox 道具交易網站。目前介面暫時精簡：首頁只顯示 banner，商店只保留標題和搜尋欄，交易頁只保留標題；商品與玩家刊登範例已移除。登入、註冊及管理者商品上／下架功能仍保留。
+ELOSKIN2 是供朋友使用的 CS2 與 Roblox 道具交易網站。目前介面暫時精簡：首頁顯示 banner 與 Steam 庫存商品推薦列，商店只保留標題和搜尋欄，交易頁只保留標題；商品與玩家刊登範例已移除。登入、註冊及管理者商品上／下架功能仍保留。
 
 ## 編輯網站文字
 
@@ -20,7 +20,7 @@ ELOSKIN2 是供朋友使用的 CS2 與 Roblox 道具交易網站。目前介面�
 
 此專案使用 GitHub Actions 自動發布。將變更推送至 `main` 分支後，可在 GitHub repo 的 **Actions** 頁面查看發布狀態；首次成功發布後，網站網址會是 `https://littleban0305.github.io/ELOSKIN2/`。公開 Pages 網站任何人都能瀏覽，並看見網站上顯示的 Steam 交易連結。
 
-EC 商品目錄目前沒有上架項目。CS2 庫存讀取設定仍保留，但同步按鈕所在的庫存面板目前不顯示；在恢復商品介面前，網站不會展示庫存或建立商品訂單。
+首頁會自動讀取 Worker 提供的 CS2 可交易庫存，並依全站收藏數、EC 價格排序。EC 價格需在 `steam-config.js` 的 `ecPrices` 設定；未定價商品仍會顯示，但不能加入購物車。商店商品清單與交易刊登仍未恢復，也不會建立真實訂單。
 
 ## 啟用 Steam 庫存讀取
 
@@ -40,7 +40,7 @@ Steam 交易連結會公開在網站前端；任何能瀏覽網站的人都能�
 
 ## 啟用 Firebase 登入／註冊
 
-1. 在 Firebase Console 的 Authentication 啟用 Email/Password 與 Google 登入方式。登入時若電子郵件尚無密碼帳號，網站會用該郵件和輸入的密碼自動建立帳號。
+1. 在 Firebase Console 的 Authentication 啟用 Email/Password、Google 與 **Anonymous** 登入方式。匿名登入用於記錄首頁全站收藏數，不會顯示成已登入的個人帳號。登入時若電子郵件尚無密碼帳號，網站會用該郵件和輸入的密碼自動建立帳號。
 2. 將 Firebase Web App 設定的 `apiKey`、`authDomain`、`projectId`、`appId` 填入 `firebase-config.js`。這些是 Firebase 用戶端設定；不要在前端放置服務帳號金鑰。
 3. 在 Firebase Authentication 的授權網域加入 `littleban0305.github.io`（本機開發可加入 `localhost`）。使用 Google 登入時會開啟 Google 帳號選擇視窗。
 4. 從 `http://localhost` 或部署後的網站網址開啟，不要直接以 `file://` 開啟。
@@ -51,7 +51,7 @@ Steam 交易連結會公開在網站前端；任何能瀏覽網站的人都能�
    - `STEAM_STATE_SECRET`：自行產生至少 32 個隨機位元組的隨機字串，用於簽署 Steam 登入狀態 Cookie。
 
    可在 Cloudflare Dashboard → Workers & Pages → 選擇 `eloskin2` Worker → Settings → Variables and Secrets → Add → **Secret** 新增上述值。Worker 會用 HttpOnly、Secure、SameSite=Lax Cookie 綁定 Steam OpenID 回呼與原始網站，驗證成功後才簽發短效 Firebase Custom Token。`ALLOWED_ORIGINS` 必須包含 `https://littleban0305.github.io`；程式中的 `steam-config.js` 已設定 `authEndpoint` 指向此 Worker。設定 Secret 後重新部署 Worker。
-7. 管理者 `littleban0305@gmail.com` 可在個人頁面管理商品上／下架。要讓商品狀態同步給所有訪客，請在 Firebase Console → **Firestore Database** 建立資料庫（選擇免費 Spark 方案可用的區域），然後將 [firestore.rules](./firestore.rules) 貼入 Firestore Rules 並發布。管理者首次以 Email/Password 登入時，需先驗證該信箱；Google 登入使用已驗證的 Google 帳號。Firestore 免費方案不需 Blaze，但受 Firebase 免費配額限制。
+7. 管理者 `littleban0305@gmail.com` 可在個人頁面管理商品上／下架。首頁全站收藏計數與商品狀態同步都需要 Firestore：在 Firebase Console → **Firestore Database** 建立資料庫（選擇免費 Spark 方案可用的區域），然後將 [firestore.rules](./firestore.rules) 貼入 Firestore Rules 並發布。收藏者資料只允許本人讀取；公開的計數只能隨收藏投票交易更新。管理者首次以 Email/Password 登入時，需先驗證該信箱；Google 登入使用已驗證的 Google 帳號。Firestore 免費方案不需 Blaze，但受 Firebase 免費配額限制。
 
 ELOSKIN2 的目標使用者是受邀朋友，但目前原型尚未設定朋友白名單或頁面存取限制；不要把它當作已啟用的私人網站。
 

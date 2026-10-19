@@ -50,17 +50,32 @@
             </div>
           </div>
         </section>
+        <section class="home-shortcuts section-wrap" id="marketplace" aria-labelledby="home-market-title">
+          <div class="home-market-heading">
+            <div>
+              <p class="eyebrow section-eyebrow" data-copy="home.marketEyebrow"></p>
+              <h2 id="home-market-title" data-copy="home.marketTitle"></h2>
+            </div>
+            <div class="market-tabs" role="group" data-copy-aria="home.marketModesAria">
+              <button class="market-tab active" type="button" data-market-mode="popular" aria-pressed="true" data-copy="home.marketPopular"></button>
+              <button class="market-tab" type="button" data-market-mode="expensive" aria-pressed="false" data-copy="home.marketExpensive"></button>
+              <button class="market-tab" type="button" data-market-mode="cheap" aria-pressed="false" data-copy="home.marketCheap"></button>
+            </div>
+          </div>
+          <div class="home-product-row">
+            <div class="product-grid featured-grid" id="featured-grid" aria-live="polite"></div>
+            <button class="home-market-more" id="home-more-products" type="button" data-copy-aria="home.marketMoreAria">
+              <img src="assets/icon_new/arrow_forward_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="" aria-hidden="true">
+            </button>
+          </div>
+          <p class="home-market-status" id="home-market-status" role="status" aria-live="polite" data-copy="home.marketLoading"></p>
+        </section>
         <section class="home-discovery section-wrap" hidden>
           <form class="home-search" id="home-search-form">
             <input id="home-search" type="search">
             <button type="submit"></button>
           </form>
           <div class="home-categories" id="home-categories"></div>
-        </section>
-        <section class="home-shortcuts section-wrap" id="marketplace" hidden>
-          <select id="home-sort"><option value="featured"></option></select>
-          <div class="product-grid featured-grid" id="featured-grid"></div>
-          <div class="curated-grid" id="curated-grid"></div>
         </section>
       </section>
 
