@@ -5475,7 +5475,7 @@ body :is(h2, h3, h4, h5, h6) * {
 
 .trade-party-heading {
   min-width: 0;
-  min-height: 88px;
+  min-height: 70px;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -5485,52 +5485,13 @@ body :is(h2, h3, h4, h5, h6) * {
   border-radius: 14px;
 }
 
-.trade-party-avatar {
-  width: 40px;
-  height: 40px;
-  display: grid;
-  flex: 0 0 40px;
-  place-items: center;
-  color: #07120f;
-  background: #50dbc5;
-  border-radius: 50%;
-  font-size: 15px;
-  font-weight: 700;
-}
-
-.trade-party-avatar-target {
-  color: #aab8bd;
-  background: #26343a;
-}
-
-.trade-party-copy {
+.trade-party-heading h2 {
   flex: 1;
   min-width: 0;
-}
-
-.trade-party-label {
-  display: block;
-  margin-bottom: 2px;
-  color: #50dbc5;
-  font-size: 10px;
-}
-
-.trade-party-copy h2 {
-  overflow: hidden;
   margin: 0;
   color: #eef3f4;
   font-size: 16px !important;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.trade-party-copy p {
-  overflow: hidden;
-  margin: 3px 0 0;
-  color: #84939a;
-  font-size: 11px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-weight: 600;
 }
 
 .trade-party-heading .trade-total {

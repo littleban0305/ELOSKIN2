@@ -847,10 +847,6 @@ function handleTradeInventoryClick(event) {
     return;
   }
   const selected = tradeState[button.dataset.tradeSide];
-  if (selected.length >= 4) {
-    showToast(t("trade.selectionLimit"));
-    return;
-  }
   selected.push(product.id);
   renderTrade();
   renderTradeItems();

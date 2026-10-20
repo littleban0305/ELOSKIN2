@@ -10,11 +10,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=53">
-    <script src="content.js?v=19" defer></script>
+    <link rel="stylesheet" href="styles.css?v=54">
+    <script src="content.js?v=20" defer></script>
     <script src="firebase-config.js?v=1" defer></script>
     <script src="steam-config.js?v=3" defer></script>
-    <script src="app.js?v=27" defer></script>
+    <script src="app.js?v=28" defer></script>
     <script src="auth.js?v=15" defer></script>
   </head>
   <body>
@@ -149,12 +149,7 @@
         <div class="trade-workspace">
           <section class="trade-side trade-your-side" aria-labelledby="trade-your-title">
             <div class="trade-party-heading">
-              <span class="trade-party-avatar" aria-hidden="true">Y</span>
-              <div class="trade-party-copy">
-                <span class="trade-party-label" data-copy="trade.you"></span>
-                <h2 id="trade-your-title" data-copy="trade.yourInventory"></h2>
-                <p data-copy="trade.yourInventoryNote"></p>
-              </div>
+              <h2 id="trade-your-title" data-copy="trade.yourInventory"></h2>
               <span class="trade-total"><span id="trade-your-total">0</span><small data-copy="product.currency"></small></span>
             </div>
             <div class="trade-selected-list" id="trade-offer-items" aria-live="polite"></div>
@@ -200,12 +195,7 @@
 
           <section class="trade-side trade-receive-side" aria-labelledby="trade-receive-title">
             <div class="trade-party-heading">
-              <span class="trade-party-avatar trade-party-avatar-target" aria-hidden="true">?</span>
-              <div class="trade-party-copy">
-                <span class="trade-party-label" data-copy="trade.tradePartner"></span>
-                <h2 id="trade-receive-title" data-copy="trade.receiveOffer"></h2>
-                <p data-copy="trade.partnerNotSelected"></p>
-              </div>
+              <h2 id="trade-receive-title" data-copy="trade.receiveOffer"></h2>
               <span class="trade-total"><span id="trade-receive-total">0</span><small data-copy="product.currency"></small></span>
             </div>
             <div class="trade-selected-list" id="trade-receive-items" aria-live="polite"></div>
