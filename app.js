@@ -31,21 +31,21 @@ const games = [
 ];
 const state = { category: copy.categories.allItems, game: "all", search: "", sort: "featured", cart: new Map(), favorites: new Set() };
 const tradeState = {
-  category: "all",
+  category: [],
   game: "CS2",
   search: "",
   sort: "featured",
-  side: "offer",
   offer: [],
   receive: [],
   minPrice: 0,
   maxPrice: 50000,
-  wear: "all",
-  rarity: "all",
-  stattrak: "all",
-  stickers: "all",
-  charms: "all",
-  miniGame: "rivals"
+  wear: [],
+  rarity: [],
+  stattrak: [],
+  stickers: [],
+  charms: [],
+  miniGame: [],
+  openFilter: ""
 };
 const favoriteCounts = new Map();
 const favoriteStatusChecks = new Set();
@@ -67,61 +67,107 @@ function renderFilters(categoryContainer = categoryFilters, gameContainer = game
   ).join("");
 }
 
-function tradeSelectMarkup(id, labelKey, selectedValue, options) {
-  return `<label class="trade-select-field"><span data-copy="trade.${labelKey}">${escapeHtml(copy.trade[labelKey])}</span><select id="${id}">${options.map(({ value, label }) => `<option value="${escapeHtml(value)}"${value === selectedValue ? " selected" : ""}>${escapeHtml(label)}</option>`).join("")}</select></label>`;
+function tradeFilterMarkup(id, labelKey, selectedValues, options, { multiple = true, emptyLabel } = {}) {
+  const selectedLabels = options
+    .filter(({ value }) => selectedValues.includes(value))
+    .map(({ label }) => label);
+  const summary = selectedLabels.length
+    ? `${selectedLabels.slice(0, 2).join("、")}${selectedLabels.length > 2 ? ` +${selectedLabels.length - 2}` : ""}`
+    : emptyLabel;
+  const inputType = multiple ? "checkbox" : "radio";
+  const inputName = multiple ? "" : `name="trade-filter-${id}"`;
+  const optionsMarkup = options.map(({ value, label }) => `
+    <label class="trade-filter-option">
+      <input type="${inputType}" ${inputName} value="${escapeHtml(value)}" data-trade-filter-value="${escapeHtml(value)}"${selectedValues.includes(value) ? " checked" : ""}>
+      <span class="trade-filter-check" aria-hidden="true"></span>
+      <span>${escapeHtml(label)}</span>
+    </label>`).join("");
+  const expanded = tradeState.openFilter === id;
+  return `
+    <div class="trade-filter${expanded ? " is-open" : ""}" id="${id}" data-trade-filter="${id}">
+      <button class="trade-filter-toggle" type="button" data-filter-toggle="${id}" aria-expanded="${expanded}" aria-controls="${id}-options">
+        <span class="trade-filter-label">${escapeHtml(copy.trade[labelKey])}</span>
+        <span class="trade-filter-summary">${escapeHtml(summary)}</span>
+        <span class="trade-filter-chevron" aria-hidden="true"></span>
+      </button>
+      <div class="trade-filter-panel" id="${id}-options" aria-hidden="${!expanded}"${expanded ? "" : " inert"}>
+        <div class="trade-filter-panel-inner">
+          <div class="trade-filter-options" role="${multiple ? "group" : "radiogroup"}" aria-label="${escapeHtml(copy.trade[labelKey])}">
+            ${optionsMarkup}
+          </div>
+        </div>
+      </div>
+    </div>`;
 }
 
 function renderTradeFilters() {
-  const allOption = (label) => ({ value: "all", label });
-  const yesNoOptions = [
-    allOption(copy.trade.any),
-    { value: "yes", label: copy.trade.has },
-    { value: "no", label: copy.trade.hasNot }
+  const gameOptions = [
+    { value: "CS2", label: copy.games.cs2 },
+    { value: "ROBLOX RIVALS", label: copy.trade.roblox }
   ];
-  const fields = tradeState.game === "CS2"
-    ? [
-        tradeSelectMarkup("trade-type-filter", "itemType", tradeState.category, [
-          allOption(copy.trade.allTypes),
-          ...[
-            copy.categories.weapon,
-            copy.categories.case,
-            copy.categories.rifle,
-            copy.categories.sniper,
-            copy.categories.pistol,
-            copy.categories.knife,
-            copy.categories.gloves,
-            copy.categories.competitor
-          ].map((category) => ({ value: category, label: category }))
-        ]),
-        tradeSelectMarkup("trade-wear-filter", "wear", tradeState.wear, [
-          allOption(copy.trade.allWear),
-          { value: "factory-new", label: copy.trade.wearFactoryNew },
-          { value: "minimal-wear", label: copy.trade.wearMinimal },
-          { value: "field-tested", label: copy.trade.wearFieldTested },
-          { value: "well-worn", label: copy.trade.wearWellWorn },
-          { value: "battle-scarred", label: copy.trade.wearBattleScarred }
-        ]),
-        tradeSelectMarkup("trade-rarity-filter", "rarity", tradeState.rarity, [
-          allOption(copy.trade.allRarity),
-          { value: "consumer", label: copy.trade.rarityConsumer },
-          { value: "industrial", label: copy.trade.rarityIndustrial },
-          { value: "mil-spec", label: copy.trade.rarityMilSpec },
-          { value: "restricted", label: copy.trade.rarityRestricted },
-          { value: "classified", label: copy.trade.rarityClassified },
-          { value: "covert", label: copy.trade.rarityCovert },
-          { value: "extraordinary", label: copy.trade.rarityExtraordinary }
-        ]),
-        tradeSelectMarkup("trade-stattrak-filter", "stattrak", tradeState.stattrak, yesNoOptions),
-        tradeSelectMarkup("trade-stickers-filter", "stickers", tradeState.stickers, yesNoOptions),
-        tradeSelectMarkup("trade-charms-filter", "charms", tradeState.charms, yesNoOptions)
-      ].join("")
-    : [
-        tradeSelectMarkup("trade-minigame-filter", "miniGame", tradeState.miniGame, [
-          { value: "rivals", label: copy.trade.rivals }
-        ]),
-        `<p class="trade-filter-note">${escapeHtml(copy.trade.rivalsFiltersComingSoon)}</p>`
-      ].join("");
-  $("#trade-specific-filters").innerHTML = fields;
+  const filters = [
+    tradeFilterMarkup("trade-game-filter", "game", [tradeState.game], gameOptions, {
+      multiple: false,
+      emptyLabel: copy.trade.chooseGame
+    })
+  ];
+  if (tradeState.game === "CS2") {
+    filters.push(
+      tradeFilterMarkup("trade-type-filter", "itemType", tradeState.category, [
+        ...[
+          copy.categories.weapon,
+          copy.categories.case,
+          copy.categories.rifle,
+          copy.categories.sniper,
+          copy.categories.pistol,
+          copy.categories.knife,
+          copy.categories.gloves,
+          copy.categories.competitor
+        ].map((category) => ({ value: category, label: category }))
+      ], { emptyLabel: copy.trade.allTypes }),
+      tradeFilterMarkup("trade-wear-filter", "wear", tradeState.wear, [
+        { value: "factory-new", label: copy.trade.wearFactoryNew },
+        { value: "minimal-wear", label: copy.trade.wearMinimal },
+        { value: "field-tested", label: copy.trade.wearFieldTested },
+        { value: "well-worn", label: copy.trade.wearWellWorn },
+        { value: "battle-scarred", label: copy.trade.wearBattleScarred }
+      ], { emptyLabel: copy.trade.allWear }),
+      tradeFilterMarkup("trade-rarity-filter", "rarity", tradeState.rarity, [
+        { value: "consumer", label: copy.trade.rarityConsumer },
+        { value: "industrial", label: copy.trade.rarityIndustrial },
+        { value: "mil-spec", label: copy.trade.rarityMilSpec },
+        { value: "restricted", label: copy.trade.rarityRestricted },
+        { value: "classified", label: copy.trade.rarityClassified },
+        { value: "covert", label: copy.trade.rarityCovert },
+        { value: "extraordinary", label: copy.trade.rarityExtraordinary }
+      ], { emptyLabel: copy.trade.allRarity }),
+      tradeFilterMarkup("trade-stattrak-filter", "stattrak", tradeState.stattrak, [
+        { value: "yes", label: copy.trade.has },
+        { value: "no", label: copy.trade.hasNot }
+      ], { emptyLabel: copy.trade.any }),
+      tradeFilterMarkup("trade-stickers-filter", "stickers", tradeState.stickers, [
+        { value: "yes", label: copy.trade.has },
+        { value: "no", label: copy.trade.hasNot }
+      ], { emptyLabel: copy.trade.any }),
+      tradeFilterMarkup("trade-charms-filter", "charms", tradeState.charms, [
+        { value: "yes", label: copy.trade.has },
+        { value: "no", label: copy.trade.hasNot }
+      ], { emptyLabel: copy.trade.any })
+    );
+  } else {
+    filters.push(
+      tradeFilterMarkup("trade-minigame-filter", "miniGame", tradeState.miniGame, [
+        { value: "rivals", label: copy.trade.rivals }
+      ], { emptyLabel: copy.trade.any }),
+      `<p class="trade-filter-note">${escapeHtml(copy.trade.rivalsFiltersComingSoon)}</p>`
+    );
+  }
+  $("#trade-specific-filters").innerHTML = filters.join("");
+}
+
+function focusTradeFilterOption(filterId, value) {
+  const panel = document.getElementById(`${filterId}-options`);
+  [...panel.querySelectorAll("input")].find((input) => input.value === value)?.focus({ preventScroll: true });
 }
 
 function updateTradePriceRange(minPrice = tradeState.minPrice, maxPrice = tradeState.maxPrice) {
@@ -143,20 +189,20 @@ function updateTradePriceRange(minPrice = tradeState.minPrice, maxPrice = tradeS
 
 function resetTradeFilters() {
   Object.assign(tradeState, {
-    category: "all",
+    category: [],
     game: "CS2",
     search: "",
     sort: "featured",
     minPrice: 0,
     maxPrice: 50000,
-    wear: "all",
-    rarity: "all",
-    stattrak: "all",
-    stickers: "all",
-    charms: "all",
-    miniGame: "rivals"
+    wear: [],
+    rarity: [],
+    stattrak: [],
+    stickers: [],
+    charms: [],
+    miniGame: [],
+    openFilter: ""
   });
-  $("#trade-game-select").value = "CS2";
   renderTradeFilters();
   updateTradePriceRange();
 }
@@ -166,7 +212,7 @@ function visibleProducts(filterState = state) {
   const visible = products.filter((product) => {
     if (!isProductPublished(product)) return false;
     const matchesCategory = filterState === tradeState
-      ? filterState.category === "all" || product.category === filterState.category || product.kind === filterState.category
+      ? !filterState.category.length || filterState.category.some((category) => product.category === category || product.kind === category)
       : filterState.category === copy.categories.allItems || product.category === filterState.category || product.kind === filterState.category;
     const matchesGame = filterState.game === "all" || product.game === filterState.game;
     const matchesSearch = !term || [product.name, product.game, product.category, product.description, product.wear].some((value) => value.toLocaleLowerCase("zh-Hant").includes(term));
@@ -174,13 +220,14 @@ function visibleProducts(filterState = state) {
     if (filterState !== tradeState) return true;
     if (!Number.isFinite(product.price) || product.price < tradeState.minPrice
       || (tradeState.maxPrice < 50000 && product.price > tradeState.maxPrice)) return false;
-    if (tradeState.game === "ROBLOX RIVALS" && product.miniGame && product.miniGame !== tradeState.miniGame) return false;
+    if (tradeState.game === "ROBLOX RIVALS" && tradeState.miniGame.length
+      && !tradeState.miniGame.includes(product.miniGame)) return false;
     if (tradeState.game === "CS2") {
-      if (tradeState.wear !== "all" && product.wearCondition !== tradeState.wear) return false;
-      if (tradeState.rarity !== "all" && product.rarityColor !== tradeState.rarity) return false;
-      if (tradeState.stattrak !== "all" && Boolean(product.stattrak) !== (tradeState.stattrak === "yes")) return false;
-      if (tradeState.stickers !== "all" && Boolean(product.hasStickers) !== (tradeState.stickers === "yes")) return false;
-      if (tradeState.charms !== "all" && Boolean(product.hasCharm) !== (tradeState.charms === "yes")) return false;
+      if (tradeState.wear.length && !tradeState.wear.includes(product.wearCondition)) return false;
+      if (tradeState.rarity.length && !tradeState.rarity.includes(product.rarityColor)) return false;
+      if (tradeState.stattrak.length && !tradeState.stattrak.includes(product.stattrak ? "yes" : "no")) return false;
+      if (tradeState.stickers.length && !tradeState.stickers.includes(product.hasStickers ? "yes" : "no")) return false;
+      if (tradeState.charms.length && !tradeState.charms.includes(product.hasCharm ? "yes" : "no")) return false;
     }
     return true;
   });
@@ -278,7 +325,7 @@ function productArtwork(product) {
   return `<svg class="product-art" viewBox="0 0 420 180" role="img" aria-label="${escapeHtml(t("product.artAlt", { name: product.name }))}" focusable="false">${silhouette}</svg>`;
 }
 
-function productCardMarkup(product, tradeMode = false) {
+function productCardMarkup(product, tradeMode = false, tradeSide = "receive") {
   const favoriteKey = productFavoriteKey(product);
   const favorite = state.favorites.has(favoriteKey);
   const favoriteCount = favoriteCounts.get(favoriteDocumentId(product)) || 0;
@@ -301,9 +348,9 @@ function productCardMarkup(product, tradeMode = false) {
     ? t("product.addToCart", { name: product.name })
     : !priced ? t("product.unpriced", { name: product.name }) : t("product.outOfStock", { name: product.name });
   const tradeSelected = tradeMode && (tradeState.offer.includes(product.id) || tradeState.receive.includes(product.id));
-  const tradeActionLabel = tradeSelected ? t("trade.selectedItemLabel") : t(tradeState.side === "offer" ? "trade.addToOffer" : "trade.addToReceive");
+  const tradeActionLabel = tradeSelected ? t("trade.selectedItemLabel") : t(tradeSide === "offer" ? "trade.addToOffer" : "trade.addToReceive");
   const actionButton = tradeMode
-    ? `<button class="add-button" type="button" data-trade-add="${escapeHtml(product.id)}" aria-label="${escapeHtml(tradeActionLabel)}：${safeName}" ${tradeSelected || product.stock === 0 || !priced ? "disabled" : ""}><img src="assets/icon_new/add_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="" aria-hidden="true"></button>`
+    ? `<button class="add-button" type="button" data-trade-add="${escapeHtml(product.id)}" data-trade-side="${tradeSide}" aria-label="${escapeHtml(tradeActionLabel)}：${safeName}" ${tradeSelected || product.stock === 0 || !priced ? "disabled" : ""}><img src="assets/icon_new/add_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="" aria-hidden="true"></button>`
     : `<button class="add-button" type="button" data-add="${escapeHtml(product.id)}" aria-label="${escapeHtml(addLabel)}" ${isDemo || product.stock === 0 || !priced ? "disabled" : ""}><img src="assets/icon_new/add_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="" aria-hidden="true"></button>`;
   return `
     <article class="product-card">
@@ -406,12 +453,19 @@ function renderTradeSide(side, container, emptyKey, totalElement) {
 function renderTrade() {
   renderTradeSide("offer", $("#trade-offer-items"), "trade.emptyOffer", $("#trade-your-total"));
   renderTradeSide("receive", $("#trade-receive-items"), "trade.emptyReceive", $("#trade-receive-total"));
+  const difference = tradeTotal("receive") - tradeTotal("offer");
+  $("#trade-after-balance-value").textContent = Math.max(0, difference).toLocaleString();
 }
 
 function renderTradeItems() {
   const visibleItems = visibleProducts(tradeState).filter((product) => Number.isFinite(product.price) && product.price > 0 && product.stock > 0);
+  const ownItems = visibleItems.filter((product) => product.source === "steam");
+  $("#trade-own-item-count").textContent = ownItems.length;
+  $("#trade-own-grid").innerHTML = ownItems.map((product) => productCardMarkup(product, true, "offer")).join("");
+  $("#trade-own-grid").hidden = ownItems.length === 0;
+  $("#trade-own-empty").hidden = ownItems.length > 0;
   $("#trade-item-count").textContent = visibleItems.length;
-  $("#trade-grid").innerHTML = visibleItems.map((product) => productCardMarkup(product, true)).join("");
+  $("#trade-grid").innerHTML = visibleItems.map((product) => productCardMarkup(product, true, "receive")).join("");
   $("#trade-empty").hidden = visibleItems.length > 0;
   $("#trade-grid").hidden = visibleItems.length === 0;
 }
@@ -631,14 +685,28 @@ gameFilters.addEventListener("click", (event) => {
   renderProducts();
 });
 
-$("#trade-game-select").addEventListener("change", (event) => {
-  tradeState.game = event.target.value;
-  tradeState.category = "all";
-  renderTradeFilters();
-  renderTradeItems();
+$("#trade-specific-filters").addEventListener("click", (event) => {
+  const toggle = event.target.closest("[data-filter-toggle]");
+  if (!toggle) return;
+  const filterId = toggle.dataset.filterToggle;
+  const filter = toggle.closest(".trade-filter");
+  const panel = document.getElementById(`${filterId}-options`);
+  const expanded = toggle.getAttribute("aria-expanded") !== "true";
+  $("#trade-specific-filters").querySelectorAll(".trade-filter").forEach((otherFilter) => {
+    const otherToggle = otherFilter.querySelector("[data-filter-toggle]");
+    const otherPanel = otherFilter.querySelector(".trade-filter-panel");
+    const isOpen = otherFilter === filter && expanded;
+    otherFilter.classList.toggle("is-open", isOpen);
+    otherToggle.setAttribute("aria-expanded", String(isOpen));
+    otherPanel.setAttribute("aria-hidden", String(!isOpen));
+    otherPanel.inert = !isOpen;
+  });
+  tradeState.openFilter = expanded ? filterId : "";
 });
 
 $("#trade-specific-filters").addEventListener("change", (event) => {
+  const input = event.target.closest("[data-trade-filter-value]");
+  if (!input) return;
   const filterKey = {
     "trade-type-filter": "category",
     "trade-wear-filter": "wear",
@@ -647,9 +715,34 @@ $("#trade-specific-filters").addEventListener("change", (event) => {
     "trade-stickers-filter": "stickers",
     "trade-charms-filter": "charms",
     "trade-minigame-filter": "miniGame"
-  }[event.target.id];
+  }[input.closest("[data-trade-filter]").dataset.tradeFilter];
+
+  if (input.closest("[data-trade-filter]").dataset.tradeFilter === "trade-game-filter") {
+    tradeState.game = input.value;
+    tradeState.category = [];
+    tradeState.wear = [];
+    tradeState.rarity = [];
+    tradeState.stattrak = [];
+    tradeState.stickers = [];
+    tradeState.charms = [];
+    tradeState.miniGame = [];
+    tradeState.openFilter = "trade-game-filter";
+    renderTradeFilters();
+    focusTradeFilterOption("trade-game-filter", input.value);
+    renderTradeItems();
+    return;
+  }
   if (!filterKey) return;
-  tradeState[filterKey] = event.target.value;
+  if (input.checked) {
+    if (!tradeState[filterKey].includes(input.value)) tradeState[filterKey].push(input.value);
+  } else {
+    tradeState[filterKey] = tradeState[filterKey].filter((value) => value !== input.value);
+  }
+  tradeState.openFilter = input.closest("[data-trade-filter]").dataset.tradeFilter;
+  const filterId = tradeState.openFilter;
+  const selectedValue = input.value;
+  renderTradeFilters();
+  focusTradeFilterOption(filterId, selectedValue);
   renderTradeItems();
 });
 
@@ -673,15 +766,29 @@ $("#trade-range-max").addEventListener("input", (event) => {
 
 $("#trade-reset-filters").addEventListener("click", resetTradeFilters);
 
-document.querySelectorAll(".trade-direction-switch [data-trade-side]").forEach((button) => {
-  button.addEventListener("click", () => {
-    tradeState.side = button.dataset.tradeSide;
-    document.querySelectorAll(".trade-direction-switch [data-trade-side]").forEach((option) => {
-      const active = option === button;
-      option.classList.toggle("active", active);
-      option.setAttribute("aria-pressed", String(active));
-    });
-    renderTradeItems();
+document.addEventListener("click", (event) => {
+  if (event.target.closest("#trade-specific-filters")) return;
+  if (!tradeState.openFilter) return;
+  tradeState.openFilter = "";
+  $("#trade-specific-filters").querySelectorAll(".trade-filter").forEach((filter) => {
+    filter.classList.remove("is-open");
+    const toggle = filter.querySelector("[data-filter-toggle]");
+    const panel = filter.querySelector(".trade-filter-panel");
+    toggle.setAttribute("aria-expanded", "false");
+    panel.setAttribute("aria-hidden", "true");
+    panel.inert = true;
+  });
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape" || !tradeState.openFilter) return;
+  tradeState.openFilter = "";
+  $("#trade-specific-filters").querySelectorAll(".trade-filter").forEach((filter) => {
+    filter.classList.remove("is-open");
+    filter.querySelector("[data-filter-toggle]").setAttribute("aria-expanded", "false");
+    const panel = filter.querySelector(".trade-filter-panel");
+    panel.setAttribute("aria-hidden", "true");
+    panel.inert = true;
   });
 });
 
@@ -730,7 +837,7 @@ document.querySelectorAll("[data-market-mode]").forEach((button) => {
   });
 });
 
-$("#trade-grid").addEventListener("click", (event) => {
+function handleTradeInventoryClick(event) {
   const button = event.target.closest("[data-trade-add]");
   if (!button) return;
   const product = products.find((item) => item.id === button.dataset.tradeAdd);
@@ -739,7 +846,7 @@ $("#trade-grid").addEventListener("click", (event) => {
     showToast(t("trade.alreadySelected"));
     return;
   }
-  const selected = tradeState[tradeState.side];
+  const selected = tradeState[button.dataset.tradeSide];
   if (selected.length >= 4) {
     showToast(t("trade.selectionLimit"));
     return;
@@ -747,7 +854,10 @@ $("#trade-grid").addEventListener("click", (event) => {
   selected.push(product.id);
   renderTrade();
   renderTradeItems();
-});
+}
+
+$("#trade-own-grid").addEventListener("click", handleTradeInventoryClick);
+$("#trade-grid").addEventListener("click", handleTradeInventoryClick);
 
 for (const side of ["offer", "receive"]) {
   $(`#trade-${side}-items`).addEventListener("click", (event) => {

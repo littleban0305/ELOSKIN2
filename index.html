@@ -10,11 +10,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=51">
-    <script src="content.js?v=18" defer></script>
+    <link rel="stylesheet" href="styles.css?v=53">
+    <script src="content.js?v=19" defer></script>
     <script src="firebase-config.js?v=1" defer></script>
     <script src="steam-config.js?v=3" defer></script>
-    <script src="app.js?v=24" defer></script>
+    <script src="app.js?v=27" defer></script>
     <script src="auth.js?v=15" defer></script>
   </head>
   <body>
@@ -148,15 +148,35 @@
         </div>
         <div class="trade-workspace">
           <section class="trade-side trade-your-side" aria-labelledby="trade-your-title">
-            <div class="trade-panel-heading">
-              <h2 id="trade-your-title" data-copy="trade.yourOffer"></h2>
+            <div class="trade-party-heading">
+              <span class="trade-party-avatar" aria-hidden="true">Y</span>
+              <div class="trade-party-copy">
+                <span class="trade-party-label" data-copy="trade.you"></span>
+                <h2 id="trade-your-title" data-copy="trade.yourInventory"></h2>
+                <p data-copy="trade.yourInventoryNote"></p>
+              </div>
               <span class="trade-total"><span id="trade-your-total">0</span><small data-copy="product.currency"></small></span>
             </div>
             <div class="trade-selected-list" id="trade-offer-items" aria-live="polite"></div>
+            <section class="trade-inventory-section" aria-labelledby="trade-own-inventory-title">
+              <div class="trade-inventory-heading">
+                <h3 id="trade-own-inventory-title" data-copy="trade.ownItems"></h3>
+                <span id="trade-own-item-count">0</span>
+              </div>
+              <div class="trade-inventory-grid" id="trade-own-grid" aria-live="polite"></div>
+              <div class="trade-own-empty" id="trade-own-empty" hidden>
+                <p data-copy="trade.connectDescription"></p>
+                <a href="#profile" data-copy="trade.loginButton"></a>
+              </div>
+            </section>
           </section>
 
           <section class="trade-controls" aria-label="交易篩選與確認">
             <button class="trade-submit" id="trade-submit" type="button" data-copy="trade.confirmButton"></button>
+            <div class="trade-after-balance">
+              <span data-copy="trade.afterBalance"></span>
+              <strong><span id="trade-after-balance-value">0</span> <small data-copy="product.currency"></small></strong>
+            </div>
             <section class="trade-filter-section" aria-labelledby="trade-price-title">
               <div class="trade-filter-heading">
                 <h3 id="trade-price-title" data-copy="trade.priceRange"></h3>
@@ -174,37 +194,31 @@
               </div>
               <div class="trade-range-endpoints"><span>0</span><span>50,000+</span></div>
             </section>
-            <label class="trade-select-field">
-              <span data-copy="trade.game"></span>
-              <select id="trade-game-select">
-                <option value="CS2" data-copy="games.cs2"></option>
-                <option value="ROBLOX RIVALS" data-copy="trade.roblox"></option>
-              </select>
-            </label>
             <div class="trade-specific-filters" id="trade-specific-filters"></div>
             <button class="trade-reset-filters" id="trade-reset-filters" type="button" data-copy="trade.resetFilters"></button>
           </section>
 
           <section class="trade-side trade-receive-side" aria-labelledby="trade-receive-title">
-            <div class="trade-panel-heading">
-              <h2 id="trade-receive-title" data-copy="trade.receiveOffer"></h2>
+            <div class="trade-party-heading">
+              <span class="trade-party-avatar trade-party-avatar-target" aria-hidden="true">?</span>
+              <div class="trade-party-copy">
+                <span class="trade-party-label" data-copy="trade.tradePartner"></span>
+                <h2 id="trade-receive-title" data-copy="trade.receiveOffer"></h2>
+                <p data-copy="trade.partnerNotSelected"></p>
+              </div>
               <span class="trade-total"><span id="trade-receive-total">0</span><small data-copy="product.currency"></small></span>
             </div>
             <div class="trade-selected-list" id="trade-receive-items" aria-live="polite"></div>
+            <section class="trade-inventory-section" aria-labelledby="trade-partner-inventory-title">
+              <div class="trade-inventory-heading">
+                <h3 id="trade-partner-inventory-title" data-copy="trade.availableItems"></h3>
+                <span class="trade-stock-count"><span id="trade-item-count">0</span><span data-copy="trade.itemsAvailable"></span></span>
+              </div>
+              <div class="trade-inventory-grid" id="trade-grid" aria-live="polite"></div>
+              <p class="trade-empty" id="trade-empty" data-copy="shop.empty" hidden></p>
+            </section>
           </section>
         </div>
-        <section class="trade-catalog" aria-labelledby="trade-catalog-title">
-          <div class="trade-catalog-heading">
-            <h2 id="trade-catalog-title" data-copy="trade.catalogTitle"></h2>
-            <div class="trade-direction-switch" role="group" data-copy-aria="trade.selectionDirection">
-              <button class="active" type="button" data-trade-side="offer" aria-pressed="true" data-copy="trade.yourOffer"></button>
-              <button type="button" data-trade-side="receive" aria-pressed="false" data-copy="trade.receiveOffer"></button>
-            </div>
-          </div>
-          <span class="trade-stock-count"><span id="trade-item-count">0</span><span data-copy="trade.itemsAvailable"></span></span>
-          <div class="product-grid trade-item-grid" id="trade-grid" aria-live="polite"></div>
-          <p class="trade-empty" id="trade-empty" data-copy="shop.empty" hidden></p>
-        </section>
       </section>
 
       <section class="page-view section-wrap profile-page" id="page-profile" data-page-view="profile" hidden>
