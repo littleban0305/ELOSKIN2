@@ -5917,3 +5917,55 @@ body :is(h2, h3, h4, h5, h6) * {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+.login-modal-backdrop {
+  z-index: 12;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.login-modal {
+  position: relative;
+  width: min(480px, 100%);
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  padding: 24px;
+  color: #e8eef1;
+  background: #10171e;
+  border: 1px solid #33434b;
+  border-radius: 8px;
+  box-shadow: 0 28px 85px #000;
+}
+
+.login-modal [hidden] { display: none !important; }
+.login-modal-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 20px; }
+.login-modal-header h2 { margin: 0; color: #e8eef1; font-size: 22px; }
+.login-modal-header .close-button { flex: 0 0 auto; color: #aab7bc; background: #182229; border: 0; }
+.login-methods { display: grid; gap: 10px; }
+.login-methods .google-auth-button,.login-methods .steam-auth-button { margin-top: 0; }
+.login-method-button { min-height: 56px; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 4px; padding: 10px 14px; color: #e8eef1; text-align: left; background: #182229; border: 1px solid #2b3a42; border-radius: 4px; cursor: pointer; }
+.login-method-button:hover { background: #1d2c32; border-color: #50dbc5; }
+.login-method-button > span { font-size: 12px; font-weight: 700; }
+.login-method-button > small { color: #8c9ba2; font-size: 10px; }
+.email-login-view { display: grid; gap: 12px; }
+.auth-back-button { justify-self: start; padding: 5px 0; color: #50dbc5; background: transparent; border: 0; cursor: pointer; font-size: 11px; }
+.auth-modal .auth-card { padding: 0; background: transparent; border: 0; border-radius: 0; box-shadow: none; }
+.auth-modal .auth-card::before { display: none; }
+.auth-modal .auth-card > h2 { margin-top: 15px; color: #e8eef1; }
+.auth-modal .auth-subtitle { color: #87959e; }
+.auth-modal .auth-tabs { border-color: #2b3941; }
+.auth-modal .auth-tab { color: #93a0a7; }
+.auth-modal .auth-tab.active { color: #e8eef1; }
+.auth-modal .auth-tab.active::after { background: #50dbc5; }
+.auth-modal .auth-status { min-height: 0; margin: 12px 0 0; color: #ff9898; line-height: 1.5; }
+.auth-modal .auth-status[data-kind="success"] { color: #50dbc5; }
+.auth-modal .auth-status[data-kind="info"] { color: #a5b4b8; }
+.profile-setup-description { margin: -6px 0 12px; color: #9aa8ae; font-size: 12px; line-height: 1.7; }
+.profile-setup-status { min-height: 18px; margin: 12px 0 0; color: #ff9898; font-size: 11px; line-height: 1.5; }
+.profile-setup-status[data-kind="info"] { color: #a5b4b8; }
+.profile-setup-status[data-kind="success"] { color: #50dbc5; }
+
+@media (max-width: 640px) {
+  .login-modal-backdrop { align-items: end; padding: 12px; }
+  .login-modal { width: 100%; max-height: calc(100dvh - 24px); padding: 20px; border-radius: 8px 8px 3px 3px; }
+}

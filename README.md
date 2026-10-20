@@ -1,6 +1,6 @@
 # ELOSKIN2
 
-ELOSKIN2 是供朋友使用的 CS2 與 Roblox 道具交易網站。目前首頁及商店會顯示一組 CS2 示意商品；示意商品沒有實際庫存，不能加入購物車。Steam 即時庫存成功載入時會取代這組示意商品。交易頁可用商店商品目錄選擇雙方物品並查看 EC 差額，但真實交易提案尚未連接；個人／登入頁的登入表單與管理者商品管理介面目前隱藏。
+ELOSKIN2 是供朋友使用的 CS2 與 Roblox 道具交易網站。目前首頁及商店會顯示一組 CS2 示意商品；示意商品沒有實際庫存，不能加入購物車。Steam 即時庫存成功載入時會取代這組示意商品。交易頁可用商店商品目錄選擇雙方物品並查看 EC 差額，但真實交易提案尚未連接。右上角登入視窗支援 Email、Google 與 Steam；首次登入需設定顯示名稱和 Steam 交易連結。管理者商品管理介面目前隱藏。
 
 ## 編輯網站文字
 
@@ -51,7 +51,7 @@ Steam 交易連結會公開在網站前端；任何能瀏覽網站的人都能�
    - `STEAM_STATE_SECRET`：自行產生至少 32 個隨機位元組的隨機字串，用於簽署 Steam 登入狀態 Cookie。
 
    可在 Cloudflare Dashboard → Workers & Pages → 選擇 `eloskin2` Worker → Settings → Variables and Secrets → Add → **Secret** 新增上述值。Worker 會用 HttpOnly、Secure、SameSite=Lax Cookie 綁定 Steam OpenID 回呼與原始網站，驗證成功後才簽發短效 Firebase Custom Token。`ALLOWED_ORIGINS` 必須包含 `https://littleban0305.github.io`；程式中的 `steam-config.js` 已設定 `authEndpoint` 指向此 Worker。設定 Secret 後重新部署 Worker。
-7. 管理者 `littleban0305@gmail.com` 可在個人頁面管理商品上／下架。首頁全站收藏計數與商品狀態同步都需要 Firestore：在 Firebase Console → **Firestore Database** 建立資料庫（選擇免費 Spark 方案可用的區域），然後將 [firestore.rules](./firestore.rules) 貼入 Firestore Rules 並發布。收藏者資料只允許本人讀取；公開的計數只能隨收藏投票交易更新。管理者首次以 Email/Password 登入時，需先驗證該信箱；Google 登入使用已驗證的 Google 帳號。Firestore 免費方案不需 Blaze，但受 Firebase 免費配額限制。
+7. 管理者 `littleban0305@gmail.com` 可在個人頁面管理商品上／下架。首頁全站收藏計數、商品狀態同步及首次登入資料儲存都需要 Firestore：在 Firebase Console → **Firestore Database** 建立資料庫（選擇免費 Spark 方案可用的區域），然後將 [firestore.rules](./firestore.rules) 貼入 Firestore Rules 並發布。個人顯示名稱與 Steam 交易連結只允許本人讀寫；收藏者資料只允許本人讀取，公開計數只能隨收藏投票交易更新。管理者首次以 Email/Password 登入時，需先驗證該信箱；Google 登入使用已驗證的 Google 帳號。Firestore 免費方案不需 Blaze，但受 Firebase 免費配額限制。
 
 ELOSKIN2 的目標使用者是受邀朋友，但目前原型尚未設定朋友白名單或頁面存取限制；不要把它當作已啟用的私人網站。
 

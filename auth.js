@@ -8,6 +8,13 @@ const avatarFile = document.querySelector("#avatar-file");
 const avatarUploadButton = document.querySelector("#avatar-upload");
 const avatarStatus = document.querySelector("#avatar-status");
 const authTabs = document.querySelectorAll("[data-auth-mode]");
+const profileShortcut = document.querySelector("#profile-shortcut");
+const loginModal = document.querySelector("#login-modal");
+const loginMethods = document.querySelector("#login-methods");
+const emailLoginView = document.querySelector("#email-login-view");
+const profileSetupModal = document.querySelector("#profile-setup-modal");
+const profileSetupForm = document.querySelector("#profile-setup-form");
+const profileSetupStatus = document.querySelector("#profile-setup-status");
 const firebaseConfig = window.ELOSKIN_FIREBASE_CONFIG;
 const steamAuthConfig = window.ELOSKIN2_STEAM_CONFIG;
 const authText = window.eloText;
@@ -34,6 +41,8 @@ let anonymousSignInPromise = null;
 let catalogVisibilityReady = false;
 let catalogVisibilityError = "";
 const hiddenProductIds = new Set();
+const checkedProfileUids = new Set();
+let profileSetupUser = null;
 
 function showAuthMessage(message, kind = "error") {
   authStatus.textContent = message;
@@ -41,6 +50,139 @@ function showAuthMessage(message, kind = "error") {
 }
 
 window.showAuthMessage = showAuthMessage;
+
+function openLoginModal() {
+  loginMethods.hidden = false;
+  emailLoginView.hidden = true;
+  loginModal.hidden = false;
+  showAuthMessage("");
+  document.querySelector("#email-login-choice").focus();
+}
+
+function openProfilePage() {
+  history.pushState(null, "", "#profile");
+  window.dispatchEvent(new Event("hashchange"));
+}
+
+document.querySelector("#email-login-choice").addEventListener("click", () => {
+  loginMethods.hidden = true;
+  emailLoginView.hidden = false;
+  setAuthMode("login");
+  document.querySelector("#email").focus();
+});
+
+document.querySelector("#email-login-back").addEventListener("click", () => {
+  emailLoginView.hidden = true;
+  loginMethods.hidden = false;
+  showAuthMessage("");
+  document.querySelector("#email-login-choice").focus();
+});
+
+function closeLoginModal() {
+  loginModal.hidden = true;
+}
+
+document.querySelector("#close-login-modal").addEventListener("click", closeLoginModal);
+loginModal.addEventListener("click", (event) => {
+  if (event.target === loginModal) closeLoginModal();
+});
+
+profileShortcut.addEventListener("click", () => {
+  if (window.eloAuthUser) openProfilePage();
+  else openLoginModal();
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  if (!loginModal.hidden) closeLoginModal();
+});
+
+function showProfileSetup(user, message = "") {
+  profileSetupUser = user;
+  document.querySelector("#setup-display-name").value = user.displayName || "";
+  profileSetupStatus.textContent = message;
+  profileSetupStatus.dataset.kind = message ? "error" : "";
+  profileSetupModal.hidden = false;
+  document.querySelector("#setup-display-name").focus();
+}
+
+async function ensureUserProfile(user) {
+  if (!user || checkedProfileUids.has(user.uid)) return;
+  checkedProfileUids.add(user.uid);
+  if (!firebaseDb) {
+    showProfileSetup(user, authText("profile.setupFirestoreUnavailable"));
+    return;
+  }
+  try {
+    const profile = await firebaseDb.collection("userProfiles").doc(user.uid).get();
+    if (firebaseAuth?.currentUser?.uid !== user.uid) return;
+    if (!profile.exists) {
+      showProfileSetup(user);
+      return;
+    }
+    const data = profile.data();
+    window.eloUserProfile = data;
+    if (data.displayName && data.displayName !== user.displayName) {
+      await user.updateProfile({ displayName: data.displayName });
+      updateAccount(user);
+    }
+  } catch (error) {
+    showProfileSetup(user, authText("profile.setupReadError", { message: error.message }));
+  }
+}
+
+function isValidSteamTradeUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:"
+      && url.hostname === "steamcommunity.com"
+      && url.pathname === "/tradeoffer/new/"
+      && /^\d+$/.test(url.searchParams.get("partner") || "")
+      && Boolean(url.searchParams.get("token"));
+  } catch {
+    return false;
+  }
+}
+
+profileSetupForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const user = firebaseAuth?.currentUser;
+  if (!user || !firebaseDb || user.uid !== profileSetupUser?.uid) {
+    profileSetupStatus.textContent = authText("profile.setupFirestoreUnavailable");
+    profileSetupStatus.dataset.kind = "error";
+    return;
+  }
+  const displayName = document.querySelector("#setup-display-name").value.trim();
+  const tradeUrl = document.querySelector("#setup-trade-url").value.trim();
+  if (!displayName) {
+    profileSetupStatus.textContent = authText("profile.setupNameRequired");
+    profileSetupStatus.dataset.kind = "error";
+    return;
+  }
+  if (!isValidSteamTradeUrl(tradeUrl)) {
+    profileSetupStatus.textContent = authText("profile.setupInvalidTradeUrl");
+    profileSetupStatus.dataset.kind = "error";
+    return;
+  }
+
+  const submit = document.querySelector("#profile-setup-submit");
+  submit.disabled = true;
+  profileSetupStatus.textContent = authText("profile.setupSaving");
+  profileSetupStatus.dataset.kind = "info";
+  try {
+    await user.updateProfile({ displayName });
+    await firebaseDb.collection("userProfiles").doc(user.uid).set({ displayName, tradeUrl });
+    window.eloUserProfile = { displayName, tradeUrl };
+    profileSetupModal.hidden = true;
+    profileSetupStatus.textContent = authText("profile.setupSaved");
+    updateAccount(user);
+  } catch (error) {
+    profileSetupStatus.textContent = authText("profile.setupSaveError", { message: error.message });
+    profileSetupStatus.dataset.kind = "error";
+  } finally {
+    submit.disabled = false;
+  }
+});
 
 function showAvatarMessage(message, kind = "error") {
   avatarStatus.textContent = message;
@@ -58,7 +200,6 @@ function setAuthMode(mode) {
   document.querySelector("#auth-title").textContent = registering ? authText("profile.registerTitle") : authText("profile.loginTitle");
   document.querySelector("#auth-subtitle").textContent = registering ? authText("profile.registerDescription") : authText("profile.loginDescription");
   document.querySelector("#auth-submit").textContent = registering ? authText("profile.createAccount") : authText("profile.login");
-  document.querySelector("#display-name-field").hidden = !registering;
   document.querySelector("#confirm-password-field").hidden = !registering;
   document.querySelector("#password").autocomplete = registering ? "new-password" : "current-password";
   document.querySelector("#confirm-password").required = registering;
@@ -117,6 +258,14 @@ function updateAccount(user) {
   document.querySelector(".auth-tabs").hidden = Boolean(user);
   document.querySelector("#auth-title").textContent = user ? authText("profile.signedInTitle") : authMode === "register" ? authText("profile.registerTitle") : authText("profile.loginTitle");
   document.querySelector("#auth-subtitle").textContent = user ? authText("profile.signedInDescription") : authMode === "register" ? authText("profile.registerDescription") : authText("profile.loginDescription");
+  if (user) {
+    closeLoginModal();
+    ensureUserProfile(user);
+  } else {
+    profileSetupModal.hidden = true;
+    profileSetupUser = null;
+    window.eloUserProfile = null;
+  }
   const isAdmin = user?.email?.toLowerCase() === ADMIN_EMAIL;
   const adminPanel = document.querySelector("#admin-panel");
   adminPanel.hidden = !isAdmin;
@@ -380,6 +529,7 @@ function loadFirebaseScript(source) {
 async function initializeFirebase() {
   if (!isConfigured(firebaseConfig)) {
     firebaseNotice.textContent = authText("profile.firebaseMissing");
+    firebaseNotice.hidden = false;
     return;
   }
 
@@ -437,7 +587,6 @@ authForm.addEventListener("submit", async (event) => {
 
   const email = document.querySelector("#email").value.trim();
   const password = document.querySelector("#password").value;
-  const displayName = document.querySelector("#display-name").value.trim();
   const confirmPassword = document.querySelector("#confirm-password").value;
   if (authMode === "register" && password !== confirmPassword) {
     showAuthMessage(authText("profile.passwordMismatch"));
@@ -451,8 +600,7 @@ authForm.addEventListener("submit", async (event) => {
   showAuthMessage(isLogin ? authText("profile.loggingIn") : authText("profile.creatingAccount"), "info");
   try {
     if (!isLogin) {
-      const credential = await firebaseAuth.createUserWithEmailAndPassword(email, password);
-      if (displayName) await credential.user.updateProfile({ displayName });
+      await firebaseAuth.createUserWithEmailAndPassword(email, password);
     } else {
       try {
         await firebaseAuth.signInWithEmailAndPassword(email, password);

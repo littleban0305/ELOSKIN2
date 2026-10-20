@@ -10,12 +10,12 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=54">
-    <script src="content.js?v=20" defer></script>
+    <link rel="stylesheet" href="styles.css?v=55">
+    <script src="content.js?v=21" defer></script>
     <script src="firebase-config.js?v=1" defer></script>
     <script src="steam-config.js?v=3" defer></script>
     <script src="app.js?v=28" defer></script>
-    <script src="auth.js?v=15" defer></script>
+    <script src="auth.js?v=16" defer></script>
   </head>
   <body>
     <header class="site-header">
@@ -34,7 +34,7 @@
           <img src="assets/icon_new/shopping_cart_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="" aria-hidden="true">
           <span class="cart-count" id="cart-count">0</span>
         </button>
-        <button class="account-button" id="profile-shortcut" type="button" data-page="profile" data-copy-aria="nav.accountAria" data-copy="nav.account"></button>
+        <button class="account-button" id="profile-shortcut" type="button" data-copy-aria="nav.accountAria" data-copy="nav.account"></button>
       </div>
     </header>
 
@@ -224,26 +224,6 @@
             <p id="profile-email" data-copy="profile.guestDescription"></p>
             <button class="signout-button" id="sign-out" type="button" hidden data-copy="profile.signOut"></button>
           </section>
-          <section class="auth-card" id="auth-card" aria-labelledby="auth-title">
-            <div class="auth-tabs" role="tablist" data-copy-aria="profile.accountOptions">
-              <button class="auth-tab active" id="login-tab" type="button" role="tab" aria-selected="true" aria-controls="auth-form" data-auth-mode="login" data-copy="profile.loginTab"></button>
-              <button class="auth-tab" id="register-tab" type="button" role="tab" aria-selected="false" aria-controls="auth-form" data-auth-mode="register" data-copy="profile.registerTab"></button>
-            </div>
-            <h2 id="auth-title" data-copy="profile.loginTitle"></h2>
-            <p class="auth-subtitle" id="auth-subtitle" data-copy="profile.loginDescription"></p>
-            <div class="firebase-notice" id="firebase-notice" role="status" data-copy="profile.firebaseMissing" hidden></div>
-            <form id="auth-form">
-              <label class="auth-field" id="display-name-field" hidden><span data-copy="profile.displayName"></span><input id="display-name" name="displayName" type="text" autocomplete="nickname" maxlength="30" data-copy-placeholder="profile.displayNamePlaceholder"></label>
-              <label class="auth-field"><span data-copy="profile.email"></span><input id="email" name="email" type="email" autocomplete="email" required data-copy-placeholder="profile.emailPlaceholder"></label>
-              <label class="auth-field"><span data-copy="profile.password"></span><span class="password-input-wrap"><input id="password" name="password" type="password" autocomplete="current-password" minlength="6" required data-copy-placeholder="profile.passwordPlaceholder"><button class="password-toggle" type="button" data-password-toggle="password" aria-pressed="false" data-copy="profile.showPassword" data-copy-aria="profile.showPassword"></button></span></label>
-              <label class="auth-field" id="confirm-password-field" hidden><span data-copy="profile.confirmPassword"></span><span class="password-input-wrap"><input id="confirm-password" name="confirmPassword" type="password" autocomplete="new-password" minlength="6" data-copy-placeholder="profile.confirmPasswordPlaceholder"><button class="password-toggle" type="button" data-password-toggle="confirm-password" aria-pressed="false" data-copy="profile.showPassword" data-copy-aria="profile.showPassword"></button></span></label>
-              <button class="auth-submit" id="auth-submit" type="submit" data-copy="profile.login"></button>
-              <button class="google-auth-button" id="google-auth" type="button"><span class="google-auth-mark" aria-hidden="true">G</span><span data-copy="profile.googleLogin"></span></button>
-              <button class="steam-auth-button" id="steam-auth" type="button" data-copy="profile.steamLogin"></button>
-              <button class="password-reset" id="password-reset" type="button" data-copy="profile.passwordReset"></button>
-              <p class="auth-status" id="auth-status" role="status" aria-live="polite"></p>
-            </form>
-          </section>
         </div>
         <section class="admin-panel" id="admin-panel" hidden>
           <div class="admin-panel-heading">
@@ -269,6 +249,54 @@
     </footer>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <div class="modal-backdrop login-modal-backdrop" id="login-modal" hidden>
+      <section class="login-modal" role="dialog" aria-modal="true" aria-labelledby="login-modal-title">
+        <header class="login-modal-header">
+          <h2 id="login-modal-title" data-copy="profile.chooseLoginMethod"></h2>
+          <button class="close-button" id="close-login-modal" type="button" data-copy-aria="profile.closeLoginModal">×</button>
+        </header>
+        <div class="login-methods" id="login-methods">
+          <button class="login-method-button email-method-button" id="email-login-choice" type="button">
+            <span data-copy="profile.emailLogin"></span>
+            <small data-copy="profile.autoRegisterHint"></small>
+          </button>
+          <button class="google-auth-button" id="google-auth" type="button"><span class="google-auth-mark" aria-hidden="true">G</span><span data-copy="profile.googleLogin"></span></button>
+          <button class="steam-auth-button" id="steam-auth" type="button" data-copy="profile.steamLogin"></button>
+        </div>
+        <div class="email-login-view" id="email-login-view" hidden>
+          <button class="auth-back-button" id="email-login-back" type="button" data-copy="profile.backToLoginMethods"></button>
+          <div class="firebase-notice" id="firebase-notice" role="status" data-copy="profile.firebaseMissing" hidden></div>
+          <section class="auth-card" id="auth-card" aria-labelledby="auth-title">
+            <div class="auth-tabs" role="tablist" data-copy-aria="profile.accountOptions">
+              <button class="auth-tab active" id="login-tab" type="button" role="tab" aria-selected="true" aria-controls="auth-form" data-auth-mode="login" data-copy="profile.loginTab"></button>
+              <button class="auth-tab" id="register-tab" type="button" role="tab" aria-selected="false" aria-controls="auth-form" data-auth-mode="register" data-copy="profile.registerTab"></button>
+            </div>
+            <h2 id="auth-title" data-copy="profile.loginTitle"></h2>
+            <p class="auth-subtitle" id="auth-subtitle" data-copy="profile.loginDescription"></p>
+            <form id="auth-form">
+              <label class="auth-field"><span data-copy="profile.email"></span><input id="email" name="email" type="email" autocomplete="email" required data-copy-placeholder="profile.emailPlaceholder"></label>
+              <label class="auth-field"><span data-copy="profile.password"></span><span class="password-input-wrap"><input id="password" name="password" type="password" autocomplete="current-password" minlength="6" required data-copy-placeholder="profile.passwordPlaceholder"><button class="password-toggle" type="button" data-password-toggle="password" aria-pressed="false" data-copy="profile.showPassword" data-copy-aria="profile.showPassword"></button></span></label>
+              <label class="auth-field" id="confirm-password-field" hidden><span data-copy="profile.confirmPassword"></span><span class="password-input-wrap"><input id="confirm-password" name="confirmPassword" type="password" autocomplete="new-password" minlength="6" data-copy-placeholder="profile.confirmPasswordPlaceholder"><button class="password-toggle" type="button" data-password-toggle="confirm-password" aria-pressed="false" data-copy="profile.showPassword" data-copy-aria="profile.showPassword"></button></span></label>
+              <button class="auth-submit" id="auth-submit" type="submit" data-copy="profile.login"></button>
+              <button class="password-reset" id="password-reset" type="button" data-copy="profile.passwordReset"></button>
+            </form>
+          </section>
+        </div>
+        <p class="auth-status" id="auth-status" role="status" aria-live="polite"></p>
+      </section>
+    </div>
+    <div class="modal-backdrop login-modal-backdrop" id="profile-setup-modal" hidden>
+      <section class="login-modal profile-setup-modal" role="dialog" aria-modal="true" aria-labelledby="profile-setup-title">
+        <header class="login-modal-header"><h2 id="profile-setup-title" data-copy="profile.setupTitle"></h2></header>
+        <p class="profile-setup-description" data-copy="profile.setupDescription"></p>
+        <form id="profile-setup-form">
+          <label class="auth-field"><span data-copy="profile.displayName"></span><input id="setup-display-name" type="text" maxlength="30" autocomplete="nickname" required data-copy-placeholder="profile.displayNamePlaceholder"></label>
+          <label class="auth-field"><span data-copy="profile.tradeUrl"></span><input id="setup-trade-url" type="url" autocomplete="url" required data-copy-placeholder="profile.tradeUrlPlaceholder"></label>
+          <p class="profile-setup-status" id="profile-setup-status" role="status" aria-live="polite"></p>
+          <button class="auth-submit" id="profile-setup-submit" type="submit" data-copy="profile.saveProfile"></button>
+        </form>
+      </section>
+    </div>
     <div class="modal-backdrop" id="cart-modal" hidden>
       <section class="cart-modal" role="dialog" aria-modal="true" aria-labelledby="cart-title">
         <div class="cart-head"><div><h2 id="cart-title" data-copy="cart.title"></h2></div><button class="close-button" id="close-cart" type="button" data-copy-aria="cart.closeAria"><img src="assets/icon_new/close_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="" aria-hidden="true"></button></div>

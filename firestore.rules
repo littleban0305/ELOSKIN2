@@ -22,6 +22,20 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /userProfiles/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create, update: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly(["displayName", "tradeUrl"])
+        && request.resource.data.keys().hasAll(["displayName", "tradeUrl"])
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() > 0
+        && request.resource.data.displayName.size() <= 30
+        && request.resource.data.tradeUrl is string
+        && request.resource.data.tradeUrl.matches("^https://steamcommunity\\.com/tradeoffer/new/\\?(partner=[0-9]+&token=[A-Za-z0-9_-]+|token=[A-Za-z0-9_-]+&partner=[0-9]+)$");
+      allow delete: if false;
+    }
+
     match /productFavoriteCounts/{productId} {
       allow read: if true;
       allow create: if request.auth != null
