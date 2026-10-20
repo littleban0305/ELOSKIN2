@@ -10,11 +10,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=50">
-    <script src="content.js?v=17" defer></script>
+    <link rel="stylesheet" href="styles.css?v=51">
+    <script src="content.js?v=18" defer></script>
     <script src="firebase-config.js?v=1" defer></script>
     <script src="steam-config.js?v=3" defer></script>
-    <script src="app.js?v=23" defer></script>
+    <script src="app.js?v=24" defer></script>
     <script src="auth.js?v=15" defer></script>
   </head>
   <body>
@@ -156,12 +156,36 @@
           </section>
 
           <section class="trade-controls" aria-label="交易篩選與確認">
+            <button class="trade-submit" id="trade-submit" type="button" data-copy="trade.confirmButton"></button>
+            <section class="trade-filter-section" aria-labelledby="trade-price-title">
+              <div class="trade-filter-heading">
+                <h3 id="trade-price-title" data-copy="trade.priceRange"></h3>
+                <span class="trade-filter-unit" data-copy="product.currency"></span>
+              </div>
+              <div class="trade-price-inputs">
+                <label><span data-copy="trade.minimumPrice"></span><input id="trade-price-min" type="number" min="0" max="50000" step="100" value="0" inputmode="numeric"></label>
+                <span class="trade-price-separator" aria-hidden="true">—</span>
+                <label><span data-copy="trade.maximumPrice"></span><input id="trade-price-max" type="number" min="0" max="50000" step="100" value="50000" inputmode="numeric"></label>
+              </div>
+              <div class="trade-range-control">
+                <div class="trade-range-track" aria-hidden="true"></div>
+                <input id="trade-range-min" type="range" min="0" max="50000" step="100" value="0" data-copy-aria="trade.minimumPrice">
+                <input id="trade-range-max" type="range" min="0" max="50000" step="100" value="50000" data-copy-aria="trade.maximumPrice">
+              </div>
+              <div class="trade-range-endpoints"><span>0</span><span>50,000+</span></div>
+            </section>
+            <label class="trade-select-field">
+              <span data-copy="trade.game"></span>
+              <select id="trade-game-select">
+                <option value="CS2" data-copy="games.cs2"></option>
+                <option value="ROBLOX RIVALS" data-copy="trade.roblox"></option>
+              </select>
+            </label>
+            <div class="trade-specific-filters" id="trade-specific-filters"></div>
             <label class="trade-search">
               <span class="sr-only" data-copy="shop.searchAria"></span>
               <input id="trade-search" type="search" data-copy-placeholder="shop.searchPlaceholder">
             </label>
-            <div class="filter-list trade-category-filters" id="trade-category-filters" data-copy-aria="shop.categoriesAria"></div>
-            <div class="game-filters trade-game-filters" id="trade-game-filters" data-copy-aria="shop.gamesAria"></div>
             <label class="sort-control trade-sort-control" for="trade-sort"><span data-copy="shop.sortLabel"></span>
               <select id="trade-sort" data-copy-aria="shop.sortAria">
                 <option value="featured" data-copy="shop.sortRecommended"></option>
@@ -181,8 +205,8 @@
               <span data-copy="trade.requirementItems"></span>
               <span data-copy="trade.requirementService"></span>
             </div>
-            <button class="trade-submit" id="trade-submit" type="button" data-copy="trade.confirmButton"></button>
             <p class="trade-connection-note" data-copy="trade.connectionNote"></p>
+            <button class="trade-reset-filters" id="trade-reset-filters" type="button" data-copy="trade.resetFilters"></button>
           </section>
 
           <section class="trade-side trade-receive-side" aria-labelledby="trade-receive-title">

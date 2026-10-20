@@ -5178,9 +5178,6 @@ body :is(h2, h3, h4, h5, h6) * {
   border: 1px solid #293740 !important;
 }
 .trade-controls .trade-search { width: 100%; flex: 0 0 auto; }
-.trade-category-filters { max-height: 190px; overflow-y: auto; flex-wrap: wrap; gap: 3px; }
-.trade-controls .filter-button,.trade-controls .game-button { flex: 0 0 auto; padding: 6px 7px; font-size: 9px; }
-.trade-game-filters { flex-wrap: wrap; gap: 4px; }
 .trade-sort-control { width: 100%; margin: 0; justify-content: space-between; }
 .trade-sort-control select { max-width: 68%; }
 .trade-balance { display: grid; gap: 6px; padding: 13px 0; border-block: 1px solid #293740; }
@@ -5237,6 +5234,201 @@ body :is(h2, h3, h4, h5, h6) * {
   .trade-catalog-heading { align-items: flex-start; flex-direction: column; }
   .trade-direction-switch { width: 100%; }
   .trade-direction-switch button { flex: 1; }
-  .trade-category-filters,.trade-game-filters { width: 100%; }
   .trade-catalog .trade-item-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.trade-controls {
+  gap: 15px;
+}
+
+.trade-controls .trade-submit {
+  order: -1;
+  min-height: 58px;
+  margin: 0;
+  color: #07120f;
+  background: #50dbc5;
+  border: 1px solid #50dbc5 !important;
+  font-size: 20px !important;
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+
+.trade-filter-section {
+  display: grid;
+  gap: 11px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #293740 !important;
+}
+
+.trade-filter-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.trade-filter-heading h3 {
+  margin: 0;
+  color: #e8eef1;
+  font-size: 14px !important;
+  font-weight: 600;
+}
+
+.trade-filter-unit {
+  color: #829199;
+}
+
+.trade-price-inputs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: end;
+  gap: 8px;
+}
+
+.trade-price-inputs label,
+.trade-select-field {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+  color: #a5b2b7;
+}
+
+.trade-price-inputs label span,
+.trade-select-field > span {
+  font-size: 11px !important;
+}
+
+.trade-price-inputs input,
+.trade-select-field select {
+  width: 100%;
+  min-width: 0;
+  height: 37px;
+  padding: 0 9px;
+  color: #e8eef1;
+  background: #0b1217;
+  border: 1px solid #2b3a42 !important;
+  border-radius: 0;
+}
+
+.trade-price-inputs input {
+  font-variant-numeric: tabular-nums;
+}
+
+.trade-price-separator {
+  padding-bottom: 9px;
+  color: #65767d;
+}
+
+.trade-range-control {
+  position: relative;
+  height: 24px;
+  margin: 0 8px;
+}
+
+.trade-range-track {
+  position: absolute;
+  top: 11px;
+  right: 0;
+  left: 0;
+  height: 3px;
+  background: #33434b;
+}
+
+.trade-range-control input[type="range"] {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 24px;
+  margin: 0;
+  appearance: none;
+  background: transparent;
+  pointer-events: none;
+}
+
+.trade-range-control input[type="range"]::-webkit-slider-runnable-track {
+  height: 3px;
+  background: transparent;
+}
+
+.trade-range-control input[type="range"]::-moz-range-track {
+  height: 3px;
+  background: transparent;
+}
+
+.trade-range-control input[type="range"]::-webkit-slider-thumb {
+  width: 15px;
+  height: 15px;
+  margin-top: -6px;
+  appearance: none;
+  background: #50dbc5;
+  border: 3px solid #0b1217;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px #50dbc5;
+  pointer-events: auto;
+  cursor: grab;
+}
+
+.trade-range-control input[type="range"]::-moz-range-thumb {
+  width: 9px;
+  height: 9px;
+  background: #50dbc5;
+  border: 3px solid #0b1217;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px #50dbc5;
+  pointer-events: auto;
+  cursor: grab;
+}
+
+.trade-range-endpoints {
+  display: flex;
+  justify-content: space-between;
+  color: #718188;
+  font-size: 10px !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.trade-specific-filters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 11px 9px;
+}
+
+.trade-specific-filters .trade-select-field:first-child {
+  grid-column: 1 / -1;
+}
+
+.trade-specific-filters select,
+.trade-game-select {
+  height: 35px;
+}
+
+.trade-filter-note {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 10px 11px;
+  color: #87969c;
+  background: #131d23;
+  border-left: 2px solid #50dbc5 !important;
+  line-height: 1.6;
+}
+
+.trade-reset-filters {
+  min-height: 37px;
+  color: #a6b4b8;
+  background: transparent;
+  border: 1px solid #34434b !important;
+  cursor: pointer;
+  transition: color .18s, border-color .18s, background .18s;
+}
+
+.trade-reset-filters:hover {
+  color: #50dbc5;
+  background: #13211f;
+  border-color: #50dbc5 !important;
+}
+
+@media (max-width: 640px) {
+  .trade-specific-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }

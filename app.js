@@ -2,11 +2,11 @@ const copy = window.ELOSKIN2_TEXT;
 const t = window.eloText;
 const products = [];
 const demoProducts = [
-  { id: "demo-ak47-rust", name: "AK-47 | 赤砂", game: "CS2", category: copy.categories.rifle, kind: copy.categories.weapon, description: "", price: 4260, stock: 3, art: "rifle", accent: "#c77955" },
-  { id: "demo-awp-frost", name: "AWP | 冬痕", game: "CS2", category: copy.categories.sniper, kind: copy.categories.weapon, description: "", price: 12800, stock: 1, art: "sniper", accent: "#86b9aa" },
-  { id: "demo-knife-ember", name: "折刃刀 | 餘燼", game: "CS2", category: copy.categories.knife, kind: copy.categories.weapon, description: "", price: 9360, stock: 2, art: "knife", accent: "#d58b58" },
-  { id: "demo-gloves-moss", name: "手套 | 苔色", game: "CS2", category: copy.categories.gloves, kind: copy.categories.item, description: "", price: 6450, stock: 2, art: "gloves", accent: "#88a968" },
-  { id: "demo-case-night", name: "夜行武器箱", game: "CS2", category: copy.categories.case, kind: copy.categories.case, description: "", price: 520, stock: 8, art: "case", accent: "#6b86a3" }
+  { id: "demo-ak47-rust", name: "AK-47 | 赤砂", game: "CS2", category: copy.categories.rifle, kind: copy.categories.weapon, description: "", price: 4260, stock: 3, art: "rifle", accent: "#c77955", wearCondition: "field-tested", rarityColor: "restricted", stattrak: false, hasStickers: true, hasCharm: false },
+  { id: "demo-awp-frost", name: "AWP | 冬痕", game: "CS2", category: copy.categories.sniper, kind: copy.categories.weapon, description: "", price: 12800, stock: 1, art: "sniper", accent: "#86b9aa", wearCondition: "minimal-wear", rarityColor: "classified", stattrak: true, hasStickers: true, hasCharm: false },
+  { id: "demo-knife-ember", name: "折刃刀 | 餘燼", game: "CS2", category: copy.categories.knife, kind: copy.categories.weapon, description: "", price: 9360, stock: 2, art: "knife", accent: "#d58b58", wearCondition: "factory-new", rarityColor: "covert", stattrak: false, hasStickers: false, hasCharm: true },
+  { id: "demo-gloves-moss", name: "手套 | 苔色", game: "CS2", category: copy.categories.gloves, kind: copy.categories.item, description: "", price: 6450, stock: 2, art: "gloves", accent: "#88a968", wearCondition: "well-worn", rarityColor: "extraordinary", stattrak: false, hasStickers: false, hasCharm: false },
+  { id: "demo-case-night", name: "夜行武器箱", game: "CS2", category: copy.categories.case, kind: copy.categories.case, description: "", price: 520, stock: 8, art: "case", accent: "#6b86a3", wearCondition: "not-applicable", rarityColor: "base-grade", stattrak: false, hasStickers: false, hasCharm: false }
 ].map((product) => ({
   ...product,
   source: "demo",
@@ -30,7 +30,23 @@ const games = [
   { id: "ROBLOX RIVALS", label: copy.games.rivals }
 ];
 const state = { category: copy.categories.allItems, game: "all", search: "", sort: "featured", cart: new Map(), favorites: new Set() };
-const tradeState = { category: copy.categories.allItems, game: "all", search: "", sort: "featured", side: "offer", offer: [], receive: [] };
+const tradeState = {
+  category: "all",
+  game: "CS2",
+  search: "",
+  sort: "featured",
+  side: "offer",
+  offer: [],
+  receive: [],
+  minPrice: 0,
+  maxPrice: 50000,
+  wear: "all",
+  rarity: "all",
+  stattrak: "all",
+  stickers: "all",
+  charms: "all",
+  miniGame: "rivals"
+};
 const favoriteCounts = new Map();
 const favoriteStatusChecks = new Set();
 let homeMarketMode = "popular";
@@ -39,8 +55,6 @@ const $ = (selector) => document.querySelector(selector);
 const productGrid = $("#product-grid");
 const categoryFilters = $("#category-filters");
 const gameFilters = $("#game-filters");
-const tradeCategoryFilters = $("#trade-category-filters");
-const tradeGameFilters = $("#trade-game-filters");
 const cartModal = $("#cart-modal");
 let toastTimer;
 
@@ -53,14 +67,124 @@ function renderFilters(categoryContainer = categoryFilters, gameContainer = game
   ).join("");
 }
 
+function tradeSelectMarkup(id, labelKey, selectedValue, options) {
+  return `<label class="trade-select-field"><span data-copy="trade.${labelKey}">${escapeHtml(copy.trade[labelKey])}</span><select id="${id}">${options.map(({ value, label }) => `<option value="${escapeHtml(value)}"${value === selectedValue ? " selected" : ""}>${escapeHtml(label)}</option>`).join("")}</select></label>`;
+}
+
+function renderTradeFilters() {
+  const allOption = (label) => ({ value: "all", label });
+  const yesNoOptions = [
+    allOption(copy.trade.any),
+    { value: "yes", label: copy.trade.has },
+    { value: "no", label: copy.trade.hasNot }
+  ];
+  const fields = tradeState.game === "CS2"
+    ? [
+        tradeSelectMarkup("trade-type-filter", "itemType", tradeState.category, [
+          allOption(copy.trade.allTypes),
+          ...[
+            copy.categories.weapon,
+            copy.categories.case,
+            copy.categories.rifle,
+            copy.categories.sniper,
+            copy.categories.pistol,
+            copy.categories.knife,
+            copy.categories.gloves,
+            copy.categories.competitor
+          ].map((category) => ({ value: category, label: category }))
+        ]),
+        tradeSelectMarkup("trade-wear-filter", "wear", tradeState.wear, [
+          allOption(copy.trade.allWear),
+          { value: "factory-new", label: copy.trade.wearFactoryNew },
+          { value: "minimal-wear", label: copy.trade.wearMinimal },
+          { value: "field-tested", label: copy.trade.wearFieldTested },
+          { value: "well-worn", label: copy.trade.wearWellWorn },
+          { value: "battle-scarred", label: copy.trade.wearBattleScarred }
+        ]),
+        tradeSelectMarkup("trade-rarity-filter", "rarity", tradeState.rarity, [
+          allOption(copy.trade.allRarity),
+          { value: "consumer", label: copy.trade.rarityConsumer },
+          { value: "industrial", label: copy.trade.rarityIndustrial },
+          { value: "mil-spec", label: copy.trade.rarityMilSpec },
+          { value: "restricted", label: copy.trade.rarityRestricted },
+          { value: "classified", label: copy.trade.rarityClassified },
+          { value: "covert", label: copy.trade.rarityCovert },
+          { value: "extraordinary", label: copy.trade.rarityExtraordinary }
+        ]),
+        tradeSelectMarkup("trade-stattrak-filter", "stattrak", tradeState.stattrak, yesNoOptions),
+        tradeSelectMarkup("trade-stickers-filter", "stickers", tradeState.stickers, yesNoOptions),
+        tradeSelectMarkup("trade-charms-filter", "charms", tradeState.charms, yesNoOptions)
+      ].join("")
+    : [
+        tradeSelectMarkup("trade-minigame-filter", "miniGame", tradeState.miniGame, [
+          { value: "rivals", label: copy.trade.rivals }
+        ]),
+        `<p class="trade-filter-note">${escapeHtml(copy.trade.rivalsFiltersComingSoon)}</p>`
+      ].join("");
+  $("#trade-specific-filters").innerHTML = fields;
+}
+
+function updateTradePriceRange(minPrice = tradeState.minPrice, maxPrice = tradeState.maxPrice) {
+  const safeMin = Number.isFinite(Number(minPrice)) ? Number(minPrice) : 0;
+  const safeMax = Number.isFinite(Number(maxPrice)) ? Number(maxPrice) : 50000;
+  tradeState.minPrice = Math.max(0, Math.min(50000, Math.round(safeMin / 100) * 100));
+  tradeState.maxPrice = Math.max(tradeState.minPrice, Math.min(50000, Math.round(safeMax / 100) * 100));
+  $("#trade-price-min").value = tradeState.minPrice;
+  $("#trade-price-max").value = tradeState.maxPrice;
+  $("#trade-range-min").value = tradeState.minPrice;
+  $("#trade-range-max").value = tradeState.maxPrice;
+  const minPercent = tradeState.minPrice / 500;
+  const maxPercent = tradeState.maxPrice / 500;
+  $(".trade-range-track").style.background = `linear-gradient(to right, #33434b ${minPercent}%, #50dbc5 ${minPercent}%, #50dbc5 ${maxPercent}%, #33434b ${maxPercent}%)`;
+  $("#trade-range-min").style.zIndex = tradeState.minPrice > 45000 ? "4" : "3";
+  $("#trade-range-max").style.zIndex = tradeState.minPrice > 45000 ? "3" : "4";
+  renderTradeItems();
+}
+
+function resetTradeFilters() {
+  Object.assign(tradeState, {
+    category: "all",
+    game: "CS2",
+    search: "",
+    sort: "featured",
+    minPrice: 0,
+    maxPrice: 50000,
+    wear: "all",
+    rarity: "all",
+    stattrak: "all",
+    stickers: "all",
+    charms: "all",
+    miniGame: "rivals"
+  });
+  $("#trade-search").value = "";
+  $("#trade-sort").value = "featured";
+  $("#trade-game-select").value = "CS2";
+  renderTradeFilters();
+  updateTradePriceRange();
+}
+
 function visibleProducts(filterState = state) {
   const term = filterState.search.trim().toLocaleLowerCase("zh-Hant");
   const visible = products.filter((product) => {
     if (!isProductPublished(product)) return false;
-    const matchesCategory = filterState.category === copy.categories.allItems || product.category === filterState.category || product.kind === filterState.category;
+    const matchesCategory = filterState === tradeState
+      ? filterState.category === "all" || product.category === filterState.category || product.kind === filterState.category
+      : filterState.category === copy.categories.allItems || product.category === filterState.category || product.kind === filterState.category;
     const matchesGame = filterState.game === "all" || product.game === filterState.game;
     const matchesSearch = !term || [product.name, product.game, product.category, product.description, product.wear].some((value) => value.toLocaleLowerCase("zh-Hant").includes(term));
-    return matchesCategory && matchesGame && matchesSearch;
+    if (!matchesCategory || !matchesGame || !matchesSearch) return false;
+    if (filterState !== tradeState) return true;
+    if (!Number.isFinite(product.price) || product.price < tradeState.minPrice
+      || (tradeState.maxPrice < 50000 && product.price > tradeState.maxPrice)) return false;
+    if (tradeState.game === "ROBLOX RIVALS" && product.miniGame && product.miniGame !== tradeState.miniGame) return false;
+    if (tradeState.game === "CS2") {
+      if (tradeState.wear !== "all" && product.wearCondition !== tradeState.wear) return false;
+      if (tradeState.rarity !== "all" && product.rarityColor !== tradeState.rarity) return false;
+      if (tradeState.stattrak !== "all" && Boolean(product.stattrak) !== (tradeState.stattrak === "yes")) return false;
+      if (tradeState.stickers !== "all" && Boolean(product.hasStickers) !== (tradeState.stickers === "yes")) return false;
+      if (tradeState.charms !== "all" && Boolean(product.hasCharm) !== (tradeState.charms === "yes")) return false;
+    }
+    return true;
   });
   const sorters = {
     featured: (a, b) => products.indexOf(a) - products.indexOf(b),
@@ -350,6 +474,11 @@ function steamInventoryProduct(item) {
     description: type || copy.shop.steamDescription,
     price,
     wear: copy.product.notApplicable,
+    wearCondition: item.wearCondition || item.wear || "unknown",
+    rarityColor: item.rarityColor || "unknown",
+    stattrak: typeof item.stattrak === "boolean" ? item.stattrak : /stattrak/i.test(item.name),
+    hasStickers: Array.isArray(item.stickers) && item.stickers.length > 0,
+    hasCharm: Array.isArray(item.charms) && item.charms.length > 0,
     stock: item.amount,
     label: category.toUpperCase(),
     art: "steam",
@@ -392,7 +521,7 @@ async function loadSteamInventory() {
     }
     renderFilters();
     renderProducts();
-    renderFilters(tradeCategoryFilters, tradeGameFilters, tradeState);
+    renderTradeFilters();
     for (const side of ["offer", "receive"]) {
       tradeState[side] = tradeState[side].filter((id) => products.some((product) => product.id === id && isProductPublished(product)));
     }
@@ -506,21 +635,47 @@ gameFilters.addEventListener("click", (event) => {
   renderProducts();
 });
 
-tradeCategoryFilters.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-category]");
-  if (!button) return;
-  tradeState.category = button.dataset.category;
-  renderFilters(tradeCategoryFilters, tradeGameFilters, tradeState);
+$("#trade-game-select").addEventListener("change", (event) => {
+  tradeState.game = event.target.value;
+  tradeState.category = "all";
+  renderTradeFilters();
   renderTradeItems();
 });
 
-tradeGameFilters.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-game]");
-  if (!button) return;
-  tradeState.game = button.dataset.game;
-  renderFilters(tradeCategoryFilters, tradeGameFilters, tradeState);
+$("#trade-specific-filters").addEventListener("change", (event) => {
+  const filterKey = {
+    "trade-type-filter": "category",
+    "trade-wear-filter": "wear",
+    "trade-rarity-filter": "rarity",
+    "trade-stattrak-filter": "stattrak",
+    "trade-stickers-filter": "stickers",
+    "trade-charms-filter": "charms",
+    "trade-minigame-filter": "miniGame"
+  }[event.target.id];
+  if (!filterKey) return;
+  tradeState[filterKey] = event.target.value;
   renderTradeItems();
 });
+
+$("#trade-price-min").addEventListener("change", (event) => {
+  const minPrice = Math.max(0, Math.min(50000, Number(event.target.value) || 0));
+  updateTradePriceRange(minPrice, Math.max(minPrice, tradeState.maxPrice));
+});
+
+$("#trade-price-max").addEventListener("change", (event) => {
+  const maxPrice = Math.max(0, Math.min(50000, Number(event.target.value) || 0));
+  updateTradePriceRange(Math.min(tradeState.minPrice, maxPrice), maxPrice);
+});
+
+$("#trade-range-min").addEventListener("input", (event) => {
+  updateTradePriceRange(Number(event.target.value), Math.max(Number(event.target.value), tradeState.maxPrice));
+});
+
+$("#trade-range-max").addEventListener("input", (event) => {
+  updateTradePriceRange(Math.min(tradeState.minPrice, Number(event.target.value)), Number(event.target.value));
+});
+
+$("#trade-reset-filters").addEventListener("click", resetTradeFilters);
 
 $("#trade-search").addEventListener("input", (event) => {
   tradeState.search = event.target.value;
@@ -779,7 +934,7 @@ $("#checkout").addEventListener("click", () => {
 });
 
 renderFilters();
-renderFilters(tradeCategoryFilters, tradeGameFilters, tradeState);
+renderTradeFilters();
 renderHomeCategories();
 renderProducts();
 renderTrade();
@@ -792,4 +947,5 @@ if (["guide", "safety", "marketplace"].includes(initialDestination)) showHomeAnc
 else {
   navigateTo(initialDestination);
 }
+updateTradePriceRange();
 loadSteamInventory();
