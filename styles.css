@@ -4935,24 +4935,6 @@ body :is(h2, h3, h4, h5, h6) * {
   border-bottom: 1px solid #293740 !important;
 }
 
-.trade-search {
-  flex: 1;
-  min-width: 90px;
-}
-
-.trade-search input {
-  width: 100%;
-  height: 34px;
-  padding: 0 10px;
-  color: #e7edef;
-  background: #0b1217;
-  border: 1px solid #2b3a42 !important;
-}
-
-.trade-search input::placeholder {
-  color: #6f8087;
-}
-
 .trade-stock-count {
   display: inline-flex;
   gap: 4px;
@@ -5177,18 +5159,6 @@ body :is(h2, h3, h4, h5, h6) * {
   background: #10171d;
   border: 1px solid #293740 !important;
 }
-.trade-controls .trade-search { width: 100%; flex: 0 0 auto; }
-.trade-sort-control { width: 100%; margin: 0; justify-content: space-between; }
-.trade-sort-control select { max-width: 68%; }
-.trade-balance { display: grid; gap: 6px; padding: 13px 0; border-block: 1px solid #293740; }
-.trade-balance > span { color: #87959e; font-size: 10px; }
-.trade-balance > strong { color: #50dbc5; font-size: 18px; font-variant-numeric: tabular-nums; }
-.trade-balance > small { color: #74828b; font-size: 9px; line-height: 1.5; }
-.trade-requirements { display: grid; gap: 7px; color: #87959e; font-size: 9px; line-height: 1.5; }
-.trade-requirements > strong { color: #e8eef1; font-size: 10px; }
-.trade-requirements > span { display: flex; align-items: start; gap: 7px; }
-.trade-requirements > span::before { content: "•"; color: #50dbc5; }
-.trade-connection-note { margin: -6px 0 0; color: #74828b; font-size: 9px; line-height: 1.5; }
 .trade-submit { width: 100%; min-height: 44px; margin-top: auto; color: #07120f; background: #50dbc5; border: 1px solid #50dbc5 !important; cursor: pointer; font-weight: 700; }
 .trade-submit:hover { background: #78ead9; transform: translateY(-2px); }
 .trade-selected-list { min-height: 240px; display: grid; align-content: start; gap: 8px; padding: 13px; }
@@ -5313,15 +5283,8 @@ body :is(h2, h3, h4, h5, h6) * {
 
 .trade-price-inputs input:hover,
 .trade-select-field select:hover,
-.trade-search input:hover,
-.trade-sort-control select:hover {
-  background: #202d33;
-}
-
 .trade-price-inputs input:focus-visible,
 .trade-select-field select:focus-visible,
-.trade-search input:focus-visible,
-.trade-sort-control select:focus-visible,
 .trade-reset-filters:focus-visible,
 .trade-controls .trade-submit:focus-visible {
   outline: 2px solid #50dbc5;
@@ -5480,18 +5443,6 @@ body :is(h2, h3, h4, h5, h6) * {
 .trade-controls .trade-submit:active,
 .trade-reset-filters:active {
   transform: translateY(0) scale(.985);
-}
-
-.trade-controls .trade-search input,
-.trade-sort-control select {
-  background: #182128;
-  border: 0 !important;
-  border-radius: 10px;
-  transition: background .24s ease, box-shadow .24s ease;
-}
-
-.trade-balance {
-  border: 0;
 }
 
 @media (max-width: 640px) {

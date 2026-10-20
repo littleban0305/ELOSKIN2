@@ -156,8 +156,6 @@ function resetTradeFilters() {
     charms: "all",
     miniGame: "rivals"
   });
-  $("#trade-search").value = "";
-  $("#trade-sort").value = "featured";
   $("#trade-game-select").value = "CS2";
   renderTradeFilters();
   updateTradePriceRange();
@@ -408,8 +406,6 @@ function renderTradeSide(side, container, emptyKey, totalElement) {
 function renderTrade() {
   renderTradeSide("offer", $("#trade-offer-items"), "trade.emptyOffer", $("#trade-your-total"));
   renderTradeSide("receive", $("#trade-receive-items"), "trade.emptyReceive", $("#trade-receive-total"));
-  const difference = tradeTotal("receive") - tradeTotal("offer");
-  $("#trade-balance-value").textContent = `${difference > 0 ? "+" : ""}${difference.toLocaleString()} EC`;
 }
 
 function renderTradeItems() {
@@ -676,16 +672,6 @@ $("#trade-range-max").addEventListener("input", (event) => {
 });
 
 $("#trade-reset-filters").addEventListener("click", resetTradeFilters);
-
-$("#trade-search").addEventListener("input", (event) => {
-  tradeState.search = event.target.value;
-  renderTradeItems();
-});
-
-$("#trade-sort").addEventListener("change", (event) => {
-  tradeState.sort = event.target.value;
-  renderTradeItems();
-});
 
 document.querySelectorAll(".trade-direction-switch [data-trade-side]").forEach((button) => {
   button.addEventListener("click", () => {
