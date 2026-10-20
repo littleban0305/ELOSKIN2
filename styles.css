@@ -5247,17 +5247,18 @@ body :is(h2, h3, h4, h5, h6) * {
   margin: 0;
   color: #07120f;
   background: #50dbc5;
-  border: 1px solid #50dbc5 !important;
+  border: 0 !important;
+  border-radius: 14px;
   font-size: 20px !important;
   font-weight: 700;
   letter-spacing: .04em;
+  transition: background .28s ease, transform .28s cubic-bezier(.2,.8,.2,1), box-shadow .28s ease;
 }
 
 .trade-filter-section {
   display: grid;
   gap: 11px;
   padding-bottom: 14px;
-  border-bottom: 1px solid #293740 !important;
 }
 
 .trade-filter-heading {
@@ -5304,9 +5305,27 @@ body :is(h2, h3, h4, h5, h6) * {
   height: 37px;
   padding: 0 9px;
   color: #e8eef1;
-  background: #0b1217;
-  border: 1px solid #2b3a42 !important;
-  border-radius: 0;
+  background: #182128;
+  border: 0 !important;
+  border-radius: 10px;
+  transition: background .24s ease, box-shadow .24s ease, transform .24s ease;
+}
+
+.trade-price-inputs input:hover,
+.trade-select-field select:hover,
+.trade-search input:hover,
+.trade-sort-control select:hover {
+  background: #202d33;
+}
+
+.trade-price-inputs input:focus-visible,
+.trade-select-field select:focus-visible,
+.trade-search input:focus-visible,
+.trade-sort-control select:focus-visible,
+.trade-reset-filters:focus-visible,
+.trade-controls .trade-submit:focus-visible {
+  outline: 2px solid #50dbc5;
+  outline-offset: 2px;
 }
 
 .trade-price-inputs input {
@@ -5331,6 +5350,8 @@ body :is(h2, h3, h4, h5, h6) * {
   left: 0;
   height: 3px;
   background: #33434b;
+  border-radius: 999px;
+  transition: background .28s ease;
 }
 
 .trade-range-control input[type="range"] {
@@ -5361,22 +5382,36 @@ body :is(h2, h3, h4, h5, h6) * {
   margin-top: -6px;
   appearance: none;
   background: #50dbc5;
-  border: 3px solid #0b1217;
+  border: 0;
   border-radius: 50%;
-  box-shadow: 0 0 0 1px #50dbc5;
+  box-shadow: 0 0 0 3px rgba(80, 219, 197, .2);
   pointer-events: auto;
   cursor: grab;
+  transition: box-shadow .2s ease, transform .2s ease;
 }
 
 .trade-range-control input[type="range"]::-moz-range-thumb {
   width: 9px;
   height: 9px;
   background: #50dbc5;
-  border: 3px solid #0b1217;
+  border: 0;
   border-radius: 50%;
-  box-shadow: 0 0 0 1px #50dbc5;
+  box-shadow: 0 0 0 3px rgba(80, 219, 197, .2);
   pointer-events: auto;
   cursor: grab;
+  transition: box-shadow .2s ease, transform .2s ease;
+}
+
+.trade-range-control input[type="range"]:hover::-webkit-slider-thumb,
+.trade-range-control input[type="range"]:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 5px rgba(80, 219, 197, .2);
+  transform: scale(1.08);
+}
+
+.trade-range-control input[type="range"]:hover::-moz-range-thumb,
+.trade-range-control input[type="range"]:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 5px rgba(80, 219, 197, .2);
+  transform: scale(1.08);
 }
 
 .trade-range-endpoints {
@@ -5408,23 +5443,55 @@ body :is(h2, h3, h4, h5, h6) * {
   padding: 10px 11px;
   color: #87969c;
   background: #131d23;
-  border-left: 2px solid #50dbc5 !important;
+  border: 0 !important;
+  border-radius: 10px;
   line-height: 1.6;
 }
 
 .trade-reset-filters {
   min-height: 37px;
   color: #a6b4b8;
-  background: transparent;
-  border: 1px solid #34434b !important;
+  background: #182128;
+  border: 0 !important;
+  border-radius: 10px;
   cursor: pointer;
-  transition: color .18s, border-color .18s, background .18s;
+  transition: color .24s ease, background .24s ease, transform .24s cubic-bezier(.2,.8,.2,1);
 }
 
 .trade-reset-filters:hover {
   color: #50dbc5;
-  background: #13211f;
-  border-color: #50dbc5 !important;
+  background: #20312f;
+  transform: translateY(-1px);
+}
+
+.trade-controls {
+  background: #10171d;
+  border: 0 !important;
+  border-radius: 16px;
+  transition: background .28s ease, box-shadow .28s ease;
+}
+
+.trade-controls .trade-submit:hover {
+  background: #78ead9;
+  box-shadow: 0 8px 20px rgba(80, 219, 197, .16);
+  transform: translateY(-2px);
+}
+
+.trade-controls .trade-submit:active,
+.trade-reset-filters:active {
+  transform: translateY(0) scale(.985);
+}
+
+.trade-controls .trade-search input,
+.trade-sort-control select {
+  background: #182128;
+  border: 0 !important;
+  border-radius: 10px;
+  transition: background .24s ease, box-shadow .24s ease;
+}
+
+.trade-balance {
+  border: 0;
 }
 
 @media (max-width: 640px) {
