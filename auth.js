@@ -53,6 +53,15 @@ function showAuthMessage(message, kind = "error") {
 
 window.showAuthMessage = showAuthMessage;
 
+function showSteamLoginError(message) {
+  loginMethods.hidden = false;
+  emailLoginView.hidden = true;
+  emailLoginBack.hidden = true;
+  loginModalTitle.textContent = authText("profile.chooseLoginMethod");
+  loginModal.hidden = false;
+  showAuthMessage(message);
+}
+
 function openLoginModal() {
   loginMethods.hidden = false;
   emailLoginView.hidden = true;
@@ -542,6 +551,7 @@ async function initializeFirebase() {
   if (!isConfigured(firebaseConfig)) {
     firebaseNotice.textContent = authText("profile.firebaseMissing");
     firebaseNotice.hidden = false;
+    if (steamCallback) showSteamLoginError(authText("profile.firebaseMissing"));
     return;
   }
 
@@ -577,7 +587,9 @@ async function initializeFirebase() {
       catalogVisibilityError = error.message;
     }
     firebaseAuth.onAuthStateChanged(updateAccount, (error) => {
-      showAuthMessage(authText("profile.firebaseStateError", { message: error.message }));
+      const message = authText("profile.firebaseStateError", { message: error.message });
+      if (steamCallback) showSteamLoginError(message);
+      else showAuthMessage(message);
     });
     firebaseReady = true;
     loadCatalogVisibility();
@@ -586,7 +598,9 @@ async function initializeFirebase() {
   } catch (error) {
     firebaseNotice.hidden = false;
     firebaseNotice.textContent = authText("profile.firebaseInitError", { message: error.message });
-    showAuthMessage(authText("profile.firebaseInitError", { message: error.message }));
+    const message = authText("profile.firebaseInitError", { message: error.message });
+    if (steamCallback) showSteamLoginError(message);
+    else showAuthMessage(message);
   }
 }
 
@@ -720,11 +734,11 @@ async function completeSteamSignIn() {
       "steam-verification-unavailable": "profile.steamVerificationUnavailable",
       "firebase-token-failed": "profile.steamFirebaseTokenFailed"
     };
-    showAuthMessage(authText(messages[steamCallback.error] || "profile.steamLoginVerificationFailed"));
+    showSteamLoginError(authText(messages[steamCallback.error] || "profile.steamLoginVerificationFailed"));
     return;
   }
   if (!steamCallback.token) {
-    showAuthMessage(authText("profile.steamLoginVerificationFailed"));
+    showSteamLoginError(authText("profile.steamLoginVerificationFailed"));
     return;
   }
 
@@ -733,10 +747,19 @@ async function completeSteamSignIn() {
     const steamId = credential.user.uid.startsWith("steam:")
       ? credential.user.uid.slice("steam:".length)
       : "";
-    if (!steamId || !steamAuthConfig?.authEndpoint) return;
+    if (!steamId) {
+      showSteamLoginError(authText("profile.steamLoginVerificationFailed"));
+      return;
+    }
+    if (!steamAuthConfig?.authEndpoint) {
+      showSteamLoginError(authText("profile.steamLoginNotConfigured"));
+      return;
+    }
     await loadSteamProfile(credential.user, steamId);
   } catch (error) {
-    showAuthMessage(authText("profile.steamLoginFirebaseFailed", { message: error.message }));
+    showSteamLoginError(authText("profile.steamLoginFirebaseFailed", {
+      message: `${error.code || "unknown"}: ${error.message}`
+    }));
   }
 }
 
