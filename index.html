@@ -10,8 +10,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=55">
-    <script src="content.js?v=21" defer></script>
+    <link rel="stylesheet" href="styles.css?v=57">
+    <script src="content.js?v=22" defer></script>
     <script src="firebase-config.js?v=1" defer></script>
     <script src="steam-config.js?v=3" defer></script>
     <script src="app.js?v=28" defer></script>
@@ -257,11 +257,19 @@
         </header>
         <div class="login-methods" id="login-methods">
           <button class="login-method-button email-method-button" id="email-login-choice" type="button">
+            <span class="provider-icon email-provider-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false"><path d="M3.75 5.75h16.5v12.5H3.75zM4 6l8 6 8-6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7"></path></svg>
+            </span>
             <span data-copy="profile.emailLogin"></span>
-            <small data-copy="profile.autoRegisterHint"></small>
           </button>
-          <button class="google-auth-button" id="google-auth" type="button"><span class="google-auth-mark" aria-hidden="true">G</span><span data-copy="profile.googleLogin"></span></button>
-          <button class="steam-auth-button" id="steam-auth" type="button" data-copy="profile.steamLogin"></button>
+          <button class="google-auth-button" id="google-auth" type="button">
+            <img class="provider-icon google-provider-icon" src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="" aria-hidden="true" referrerpolicy="no-referrer">
+            <span data-copy="profile.googleLogin"></span>
+          </button>
+          <button class="steam-auth-button" id="steam-auth" type="button">
+            <span class="provider-icon steam-provider-icon" aria-hidden="true"><img src="https://store.steampowered.com/public/shared/images/header/logo_steam.svg" alt="" referrerpolicy="no-referrer"></span>
+            <span data-copy="profile.steamLogin"></span>
+          </button>
         </div>
         <div class="email-login-view" id="email-login-view" hidden>
           <button class="auth-back-button" id="email-login-back" type="button" data-copy="profile.backToLoginMethods"></button>

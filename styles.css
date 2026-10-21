@@ -1476,12 +1476,6 @@ body {
   cursor: wait;
 }
 
-.google-auth-mark {
-  color: #4285f4;
-  font-size: 15px;
-  font-weight: 700;
-}
-
 .steam-auth-button {
   width: 100%;
   min-height: 40px;
@@ -5968,4 +5962,253 @@ body :is(h2, h3, h4, h5, h6) * {
 @media (max-width: 640px) {
   .login-modal-backdrop { align-items: end; padding: 12px; }
   .login-modal { width: 100%; max-height: calc(100dvh - 24px); padding: 20px; border-radius: 8px 8px 3px 3px; }
+}
+
+.login-modal-backdrop {
+  background: rgba(4, 9, 12, .82);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.login-modal {
+  width: min(440px, 100%);
+  padding: 30px;
+  overflow: hidden auto;
+  background: #10171e;
+  border: 0 !important;
+  border-radius: 20px;
+  box-shadow: 0 28px 90px rgba(0, 0, 0, .6), 0 0 0 1px rgba(80, 219, 197, .14);
+  animation: login-modal-enter .34s cubic-bezier(.2,.8,.2,1) both;
+}
+
+.login-modal::before {
+  position: absolute;
+  top: 0;
+  right: 30px;
+  left: 30px;
+  height: 2px;
+  background: #50dbc5;
+  content: "";
+}
+
+.login-modal-header {
+  margin-bottom: 24px;
+}
+
+.login-modal-header h2 {
+  color: #eef3f4;
+  font-size: 25px !important;
+  font-weight: 700;
+  letter-spacing: -.035em;
+}
+
+.login-modal-header .close-button {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  transition: color .2s ease, background .2s ease, transform .2s ease;
+}
+
+.login-modal-header .close-button:hover {
+  color: #50dbc5;
+  background: #223036;
+  transform: rotate(90deg);
+}
+
+.login-methods {
+  gap: 11px;
+}
+
+.login-method-button,
+.login-modal .google-auth-button,
+.login-modal .steam-auth-button {
+  width: 100%;
+  min-height: 56px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 13px;
+  margin: 0;
+  padding: 0 17px;
+  color: #e8eef1;
+  text-align: left;
+  background: #182229;
+  border: 0 !important;
+  border-radius: 13px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px !important;
+  font-weight: 600;
+  transition: color .22s ease, background .22s ease, transform .22s cubic-bezier(.2,.8,.2,1), box-shadow .22s ease;
+}
+
+.login-method-button:hover,
+.login-modal .google-auth-button:hover,
+.login-modal .steam-auth-button:hover {
+  color: #f4ffff;
+  background: #202e34;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, .2);
+  transform: translateY(-2px);
+}
+
+.login-method-button:active,
+.login-modal .google-auth-button:active,
+.login-modal .steam-auth-button:active {
+  transform: translateY(0) scale(.99);
+}
+
+.login-method-button:focus-visible,
+.login-modal .google-auth-button:focus-visible,
+.login-modal .steam-auth-button:focus-visible,
+.login-modal-header .close-button:focus-visible {
+  box-shadow: 0 0 0 3px rgba(80, 219, 197, .3);
+}
+
+.login-method-button > span:last-child,
+.login-modal .google-auth-button > span:last-child,
+.login-modal .steam-auth-button > span:last-child {
+  color: inherit;
+  font-size: 14px !important;
+  font-weight: 600;
+}
+
+.provider-icon {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  flex: 0 0 28px;
+  place-items: center;
+}
+
+.email-provider-icon {
+  color: #50dbc5;
+}
+
+.email-provider-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.google-provider-icon {
+  width: 25px;
+  height: 25px;
+  flex-basis: 25px;
+}
+
+.steam-provider-icon {
+  overflow: hidden;
+  border-radius: 50%;
+}
+
+.steam-provider-icon img {
+  width: 92px !important;
+  max-width: none !important;
+  height: 28px !important;
+  object-fit: fill;
+  object-position: left center;
+}
+
+.login-modal .auth-back-button {
+  color: #50dbc5;
+  transition: color .2s ease, transform .2s ease;
+}
+
+.login-modal .auth-back-button:hover {
+  color: #83ecdc;
+  transform: translateX(-2px);
+}
+
+.login-modal .auth-card > h2 {
+  color: #eef3f4;
+}
+
+.login-modal .auth-subtitle {
+  color: #89989e;
+}
+
+.login-modal .auth-tabs {
+  border-color: #2a3940;
+}
+
+.login-modal .auth-tab {
+  color: #89989e;
+}
+
+.login-modal .auth-tab.active {
+  color: #eef3f4;
+}
+
+.login-modal .auth-field {
+  color: #aebbc0;
+}
+
+.login-modal .auth-field input {
+  color: #eef3f4;
+  background: #182229;
+  border: 0 !important;
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 1px rgba(164, 186, 191, .12);
+  transition: background .2s ease, box-shadow .2s ease;
+}
+
+.login-modal .auth-field input:focus {
+  background: #1b292f;
+  border: 0 !important;
+  box-shadow: inset 0 0 0 1px rgba(80, 219, 197, .72), 0 0 0 3px rgba(80, 219, 197, .1);
+}
+
+.login-modal .auth-field input::placeholder {
+  color: #6f8087;
+}
+
+.login-modal .auth-submit {
+  color: #07120f;
+  background: #50dbc5;
+  border-radius: 10px;
+  font-size: 14px !important;
+  transition: background .2s ease, transform .2s ease;
+}
+
+.login-modal .auth-submit:hover {
+  background: #78ead9;
+  transform: translateY(-1px);
+}
+
+.login-modal .password-toggle,
+.login-modal .password-reset {
+  color: #50dbc5;
+}
+
+.login-modal .auth-status[data-kind="success"] {
+  color: #50dbc5;
+}
+
+.login-modal .auth-status[data-kind="info"] {
+  color: #a5b4b8;
+}
+
+.login-modal .firebase-notice {
+  color: #a5b4b8;
+  background: #182229;
+  border: 0 !important;
+  border-radius: 10px;
+}
+
+@keyframes login-modal-enter {
+  from { opacity: 0; transform: translateY(12px) scale(.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-modal {
+    animation: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .login-modal {
+    padding: 26px 21px 22px;
+    border-radius: 20px 20px 14px 14px;
+  }
 }
