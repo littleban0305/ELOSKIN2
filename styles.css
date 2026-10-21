@@ -6165,16 +6165,15 @@ body :is(h2, h3, h4, h5, h6) * {
 }
 
 .steam-provider-icon {
-  overflow: hidden;
   border-radius: 50%;
+  color: #f0f3f4;
+  background: #17212b;
 }
 
-.steam-provider-icon img {
-  width: 92px !important;
-  max-width: none !important;
-  height: 28px !important;
-  object-fit: fill;
-  object-position: left center;
+.steam-provider-icon svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
 }
 
 .login-modal .auth-back-button {
