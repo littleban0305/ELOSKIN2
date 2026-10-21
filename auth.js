@@ -197,8 +197,10 @@ function setAuthMode(mode) {
   document.querySelector("#register-tab").classList.toggle("active", registering);
   document.querySelector("#login-tab").setAttribute("aria-selected", String(!registering));
   document.querySelector("#register-tab").setAttribute("aria-selected", String(registering));
-  document.querySelector("#auth-title").textContent = registering ? authText("profile.registerTitle") : authText("profile.loginTitle");
-  document.querySelector("#auth-subtitle").textContent = registering ? authText("profile.registerDescription") : authText("profile.loginDescription");
+  const authTitle = document.querySelector("#auth-title");
+  const authSubtitle = document.querySelector("#auth-subtitle");
+  if (authTitle) authTitle.textContent = registering ? authText("profile.registerTitle") : authText("profile.loginTitle");
+  if (authSubtitle) authSubtitle.textContent = registering ? authText("profile.registerDescription") : authText("profile.loginDescription");
   document.querySelector("#auth-submit").textContent = registering ? authText("profile.createAccount") : authText("profile.login");
   document.querySelector("#confirm-password-field").hidden = !registering;
   document.querySelector("#password").autocomplete = registering ? "new-password" : "current-password";
@@ -256,8 +258,10 @@ function updateAccount(user) {
   avatarUploadButton.hidden = !user;
   document.querySelector("#auth-form").hidden = Boolean(user);
   document.querySelector(".auth-tabs").hidden = Boolean(user);
-  document.querySelector("#auth-title").textContent = user ? authText("profile.signedInTitle") : authMode === "register" ? authText("profile.registerTitle") : authText("profile.loginTitle");
-  document.querySelector("#auth-subtitle").textContent = user ? authText("profile.signedInDescription") : authMode === "register" ? authText("profile.registerDescription") : authText("profile.loginDescription");
+  const authTitle = document.querySelector("#auth-title");
+  const authSubtitle = document.querySelector("#auth-subtitle");
+  if (authTitle) authTitle.textContent = user ? authText("profile.signedInTitle") : authMode === "register" ? authText("profile.registerTitle") : authText("profile.loginTitle");
+  if (authSubtitle) authSubtitle.textContent = user ? authText("profile.signedInDescription") : authMode === "register" ? authText("profile.registerDescription") : authText("profile.loginDescription");
   if (user) {
     closeLoginModal();
     ensureUserProfile(user);

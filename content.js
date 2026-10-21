@@ -253,6 +253,7 @@ window.ELOSKIN2_TEXT = {
     emailPasswordProviderDisabled: "Firebase 尚未啟用電子郵件／密碼登入，請先在 Authentication 設定啟用。",
     loginTab: "登入",
     registerTab: "註冊",
+    accountForm: "帳號登入與註冊",
     chooseLoginMethod: "選擇登入方式",
     closeLoginModal: "關閉登入視窗",
     emailLogin: "電子郵件",
