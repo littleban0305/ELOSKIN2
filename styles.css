@@ -1421,6 +1421,21 @@ body {
   cursor: pointer;
 }
 
+.password-toggle svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+
+.password-icon-hide,
+.password-toggle.is-visible .password-icon-show {
+  display: none !important;
+}
+
+.password-toggle.is-visible .password-icon-hide {
+  display: block !important;
+}
+
 .password-toggle:hover,
 .password-reset:hover {
   text-decoration: underline;
@@ -5923,12 +5938,19 @@ body :is(h2, h3, h4, h5, h6) * {
   width: min(480px, 100%);
   max-height: calc(100dvh - 40px);
   overflow-y: auto;
+  scrollbar-width: none;
   padding: 24px;
   color: #e8eef1;
   background: #10171e;
   border: 1px solid #33434b;
   border-radius: 8px;
   box-shadow: 0 28px 85px #000;
+}
+
+.login-modal::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .login-modal [hidden] { display: none !important; }
@@ -5968,6 +5990,13 @@ body :is(h2, h3, h4, h5, h6) * {
   background: rgba(4, 9, 12, .82);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+  scrollbar-width: none;
+}
+
+.login-modal-backdrop::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .login-modal {
@@ -5995,7 +6024,41 @@ body :is(h2, h3, h4, h5, h6) * {
   margin-bottom: 24px;
 }
 
+.login-modal-back {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  flex: 0 0 36px;
+  place-items: center;
+  padding: 0;
+  color: #aab7bc;
+  background: #182229;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: color .2s ease, background .2s ease, transform .2s ease;
+}
+
+.login-modal-back[hidden] {
+  display: none !important;
+}
+
+.login-modal-back:hover {
+  color: #50dbc5;
+  background: #223036;
+  transform: translateX(-2px);
+}
+
+.login-modal-back:focus-visible {
+  box-shadow: 0 0 0 3px rgba(80, 219, 197, .3);
+}
+
+.login-modal-back svg {
+  width: 19px;
+  height: 19px;
+}
+
 .login-modal-header h2 {
+  flex: 1;
   color: #eef3f4;
   font-size: 25px !important;
   font-weight: 700;
@@ -6007,6 +6070,11 @@ body :is(h2, h3, h4, h5, h6) * {
   height: 36px;
   border-radius: 50%;
   transition: color .2s ease, background .2s ease, transform .2s ease;
+}
+
+.login-modal-header:has(.login-modal-back:not([hidden])) h2 {
+  margin-left: 2px;
+  font-size: 19px !important;
 }
 
 .login-modal-header .close-button:hover {
@@ -6178,6 +6246,27 @@ body :is(h2, h3, h4, h5, h6) * {
 .login-modal .password-toggle,
 .login-modal .password-reset {
   color: #50dbc5;
+}
+
+.login-modal .password-toggle {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  padding: 0;
+  border-radius: 50%;
+  transition: color .2s ease, background .2s ease, transform .2s ease;
+}
+
+.login-modal .password-toggle:hover {
+  color: #83ecdc;
+  background: #26373c;
+  text-decoration: none;
+  transform: translateY(-50%) scale(1.05);
+}
+
+.login-modal .password-toggle:focus-visible {
+  box-shadow: 0 0 0 3px rgba(80, 219, 197, .22);
 }
 
 .login-modal .auth-status[data-kind="success"] {

@@ -255,6 +255,7 @@ window.ELOSKIN2_TEXT = {
     registerTab: "註冊",
     accountForm: "帳號登入與註冊",
     chooseLoginMethod: "選擇登入方式",
+    emailLoginTitle: "使用電子郵件登入",
     closeLoginModal: "關閉登入視窗",
     emailLogin: "電子郵件",
     backToLoginMethods: "返回登入方式",

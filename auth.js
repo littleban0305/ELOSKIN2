@@ -12,6 +12,8 @@ const profileShortcut = document.querySelector("#profile-shortcut");
 const loginModal = document.querySelector("#login-modal");
 const loginMethods = document.querySelector("#login-methods");
 const emailLoginView = document.querySelector("#email-login-view");
+const emailLoginBack = document.querySelector("#email-login-back");
+const loginModalTitle = document.querySelector("#login-modal-title");
 const profileSetupModal = document.querySelector("#profile-setup-modal");
 const profileSetupForm = document.querySelector("#profile-setup-form");
 const profileSetupStatus = document.querySelector("#profile-setup-status");
@@ -54,6 +56,8 @@ window.showAuthMessage = showAuthMessage;
 function openLoginModal() {
   loginMethods.hidden = false;
   emailLoginView.hidden = true;
+  emailLoginBack.hidden = true;
+  loginModalTitle.textContent = authText("profile.chooseLoginMethod");
   loginModal.hidden = false;
   showAuthMessage("");
   document.querySelector("#email-login-choice").focus();
@@ -67,13 +71,17 @@ function openProfilePage() {
 document.querySelector("#email-login-choice").addEventListener("click", () => {
   loginMethods.hidden = true;
   emailLoginView.hidden = false;
+  emailLoginBack.hidden = false;
+  loginModalTitle.textContent = authText("profile.emailLoginTitle");
   setAuthMode("login");
   document.querySelector("#email").focus();
 });
 
-document.querySelector("#email-login-back").addEventListener("click", () => {
+emailLoginBack.addEventListener("click", () => {
   emailLoginView.hidden = true;
   loginMethods.hidden = false;
+  emailLoginBack.hidden = true;
+  loginModalTitle.textContent = authText("profile.chooseLoginMethod");
   showAuthMessage("");
   document.querySelector("#email-login-choice").focus();
 });
@@ -216,7 +224,7 @@ document.querySelectorAll("[data-password-toggle]").forEach((button) => {
     const input = document.getElementById(button.dataset.passwordToggle);
     const showing = input.type === "password";
     input.type = showing ? "text" : "password";
-    button.textContent = authText(showing ? "profile.hidePassword" : "profile.showPassword");
+    button.classList.toggle("is-visible", showing);
     button.setAttribute("aria-label", authText(showing ? "profile.hidePassword" : "profile.showPassword"));
     button.setAttribute("aria-pressed", String(showing));
   });
