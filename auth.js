@@ -732,9 +732,15 @@ async function completeSteamSignIn() {
       "verification-failed": "profile.steamLoginVerificationFailed",
       "service-unavailable": "profile.steamLoginUnavailable",
       "steam-verification-unavailable": "profile.steamVerificationUnavailable",
+      "steam-verification-network-error": "profile.steamVerificationNetworkError",
+      "steam-verification-response-error": "profile.steamVerificationResponseError",
       "firebase-token-failed": "profile.steamFirebaseTokenFailed"
     };
-    showSteamLoginError(authText(messages[steamCallback.error] || "profile.steamLoginVerificationFailed"));
+    const httpError = /^steam-verification-http-(\d{3})$/.exec(steamCallback.error);
+    const message = httpError
+      ? authText("profile.steamVerificationHttpError", { status: httpError[1] })
+      : authText(messages[steamCallback.error] || "profile.steamLoginVerificationFailed");
+    showSteamLoginError(message);
     return;
   }
   if (!steamCallback.token) {

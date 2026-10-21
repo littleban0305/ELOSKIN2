@@ -6,6 +6,7 @@ const MAX_PAGES = 10;
 const INVENTORY_CACHE_TTL_SECONDS = 300;
 const ICON_BASE = "https://community.cloudflare.steamstatic.com/economy/image/";
 const STEAM_OPENID_URL = "https://steamcommunity.com/openid/login";
+const STEAM_USER_AGENT = "ELOSKIN2 Steam authentication";
 const FIREBASE_CUSTOM_TOKEN_AUDIENCE = "https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit";
 const STEAM_STATE_COOKIE = "eloskin_steam_state";
 const STEAM_STATE_TTL_SECONDS = 600;
@@ -279,21 +280,26 @@ async function steamLoginCallback(request, requestUrl, env) {
   try {
     verification = await fetch(STEAM_OPENID_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: verificationParameters,
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent": STEAM_USER_AGENT
+      },
+      body: verificationParameters.toString(),
       redirect: "error",
       cache: "no-store"
     });
   } catch {
-    return callbackError(returnUrl.href, "steam-verification-unavailable");
+    return callbackError(returnUrl.href, "steam-verification-network-error");
   }
-  if (!verification.ok) return callbackError(returnUrl.href, "steam-verification-unavailable");
+  if (!verification.ok) {
+    return callbackError(returnUrl.href, `steam-verification-http-${verification.status}`);
+  }
   let openIdVerified = false;
   try {
     const verificationBody = await verification.text();
     openIdVerified = verificationBody.split(/\r?\n/).some((line) => line.trim() === "is_valid:true");
   } catch {
-    return callbackError(returnUrl.href, "steam-verification-unavailable");
+    return callbackError(returnUrl.href, "steam-verification-response-error");
   }
   if (!openIdVerified) {
     return callbackError(returnUrl.href, "verification-failed");
@@ -323,7 +329,10 @@ async function steamProfile(requestUrl, env) {
   let response;
   try {
     response = await fetch(`https://steamcommunity.com/profiles/${steamId}?xml=1`, {
-      headers: { "Accept": "application/xml, text/xml" },
+      headers: {
+        "Accept": "application/xml, text/xml",
+        "User-Agent": STEAM_USER_AGENT
+      },
       redirect: "error",
       cf: { cacheTtl: 3600, cacheEverything: true }
     });
