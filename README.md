@@ -35,8 +35,12 @@ GitHub Pages 是靜態網站，不能直接讀取 Steam 庫存 API（Steam 不�
 3. 確認 Steam 個人資料及物品庫設為公開。此 Worker 固定讀取 Steam ID `76561199883868233` 的 CS2（App 730）物品庫，只回傳可交易物品，最多讀取 20,000 件；Steam 上游分頁回應會由 Cloudflare 快取 60 秒，成功取得的完整庫存會快取 5 分鐘。
 4. Worker 網址已接入 `steam-config.js`：`https://eloskin2.littleban0305.workers.dev/inventory`。目前 `ALLOWED_ORIGINS` 已允許 `https://littleban0305.github.io`。
 5. 只有管理頁的「從 Steam 匯入」會讀取這個庫存；商品的 EC 價格在管理頁設定。
+6. **建議設定 Steam Web API 金鑰。** Steam 經常以 HTTP 429 拒絕 Cloudflare Worker 直接讀取社群庫存網址。設定金鑰後，Worker 會改用官方的 `IEconService/GetInventoryItemsWithDescriptions` API：
+   - 到 https://steamcommunity.com/dev/apikey 申請金鑰（網域可填 `littleban0305.github.io`）。
+   - Cloudflare Dashboard → Workers & Pages → `eloskin2` → Settings → Variables and Secrets → Add → **Secret**，名稱 `STEAM_API_KEY`，值為金鑰。
+   - 把最新版 `steam-inventory-worker.js` 貼進 Worker 編輯器並部署。金鑰只放在 Worker Secret，不要放進前端或 Git。
 
-Steam 交易連結會公開在網站前端；任何能瀏覽網站的人都能看到該連結。不要將 Steam 密碼、API 金鑰或登入 Cookie 放進 Worker 或前端。
+Steam 交易連結會公開在網站前端；任何能瀏覽網站的人都能看到該連結。不要將 Steam 密碼或登入 Cookie 放進 Worker 或前端；Steam API 金鑰只能放在 Worker 的 Secret。
 
 ## 啟用 Firebase 登入／註冊
 

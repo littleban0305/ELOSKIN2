@@ -6,6 +6,7 @@ const MAX_PAGES = 10;
 const INVENTORY_CACHE_TTL_SECONDS = 300;
 const ICON_BASE = "https://community.cloudflare.steamstatic.com/economy/image/";
 const STEAM_OPENID_URL = "https://steamcommunity.com/openid/login";
+const STEAM_API_INVENTORY_URL = "https://api.steampowered.com/IEconService/GetInventoryItemsWithDescriptions/v1/";
 const STEAM_USER_AGENT = "ELOSKIN2 Steam authentication";
 const FIREBASE_CUSTOM_TOKEN_AUDIENCE = "https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit";
 const STEAM_STATE_COOKIE = "eloskin_steam_state";
@@ -422,7 +423,70 @@ function inventoryItems(assets, descriptions) {
   });
 }
 
-async function fetchSteamInventory() {
+function inventoryError(status) {
+  if (status === 429) return "steam_rate_limited";
+  if (status === 401 || status === 403) return "steam_forbidden";
+  return "steam_unavailable";
+}
+
+async function fetchCommunityPage(startAssetId) {
+  const url = new URL(`https://steamcommunity.com/inventory/${STEAM_ID64}/${APP_ID}/${CONTEXT_ID}`);
+  url.searchParams.set("l", "tchinese");
+  url.searchParams.set("count", String(PAGE_SIZE));
+  if (startAssetId) url.searchParams.set("start_assetid", startAssetId);
+  const response = await fetch(url, {
+    headers: { "User-Agent": "ELOSKIN2 inventory reader" },
+    cf: { cacheEverything: true, cacheTtlByStatus: { "200-299": 60, "400-599": 0 } }
+  });
+  if (!response.ok) return { error: inventoryError(response.status), status: response.status };
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    return { error: "invalid_steam_response" };
+  }
+  if (Number(data.success) !== 1) return { error: "inventory_unavailable" };
+  return { data };
+}
+
+async function fetchApiPage(startAssetId, apiKey) {
+  const url = new URL(STEAM_API_INVENTORY_URL);
+  url.searchParams.set("key", apiKey);
+  url.searchParams.set("steamid", STEAM_ID64);
+  url.searchParams.set("appid", APP_ID);
+  url.searchParams.set("contextid", CONTEXT_ID);
+  url.searchParams.set("get_descriptions", "true");
+  url.searchParams.set("language", "tchinese");
+  url.searchParams.set("count", String(PAGE_SIZE));
+  if (startAssetId) url.searchParams.set("start_assetid", startAssetId);
+  const response = await fetch(url, {
+    headers: { "User-Agent": "ELOSKIN2 inventory reader", "Accept": "application/json" },
+    cf: { cacheEverything: true, cacheTtlByStatus: { "200-299": 60, "400-599": 0 } }
+  });
+  if (response.status === 401 || response.status === 403) return { error: "steam_api_key_invalid", status: response.status };
+  if (!response.ok) return { error: inventoryError(response.status), status: response.status };
+  let body;
+  try {
+    body = await response.json();
+  } catch {
+    return { error: "invalid_steam_response" };
+  }
+  const data = body?.response;
+  if (!data || typeof data !== "object") return { error: "inventory_unavailable" };
+  return {
+    data: {
+      assets: Array.isArray(data.assets) ? data.assets : [],
+      descriptions: Array.isArray(data.descriptions) ? data.descriptions : [],
+      total_inventory_count: data.total_inventory_count,
+      more_items: data.more_items,
+      last_assetid: data.last_assetid
+    }
+  };
+}
+
+async function fetchSteamInventory(env) {
+  const apiKey = String(env.STEAM_API_KEY || "").trim();
+  const source = apiKey ? "steam_api" : "community";
   const assets = [];
   const descriptionsByKey = new Map();
   let startAssetId = "";
@@ -430,30 +494,11 @@ async function fetchSteamInventory() {
   let hasMore = false;
 
   for (let page = 0; page < MAX_PAGES; page += 1) {
-    const url = new URL(`https://steamcommunity.com/inventory/${STEAM_ID64}/${APP_ID}/${CONTEXT_ID}`);
-    url.searchParams.set("l", "tchinese");
-    url.searchParams.set("count", String(PAGE_SIZE));
-    if (startAssetId) url.searchParams.set("start_assetid", startAssetId);
-
-    const response = await fetch(url, {
-      headers: { "User-Agent": "ELOSKIN2 inventory reader" },
-      cf: {
-        cacheEverything: true,
-        cacheTtlByStatus: { "200-299": 60, "400-599": 0 }
-      }
-    });
-    if (!response.ok) {
-      return { error: response.status === 429 ? "steam_rate_limited" : "steam_unavailable", status: response.status };
-    }
-
-    let pageData;
-    try {
-      pageData = await response.json();
-    } catch {
-      return { error: "invalid_steam_response" };
-    }
-    if (Number(pageData.success) !== 1 || !Array.isArray(pageData.assets) || !Array.isArray(pageData.descriptions)) {
-      return { error: "inventory_unavailable" };
+    const result = apiKey ? await fetchApiPage(startAssetId, apiKey) : await fetchCommunityPage(startAssetId);
+    if (result.error) return { ...result, source };
+    const pageData = result.data;
+    if (!Array.isArray(pageData.assets) || !Array.isArray(pageData.descriptions)) {
+      return { error: "inventory_unavailable", source };
     }
 
     assets.push(...pageData.assets);
@@ -469,7 +514,8 @@ async function fetchSteamInventory() {
   return {
     items: inventoryItems(assets, [...descriptionsByKey.values()]),
     totalInventoryCount: reportedTotal,
-    truncated: hasMore
+    truncated: hasMore,
+    source
   };
 }
 
@@ -509,7 +555,7 @@ export default {
       return jsonResponse({ error: "method_not_allowed" }, 405, corsHeaders);
     }
 
-    const cacheKey = new Request(new URL("/__cache/inventory-v1", requestUrl.origin), { method: "GET" });
+    const cacheKey = new Request(new URL("/__cache/inventory-v2", requestUrl.origin), { method: "GET" });
     const cache = caches.default;
     const cachedResponse = await cache.match(cacheKey);
     if (cachedResponse) {
@@ -518,14 +564,16 @@ export default {
 
     let result;
     try {
-      result = await fetchSteamInventory();
+      result = await fetchSteamInventory(env);
     } catch {
       return jsonResponse({ error: "steam_unavailable" }, 502, corsHeaders);
     }
     if (result.error) {
-      return jsonResponse({ error: result.error }, result.error === "steam_rate_limited" ? 429 : 502, corsHeaders);
+      return jsonResponse({ error: result.error, source: result.source, steamStatus: result.status || null },
+        result.error === "steam_rate_limited" ? 429 : 502, corsHeaders);
     }
     const inventory = {
+      source: result.source,
       items: result.items,
       totalInventoryCount: result.totalInventoryCount,
       tradableQuantity: result.items.reduce((total, item) => total + item.amount, 0),

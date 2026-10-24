@@ -782,11 +782,16 @@
 
   // ---------- Steam import ----------
 
-  function steamErrorMessage(code, status) {
+  function steamErrorMessage(data, status) {
+    const code = data?.error;
+    if (code === "steam_api_key_invalid") return text("admin.steamApiKeyInvalid");
+    if (code === "steam_rate_limited") {
+      return data?.source === "community" ? text("admin.steamRateLimitedNoKey") : text("admin.steamRateLimited");
+    }
+    if (code === "steam_forbidden") return text("admin.steamForbidden");
     const keys = {
       inventory_unavailable: "shop.inventoryUnavailable",
       steam_unavailable: "shop.steamUnavailable",
-      steam_rate_limited: "shop.steamUnavailable",
       invalid_steam_response: "shop.invalidSteamResponse",
       origin_not_allowed: "shop.corsNotAllowed"
     };
@@ -811,7 +816,7 @@
       } catch {
         throw new Error(text("shop.invalidWorkerResponse"));
       }
-      if (!response.ok) throw new Error(steamErrorMessage(data?.error, response.status));
+      if (!response.ok) throw new Error(steamErrorMessage(data, response.status));
       if (!Array.isArray(data.items)) throw new Error(text("shop.missingItems"));
       const grouped = new Map();
       for (const item of data.items) {
