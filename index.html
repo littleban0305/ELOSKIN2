@@ -11,13 +11,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css?v=60">
-    <link rel="stylesheet" href="admin.css?v=1">
-    <script src="content.js?v=27" defer></script>
+    <link rel="stylesheet" href="admin.css?v=2">
+    <script src="content.js?v=28" defer></script>
     <script src="firebase-config.js?v=1" defer></script>
     <script src="steam-config.js?v=3" defer></script>
-    <script src="app.js?v=29" defer></script>
-    <script src="auth.js?v=22" defer></script>
-    <script src="admin.js?v=1" defer></script>
+    <script src="app.js?v=30" defer></script>
+    <script src="auth.js?v=23" defer></script>
+    <script src="admin.js?v=2" defer></script>
   </head>
   <body>
     <header class="site-header">
@@ -208,8 +208,10 @@
         </div>
         <div class="admin-tabs" role="tablist" data-copy-aria="admin.tabsAria">
           <button class="admin-tab active" id="admin-tab-products" type="button" role="tab" aria-selected="true" aria-controls="admin-products-panel" data-admin-tab="products" data-copy="admin.tabProducts"></button>
+          <button class="admin-tab" id="admin-tab-create" type="button" role="tab" aria-selected="false" aria-controls="admin-create-panel" data-admin-tab="create" data-copy="admin.tabCreate"></button>
           <button class="admin-tab" id="admin-tab-faq" type="button" role="tab" aria-selected="false" aria-controls="admin-faq-panel" data-admin-tab="faq" data-copy="admin.tabFaq"></button>
         </div>
+        <datalist id="admin-tag-suggestions"></datalist>
         <section class="admin-card" id="admin-products-panel" role="tabpanel" aria-labelledby="admin-tab-products">
           <div class="admin-toolbar">
             <label class="admin-search">
@@ -225,7 +227,45 @@
             <span class="admin-count" id="admin-product-count"></span>
           </div>
           <div class="admin-product-list" id="admin-product-list"></div>
-          <p class="admin-empty" id="admin-product-empty" data-copy="admin.noProducts" hidden></p>
+          <p class="admin-empty" id="admin-product-empty" hidden></p>
+        </section>
+        <section class="admin-card" id="admin-create-panel" role="tabpanel" aria-labelledby="admin-tab-create" hidden>
+          <div class="admin-mode-switch" role="group" data-copy-aria="admin.modeAria">
+            <button class="admin-mode active" type="button" data-create-mode="custom" aria-pressed="true" data-copy="admin.modeCustom"></button>
+            <button class="admin-mode" type="button" data-create-mode="steam" aria-pressed="false" data-copy="admin.modeSteam"></button>
+          </div>
+          <div class="admin-steam-picker" id="admin-steam-picker" hidden>
+            <div class="admin-toolbar">
+              <label class="admin-search">
+                <img src="assets/icon_new/search_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="" aria-hidden="true">
+                <input id="admin-steam-search" type="search" data-copy-placeholder="admin.steamSearchPlaceholder" data-copy-aria="admin.steamSearchPlaceholder">
+              </label>
+              <button class="admin-ghost-button" id="admin-steam-reload" type="button" data-copy="admin.steamReload"></button>
+              <span class="admin-count" id="admin-steam-status" role="status" aria-live="polite"></span>
+            </div>
+            <div class="admin-steam-grid" id="admin-steam-grid"></div>
+          </div>
+          <form class="admin-create-form" id="admin-create-form" novalidate>
+            <div class="admin-create-preview">
+              <div class="admin-product-art admin-create-art" id="admin-create-art"></div>
+              <p id="admin-create-source"></p>
+            </div>
+            <div class="admin-create-fields">
+              <label class="admin-field admin-field-wide"><span class="admin-field-label" data-copy="admin.fieldName"></span><input id="admin-create-name" type="text" maxlength="100" required></label>
+              <label class="admin-field"><span class="admin-field-label" data-copy="admin.fieldGame"></span><select class="admin-select" id="admin-create-game"></select></label>
+              <label class="admin-field"><span class="admin-field-label" data-copy="admin.fieldCategory"></span><select class="admin-select" id="admin-create-category"></select></label>
+              <label class="admin-field"><span class="admin-field-label" data-copy="admin.fieldPrice"></span><input id="admin-create-price" type="number" min="0" max="10000000" step="1" inputmode="numeric" data-copy-placeholder="admin.pricePlaceholder"></label>
+              <label class="admin-field"><span class="admin-field-label" data-copy="admin.fieldStock"></span><input id="admin-create-stock" type="number" min="0" max="100000" step="1" inputmode="numeric" value="1"></label>
+              <label class="admin-field admin-field-wide" id="admin-create-image-field"><span class="admin-field-label" data-copy="admin.fieldImage"></span><input id="admin-create-image" type="url" maxlength="2048" data-copy-placeholder="admin.imagePlaceholder"></label>
+              <label class="admin-field admin-field-wide"><span class="admin-field-label" data-copy="admin.fieldDescription"></span><textarea id="admin-create-description" rows="3" maxlength="500" data-copy-placeholder="admin.descriptionPlaceholder"></textarea></label>
+              <div class="admin-field admin-field-wide"><span class="admin-field-label" data-copy="admin.fieldTags"></span><div id="admin-create-tags"></div></div>
+              <label class="admin-checkbox admin-field-wide"><input id="admin-create-listed" type="checkbox" checked><span data-copy="admin.fieldListed"></span></label>
+            </div>
+            <div class="admin-create-footer">
+              <p class="admin-create-status" id="admin-create-status" role="status" aria-live="polite"></p>
+              <button class="admin-primary-button" id="admin-create-submit" type="submit" data-copy="admin.createSubmit"></button>
+            </div>
+          </form>
         </section>
         <section class="admin-card" id="admin-faq-panel" role="tabpanel" aria-labelledby="admin-tab-faq" hidden>
           <div class="admin-toolbar">

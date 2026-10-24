@@ -459,7 +459,335 @@
     grid-row: auto;
   }
 
-  .admin-product-fields .admin-field:last-child {
-    grid-column: 1 / -1;
+
+}
+
+/* ---------- 商品列表（上架物品） ---------- */
+
+.admin-listing-row {
+  align-items: start;
+}
+
+.admin-listing-fields {
+  grid-template-columns: minmax(0, 1fr) 110px 90px;
+}
+
+.admin-field-wide {
+  grid-column: 1 / -1;
+}
+
+.admin-product-actions .admin-faq-delete {
+  min-height: 32px;
+}
+
+/* ---------- 標籤 ---------- */
+
+.admin-tag-editor {
+  min-height: 38px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  background: #182229;
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 1px rgba(164, 186, 191, .12);
+}
+
+.admin-tag-editor:focus-within {
+  background: #1b292f;
+  box-shadow: inset 0 0 0 1px rgba(80, 219, 197, .72), 0 0 0 3px rgba(80, 219, 197, .1);
+}
+
+.admin-tag-editor.is-disabled { opacity: .5; }
+
+.admin-tag-chips {
+  display: contents;
+}
+
+.admin-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 4px 3px 9px;
+  color: #50dbc5;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(80, 219, 197, .12);
+  border-radius: 999px;
+}
+
+.admin-tag-chip button {
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  color: inherit;
+  font-size: 13px;
+  line-height: 1;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.admin-tag-chip button:hover { background: rgba(80, 219, 197, .2); }
+
+.admin-field .admin-tag-editor input {
+  flex: 1 1 120px;
+  min-width: 100px;
+  min-height: 26px;
+  padding: 2px 4px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.admin-field .admin-tag-editor input:focus {
+  background: transparent;
+  box-shadow: none;
+}
+
+/* ---------- 上架物品 ---------- */
+
+.admin-mode-switch {
+  display: inline-flex;
+  gap: 4px;
+  margin-bottom: 14px;
+  padding: 4px;
+  background: #151f25;
+  border-radius: 12px;
+}
+
+.admin-mode {
+  padding: 9px 16px;
+  color: #94a0a8;
+  font-size: 13px;
+  font-weight: 600;
+  background: transparent;
+  border: 0;
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+.admin-mode:hover { color: #dce5e8; }
+.admin-mode.active { color: #dce5e8; background: #22323a; box-shadow: inset 0 0 0 1px rgba(80, 219, 197, .5); }
+.admin-mode:focus-visible { outline: 2px solid #50dbc5; outline-offset: 2px; }
+
+.admin-steam-picker[hidden],
+.admin-field[hidden] {
+  display: none !important;
+}
+
+.admin-steam-picker {
+  margin-bottom: 14px;
+  padding: 12px;
+  background: #151f25;
+  border-radius: 14px;
+}
+
+.admin-steam-grid {
+  max-height: 340px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+  overflow-y: auto;
+  padding: 2px;
+}
+
+.admin-steam-item {
+  position: relative;
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  padding: 10px;
+  color: #dce5e8;
+  text-align: left;
+  background: #10171d;
+  border: 0;
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 1px transparent;
+  cursor: pointer;
+  transition: background .2s ease, box-shadow .2s ease;
+}
+
+.admin-steam-item:hover { background: #172229; }
+.admin-steam-item.is-selected { box-shadow: inset 0 0 0 2px #50dbc5; background: #172229; }
+.admin-steam-item:focus-visible { outline: 2px solid #50dbc5; outline-offset: 2px; }
+
+.admin-steam-item .admin-product-art {
+  width: 100%;
+  height: 72px;
+  flex: none;
+}
+
+.admin-steam-item strong {
+  overflow: hidden;
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.admin-steam-item > span:not(.admin-steam-badge) {
+  overflow: hidden;
+  color: #829098;
+  font-size: 11px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.admin-steam-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 2px 7px;
+  color: #07120f;
+  font-size: 10px;
+  font-weight: 700;
+  background: #50dbc5;
+  border-radius: 999px;
+}
+
+.admin-create-form {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 18px;
+  padding: 14px;
+  background: #151f25;
+  border-radius: 14px;
+}
+
+.admin-create-preview {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+.admin-create-art {
+  width: 100%;
+  height: 130px;
+  font-size: 12px;
+}
+
+.admin-create-preview p {
+  margin: 0;
+  color: #829098;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.admin-create-fields {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.admin-create-fields .admin-select {
+  width: 100%;
+  min-height: 38px;
+}
+
+.admin-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #dce5e8;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.admin-checkbox input {
+  width: 16px;
+  height: 16px;
+  accent-color: #50dbc5;
+}
+
+.admin-create-footer {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+}
+
+.admin-create-footer .admin-primary-button {
+  min-width: 120px;
+  min-height: 42px;
+  font-size: 14px;
+}
+
+.admin-create-status {
+  margin: 0;
+  color: #a5b4b8;
+  font-size: 13px;
+}
+
+.admin-create-status[data-kind="success"] { color: #50dbc5; }
+.admin-create-status[data-kind="error"] { color: #ff8f8f; }
+
+.admin-ghost-button {
+  min-height: 42px;
+  padding: 0 14px;
+  color: #dce5e8;
+  font-size: 12px;
+  font-weight: 700;
+  background: #1c2b30;
+  border: 0;
+  border-radius: 11px;
+  cursor: pointer;
+}
+
+.admin-ghost-button:hover { color: #50dbc5; }
+.admin-ghost-button:focus-visible { outline: 2px solid #50dbc5; outline-offset: 2px; }
+
+/* ---------- 商品卡片標籤 ---------- */
+
+.product-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 4px 0 2px;
+}
+
+.product-tags span {
+  padding: 2px 8px;
+  color: #50dbc5;
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(80, 219, 197, .12);
+  border-radius: 999px;
+}
+
+@media (max-width: 760px) {
+  .admin-create-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-create-preview {
+    grid-template-columns: 96px minmax(0, 1fr);
+    align-items: center;
+  }
+
+  .admin-create-art { height: 72px; }
+
+  .admin-create-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-listing-fields {
+    grid-template-columns: minmax(0, 1fr) 90px;
+  }
+
+  .admin-listing-fields .admin-field-name { grid-column: 1 / -1; }
+
+  .admin-product-actions {
+    grid-template-columns: 1fr auto auto;
+  }
+
+  .admin-create-footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
   }
 }

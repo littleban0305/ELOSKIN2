@@ -1,6 +1,6 @@
 # ELOSKIN2
 
-ELOSKIN2 是供朋友使用的 CS2 與 Roblox 道具交易網站。目前首頁及商店會顯示一組 CS2 示意商品；示意商品沒有實際庫存，不能加入購物車。Steam 即時庫存成功載入時會取代這組示意商品。交易頁可用商店商品目錄選擇雙方物品並查看 EC 差額，但真實交易提案尚未連接。右上角登入視窗支援 Email、Google 與 Steam；首次登入需設定顯示名稱和 Steam 交易連結。管理員登入後導覽列會出現「管理」頁面。
+ELOSKIN2 是供朋友使用的 CS2 與 Roblox 道具交易網站。商店、首頁和交易頁只顯示管理員在「管理 → 上架物品」上架的物品（存放在 Firestore 的 `listings`），不再直接讀取 Steam 庫存。上架時可以自創物品，或從站方的 Steam 庫存匯入，並設定標籤、EC 價格與數量。Firestore 無法連線時才會顯示展示商品。真實交易提案尚未連接。右上角登入視窗支援 Email、Google 與 Steam；首次登入需設定顯示名稱和 Steam 交易連結。
 
 ## 編輯網站文字
 
@@ -20,7 +20,7 @@ ELOSKIN2 是供朋友使用的 CS2 與 Roblox 道具交易網站。目前首頁�
 
 此專案使用 GitHub Actions 自動發布。將變更推送至 `main` 分支後，可在 GitHub repo 的 **Actions** 頁面查看發布狀態；首次成功發布後，網站網址會是 `https://littleban0305.github.io/ELOSKIN2/`。公開 Pages 網站任何人都能瀏覽。
 
-首頁與商店會讀取 Worker 提供的 CS2 可交易庫存，並依全站收藏數、EC 價格排序。Steam 無法連線或限流時會顯示展示商品作為暫用畫面；這些假商品會標示「展示商品」，不代表真實庫存，也不能購買。Steam 庫存成功載入後會取代展示商品。EC 價格需在 `steam-config.js` 的 `ecPrices` 設定；未定價的實際商品仍會顯示，但不能加入購物車。網站不會建立真實訂單。
+首頁與商店的商品來自 Firestore `listings`。Cloudflare Worker 的 `/inventory` 只在管理頁「從 Steam 匯入」時使用。網站不會建立真實訂單。
 
 ## 啟用 Steam 庫存讀取
 
@@ -34,7 +34,7 @@ GitHub Pages 是靜態網站，不能直接讀取 Steam 庫存 API（Steam 不�
    - 如果網站使用自訂網域，填自訂網域的開頭，例如 `https://skins.example.com`。不要填 `file://` 開啟的本機檔案網址。
 3. 確認 Steam 個人資料及物品庫設為公開。此 Worker 固定讀取 Steam ID `76561199883868233` 的 CS2（App 730）物品庫，只回傳可交易物品，最多讀取 20,000 件；Steam 上游分頁回應會由 Cloudflare 快取 60 秒，成功取得的完整庫存會快取 5 分鐘。
 4. Worker 網址已接入 `steam-config.js`：`https://eloskin2.littleban0305.workers.dev/inventory`。目前 `ALLOWED_ORIGINS` 已允許 `https://littleban0305.github.io`。
-5. 首頁與商店會在背景讀取庫存，不顯示同步狀態或 Steam 交易提案連結。可在 `steam-config.js` 的 `ecPrices` 依 Steam 市場名稱填入正整數 EC。
+5. 只有管理頁的「從 Steam 匯入」會讀取這個庫存；商品的 EC 價格在管理頁設定。
 
 Steam 交易連結會公開在網站前端；任何能瀏覽網站的人都能看到該連結。不要將 Steam 密碼、API 金鑰或登入 Cookie 放進 Worker 或前端。
 
@@ -51,8 +51,8 @@ Steam 交易連結會公開在網站前端；任何能瀏覽網站的人都能�
    - `STEAM_STATE_SECRET`：自行產生至少 32 個隨機位元組的隨機字串，用於簽署 Steam 登入狀態 Cookie。
 
    可在 Cloudflare Dashboard → Workers & Pages → 選擇 `eloskin2` Worker → Settings → Variables and Secrets → Add → **Secret** 新增上述值。Worker 會用 HttpOnly、Secure、SameSite=Lax Cookie 綁定 Steam OpenID 回呼與原始網站，驗證成功後才簽發短效 Firebase Custom Token。`ALLOWED_ORIGINS` 必須包含 `https://littleban0305.github.io`；程式中的 `steam-config.js` 已設定 `authEndpoint` 指向此 Worker。設定 Secret 後重新部署 Worker。
-7. 管理者 `littleban0305@gmail.com` 登入後，導覽列會出現「管理」頁面，可以編輯商品顯示名稱、EC 價格、說明與上／下架，也可以編輯首頁 Q&A；所有變更會自動儲存到 Firestore（`productOverrides`、`siteSettings/catalog`、`siteSettings/faq`）。在管理頁設定的 EC 價格會優先於 `steam-config.js` 的 `ecPrices`。首頁全站收藏計數、商品狀態同步及首次登入資料儲存都需要 Firestore：在 Firebase Console → **Firestore Database** 建立資料庫（選擇免費 Spark 方案可用的區域），然後將 [firestore.rules](./firestore.rules) 貼入 Firestore Rules 並發布。個人顯示名稱與 Steam 交易連結只允許本人讀寫；收藏者資料只允許本人讀取，公開計數只能隨收藏投票交易更新。管理者首次以 Email/Password 登入時，需先驗證該信箱；Google 登入使用已驗證的 Google 帳號。Firestore 免費方案不需 Blaze，但受 Firebase 免費配額限制。
+7. 管理者 `littleban0305@gmail.com` 登入後，導覽列會出現「管理」頁面：「商品」分頁可編輯名稱、EC 價格、數量、說明、標籤、上／下架與刪除；「上架物品」分頁可自創物品或從 Steam 匯入；「Q&A」分頁可編輯首頁常見問題。變更會自動儲存到 Firestore（`listings`、`siteSettings/faq`）。這些功能需要 Firestore：在 Firebase Console → **Firestore Database** 建立資料庫（選擇免費 Spark 方案可用的區域），然後將 [firestore.rules](./firestore.rules) 貼入 Firestore Rules 並發布。未上架的物品只有管理員讀得到。個人顯示名稱與 Steam 交易連結只允許本人讀寫；收藏者資料只允許本人讀取，公開計數只能隨收藏投票交易更新。管理者首次以 Email/Password 登入時，需先驗證該信箱；Google 登入使用已驗證的 Google 帳號。Firestore 免費方案不需 Blaze，但受 Firebase 免費配額限制。
 
 ELOSKIN2 的目標使用者是受邀朋友，但目前原型尚未設定朋友白名單或頁面存取限制；不要把它當作已啟用的私人網站。
 
-商品與玩家刊登範例目前已移除，商店及交易功能頁暫時只保留頁首。管理頁每次最多顯示 100 筆商品，可用搜尋或篩選縮小範圍；同名的 Steam 物品會合併成一列。
+商品與玩家刊登範例目前已移除，商店及交易功能頁暫時只保留頁首。管理頁每次最多顯示 100 筆商品，可用搜尋或篩選縮小範圍。圖片目前用網址填寫（Firebase Storage 需要 Blaze 方案）。

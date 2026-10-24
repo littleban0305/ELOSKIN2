@@ -9,21 +9,54 @@ const demoProducts = [
   { id: "demo-case-night", name: "夜行武器箱", game: "CS2", category: copy.categories.case, kind: copy.categories.case, description: "", price: 520, stock: 8, art: "case", accent: "#6b86a3", wearCondition: "not-applicable", rarityColor: "base-grade", stattrak: false, hasStickers: false, hasCharm: false }
 ].map((product) => ({
   ...product,
-  baseName: product.name,
-  basePrice: product.price,
-  baseDescription: product.description,
+  tags: [],
   source: "demo",
   wear: copy.product.notApplicable,
   label: product.category.toUpperCase()
 }));
-products.push(...demoProducts);
+let catalogLoaded = false;
 window.eloProductCatalog = products;
-window.eloHiddenProductIds = new Set();
-window.eloProductVisibilityId = (product) => product.source === "steam"
-  ? `steam:${product.marketHashName}`
-  : product.id;
+window.eloProductVisibilityId = (product) => product.id;
 function isProductPublished(product) {
-  return !window.eloHiddenProductIds.has(window.eloProductVisibilityId(product));
+  return product.listed !== false;
+}
+const LISTING_CATEGORY_ART = { rifle: "rifle", sniper: "sniper", pistol: "pistol", knife: "knife", gloves: "gloves", case: "case", competitor: "competitor", rivals: "rivals" };
+const WEAPON_CATEGORY_KEYS = ["weapon", "rifle", "sniper", "pistol", "knife"];
+
+function listingProduct(listing) {
+  const key = typeof copy.categories[listing.category] === "string" ? listing.category : "item";
+  const category = copy.categories[key];
+  const kind = key === "case" || key === "competitor" ? category
+    : WEAPON_CATEGORY_KEYS.includes(key) ? copy.categories.weapon : copy.categories.item;
+  const name = String(listing.name || "");
+  return {
+    id: `listing-${listing.id}`,
+    listingId: listing.id,
+    source: "listing",
+    listingSource: listing.source,
+    listed: listing.listed !== false,
+    name,
+    game: listing.game === "ROBLOX RIVALS" ? "ROBLOX RIVALS" : "CS2",
+    category,
+    categoryKey: key,
+    kind,
+    description: String(listing.description || ""),
+    price: Number.isInteger(listing.price) && listing.price >= 0 ? listing.price : null,
+    stock: Number.isInteger(listing.stock) && listing.stock >= 0 ? listing.stock : 0,
+    tags: Array.isArray(listing.tags) ? listing.tags.filter((tag) => typeof tag === "string") : [],
+    wear: copy.product.notApplicable,
+    wearCondition: "unknown",
+    rarityColor: "unknown",
+    stattrak: /stattrak/i.test(name),
+    hasStickers: false,
+    hasCharm: false,
+    label: category.toUpperCase(),
+    art: LISTING_CATEGORY_ART[key] || "",
+    accent: "#74c9c0",
+    iconUrl: /^https:\/\//.test(listing.imageUrl || "") ? listing.imageUrl : "",
+    marketHashName: listing.steam?.marketHashName || "",
+    createdAt: Number(listing.createdAt) || 0
+  };
 }
 const categoryKeys = ["item", "case", "weapon", "competitor", "rifle", "sniper", "pistol", "knife", "gloves", "rivals"];
 const categories = [copy.categories.allItems, ...categoryKeys.map((key) => copy.categories[key])];
@@ -218,7 +251,7 @@ function visibleProducts(filterState = state) {
       ? !filterState.category.length || filterState.category.some((category) => product.category === category || product.kind === category)
       : filterState.category === copy.categories.allItems || product.category === filterState.category || product.kind === filterState.category;
     const matchesGame = filterState.game === "all" || product.game === filterState.game;
-    const matchesSearch = !term || [product.name, product.game, product.category, product.description, product.wear].some((value) => value.toLocaleLowerCase("zh-Hant").includes(term));
+    const matchesSearch = !term || [product.name, product.game, product.category, product.description, product.wear, ...(product.tags || [])].some((value) => value.toLocaleLowerCase("zh-Hant").includes(term));
     if (!matchesCategory || !matchesGame || !matchesSearch) return false;
     if (filterState !== tradeState) return true;
     if (!Number.isFinite(product.price) || product.price < tradeState.minPrice
@@ -247,9 +280,9 @@ function visibleProducts(filterState = state) {
 
 function renderProducts() {
   const visible = visibleProducts();
-  productGrid.innerHTML = visible.map(productCardMarkup).join("");
+  productGrid.innerHTML = visible.map((product) => productCardMarkup(product)).join("");
   $("#product-total").textContent = visible.length;
-  $("#empty-state").hidden = visible.length > 0;
+  $("#empty-state").hidden = visible.length > 0 || !catalogLoaded;
   productGrid.hidden = visible.length === 0;
 }
 
@@ -366,6 +399,7 @@ function productCardMarkup(product, tradeMode = false, tradeSide = "receive") {
       <div class="product-info">
         <h3 title="${safeName}">${safeName}</h3>
         ${isDemo ? "" : `<div class="product-description">${escapeHtml(product.description)}${product.wear === copy.product.notApplicable ? "" : ` <span>／ ${escapeHtml(product.wear)}</span>`}</div>`}
+        ${product.tags?.length ? `<div class="product-tags">${product.tags.slice(0, 4).map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
         <div class="product-favorite-count">${escapeHtml(t("home.marketFavoriteCount", { count: favoriteCount }))}</div>
         <div class="product-bottom">
           <div class="product-price">${priced ? `<span class="currency-symbol">${escapeHtml(t("product.currency"))}</span>${product.price.toLocaleString()}` : `<span class="unpriced-label">${escapeHtml(t("product.noPrice"))}</span>`}</div>
@@ -387,7 +421,7 @@ function escapeHtml(value) {
 }
 
 function productFavoriteKey(product) {
-  return product.source === "steam" ? `steam:${product.marketHashName}` : product.id;
+  return product.id;
 }
 
 function favoriteDocumentId(product) {
@@ -411,7 +445,7 @@ function renderHomeProducts() {
   };
   const sorter = sorters[homeMarketMode] || sorters.popular;
   const featured = uniqueProducts.sort((a, b) => sorter(a, b) || a.name.localeCompare(b.name, "zh-Hant")).slice(0, 5);
-  $("#featured-grid").innerHTML = featured.map(productCardMarkup).join("");
+  $("#featured-grid").innerHTML = featured.map((product) => productCardMarkup(product)).join("");
   $("#featured-grid").hidden = featured.length === 0;
   if (typeof window.eloGetProductFavorite === "function") {
     for (const product of featured) {
@@ -469,7 +503,7 @@ function renderTradeItems() {
   $("#trade-own-empty").hidden = ownItems.length > 0;
   $("#trade-item-count").textContent = visibleItems.length;
   $("#trade-grid").innerHTML = visibleItems.map((product) => productCardMarkup(product, true, "receive")).join("");
-  $("#trade-empty").hidden = visibleItems.length > 0;
+  $("#trade-empty").hidden = visibleItems.length > 0 || !catalogLoaded;
   $("#trade-grid").hidden = visibleItems.length === 0;
 }
 
@@ -501,109 +535,28 @@ function renderCart() {
   $("#checkout").disabled = count === 0;
 }
 
-function steamInventoryProduct(item) {
-  const type = String(item.type || "");
-  const categoryName = `${item.name} ${type}`.toLocaleLowerCase("zh-Hant");
-  const category = /glove|手套/.test(categoryName) ? copy.categories.gloves
-    : /knife|刀/.test(categoryName) ? copy.categories.knife
-      : /sniper|狙擊/.test(categoryName) ? copy.categories.sniper
-      : /rifle|步槍/.test(categoryName) ? copy.categories.rifle
-        : /pistol|手槍/.test(categoryName) ? copy.categories.pistol
-          : /case|container|箱/.test(categoryName) ? copy.categories.case
-            : /agent|探員|競爭者/.test(categoryName) ? copy.categories.competitor : copy.categories.cs2Items;
-  const isWeapon = /knife|weapon|rifle|sniper|pistol|smg|shotgun|machine gun|刀|武器|步槍|狙擊|手槍/.test(categoryName);
-  const kind = category === copy.categories.case || category === copy.categories.competitor ? category : isWeapon ? copy.categories.weapon : copy.categories.item;
-  const configuredPrice = steamConfig.ecPrices?.[item.marketHashName];
-  const price = Number.isInteger(Number(configuredPrice)) && Number(configuredPrice) > 0 ? Number(configuredPrice) : null;
-  return {
-    id: `steam-${item.assetId}`,
-    assetId: item.assetId,
-    source: "steam",
-    baseName: item.name,
-    basePrice: price,
-    baseDescription: type || copy.shop.steamDescription,
-    name: item.name,
-    marketHashName: item.marketHashName,
-    game: "CS2",
-    category,
-    kind,
-    description: type || copy.shop.steamDescription,
-    price,
-    wear: copy.product.notApplicable,
-    wearCondition: item.wearCondition || item.wear || "unknown",
-    rarityColor: item.rarityColor || "unknown",
-    stattrak: typeof item.stattrak === "boolean" ? item.stattrak : /stattrak/i.test(item.name),
-    hasStickers: Array.isArray(item.stickers) && item.stickers.length > 0,
-    hasCharm: Array.isArray(item.charms) && item.charms.length > 0,
-    stock: item.amount,
-    label: category.toUpperCase(),
-    art: "steam",
-    accent: "#74c9c0",
-    iconUrl: item.iconUrl
-  };
+function setCatalog(nextProducts) {
+  products.splice(0, products.length, ...nextProducts);
+  catalogLoaded = true;
+  for (const side of ["offer", "receive"]) {
+    tradeState[side] = tradeState[side].filter((id) => products.some((product) => product.id === id));
+  }
+  renderAllProductViews();
+  window.dispatchEvent(new Event("catalogproductschange"));
 }
 
-async function loadSteamInventory() {
-  const endpoint = steamConfig.inventoryEndpoint;
-  if (!endpoint) {
-    console.warn("Steam inventory sync skipped: inventory endpoint is not configured.");
+window.addEventListener("listingschange", (event) => {
+  const { listings, error } = event.detail || {};
+  if (error) {
+    console.warn("Listings unavailable, showing demo products:", error);
+    setCatalog(demoProducts);
     return;
   }
-
-  try {
-    const response = await fetch(endpoint);
-    let data;
-    try {
-      data = await response.json();
-    } catch {
-      throw new Error(t("shop.invalidWorkerResponse"));
-    }
-    if (!response.ok) {
-      const errors = {
-        inventory_unavailable: t("shop.inventoryUnavailable"),
-        steam_unavailable: t("shop.steamUnavailable"),
-        invalid_steam_response: t("shop.invalidSteamResponse"),
-        origin_not_allowed: t("shop.corsNotAllowed")
-      };
-      throw new Error(errors[data.error] || t("shop.workerHttpError", { status: response.status }));
-    }
-    if (!Array.isArray(data.items)) throw new Error(t("shop.missingItems"));
-
-    const liveProducts = data.items.map(steamInventoryProduct);
-    products.splice(0, products.length, ...products.filter((product) => product.source !== "steam" && (!liveProducts.length || product.source !== "demo")), ...liveProducts);
-    applyProductOverrides();
-    for (const [id, quantity] of state.cart) {
-      const currentProduct = products.find((product) => product.id === id);
-      if (!currentProduct || currentProduct.stock < quantity || !Number.isFinite(currentProduct.price)) state.cart.delete(id);
-    }
-    renderFilters();
-    renderProducts();
-    renderTradeFilters();
-    for (const side of ["offer", "receive"]) {
-      tradeState[side] = tradeState[side].filter((id) => products.some((product) => product.id === id && isProductPublished(product)));
-    }
-    renderTrade();
-    renderTradeItems();
-    renderHomeProducts();
-    renderCart();
-    window.dispatchEvent(new Event("catalogproductschange"));
-  } catch (error) {
-    const message = error instanceof TypeError
-      ? t("shop.workerUnavailable")
-      : error instanceof Error ? error.message : t("shop.genericInventoryError");
-    console.warn(`Steam inventory sync failed: ${message}`, error);
-  }
-}
-
-function applyProductOverrides() {
-  const overrides = window.eloProductOverrides || {};
-  for (const product of products) {
-    const override = overrides[favoriteDocumentId(product)];
-    product.name = override?.name || product.baseName;
-    product.description = override?.description || product.baseDescription;
-    product.price = Number.isInteger(override?.price) ? override.price : product.basePrice;
-  }
-}
+  setCatalog((listings || [])
+    .map(listingProduct)
+    .filter((product) => product.name)
+    .sort((a, b) => b.createdAt - a.createdAt));
+});
 
 function renderAllProductViews() {
   for (const [id, quantity] of state.cart) {
@@ -952,11 +905,6 @@ $(".home-faq-list").addEventListener("click", (event) => {
 });
 
 window.addEventListener("faqchange", renderFaq);
-window.addEventListener("productoverrideschange", () => {
-  applyProductOverrides();
-  renderAllProductViews();
-  window.dispatchEvent(new Event("catalogproductschange"));
-});
 
 $("#home-more-products").addEventListener("click", () => {
   $("#search").value = "";
@@ -1021,21 +969,6 @@ document.addEventListener("click", (event) => {
   state.cart.set(id, (state.cart.get(id) || 0) + 1);
   renderCart();
   showToast(t("messages.cartAdded"));
-});
-
-window.addEventListener("catalogvisibilitychange", () => {
-  for (const [id] of state.cart) {
-    const product = products.find((item) => item.id === id);
-    if (product && !isProductPublished(product)) state.cart.delete(id);
-  }
-  for (const side of ["offer", "receive"]) {
-    tradeState[side] = tradeState[side].filter((id) => products.some((product) => product.id === id && isProductPublished(product)));
-  }
-  renderProducts();
-  renderHomeProducts();
-  renderTrade();
-  renderTradeItems();
-  renderCart();
 });
 
 window.addEventListener("favoritecountschanged", (event) => {
@@ -1112,4 +1045,6 @@ else {
   navigateTo(initialDestination);
 }
 updateTradePriceRange();
-loadSteamInventory();
+if (Array.isArray(window.eloListings)) {
+  window.dispatchEvent(new CustomEvent("listingschange", { detail: { listings: window.eloListings } }));
+}

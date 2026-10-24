@@ -16,16 +16,6 @@ service cloud.firestore {
         && request.auth.token.email_verified == true;
     }
 
-    match /siteSettings/catalog {
-      allow read: if true;
-      allow create, update: if isAdmin()
-        && request.resource.data.keys().hasOnly(["hiddenProductIds"])
-        && request.resource.data.keys().hasAll(["hiddenProductIds"])
-        && request.resource.data.hiddenProductIds is list
-        && request.resource.data.hiddenProductIds.size() <= 2000;
-      allow delete: if false;
-    }
-
     match /siteSettings/faq {
       allow read: if true;
       allow create, update: if isAdmin()
@@ -35,20 +25,26 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    match /productOverrides/{productId} {
-      allow read: if true;
-      allow create, update: if isAdmin()
-        && productId.size() <= 1000
-        && request.resource.data.keys().hasOnly(["name", "price", "description"])
-        && request.resource.data.keys().hasAll(["name", "price", "description"])
-        && request.resource.data.name is string
-        && request.resource.data.name.size() <= 100
-        && request.resource.data.description is string
-        && request.resource.data.description.size() <= 500
-        && (request.resource.data.price == null
-          || (request.resource.data.price is int
-            && request.resource.data.price >= 0
-            && request.resource.data.price <= 10000000));
+    function validListing(data) {
+      return data.keys().hasOnly(["name", "game", "category", "description", "price", "stock", "tags", "imageUrl", "source", "steam", "listed", "createdAt", "updatedAt"])
+        && data.keys().hasAll(["name", "game", "category", "description", "price", "stock", "tags", "imageUrl", "source", "listed", "createdAt"])
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+        && data.game in ["CS2", "ROBLOX RIVALS"]
+        && data.category is string && data.category.size() <= 30
+        && data.description is string && data.description.size() <= 500
+        && (data.price == null || (data.price is int && data.price >= 0 && data.price <= 10000000))
+        && data.stock is int && data.stock >= 0 && data.stock <= 100000
+        && data.tags is list && data.tags.size() <= 10
+        && data.imageUrl is string && data.imageUrl.size() <= 2048
+        && (data.imageUrl == "" || data.imageUrl.matches("^https://.+"))
+        && data.source in ["custom", "steam"]
+        && data.listed is bool
+        && data.createdAt is int;
+    }
+
+    match /listings/{listingId} {
+      allow read: if resource.data.listed == true || isAdmin();
+      allow create, update: if isAdmin() && validListing(request.resource.data);
       allow delete: if isAdmin();
     }
 

@@ -40,9 +40,6 @@ let favoriteDb = null;
 let favoriteAuthReady = Promise.resolve();
 let firebaseReady = false;
 let anonymousSignInPromise = null;
-let catalogVisibilityReady = false;
-let catalogVisibilityError = "";
-const hiddenProductIds = new Set();
 const checkedProfileUids = new Set();
 let profileSetupUser = null;
 
@@ -295,61 +292,19 @@ function updateAccount(user) {
   if (!user) showAvatarMessage("");
 }
 
-function announceCatalogVisibility() {
-  window.eloCatalogVisibility = { ready: catalogVisibilityReady, error: catalogVisibilityError };
-  window.dispatchEvent(new Event("catalogvisibilitychange"));
-}
-
-function loadCatalogVisibility() {
+function loadSiteContent() {
   if (!firebaseDb) {
-    catalogVisibilityReady = true;
-    catalogVisibilityError = authText("profile.adminNotConfigured");
-    announceCatalogVisibility();
+    window.dispatchEvent(new CustomEvent("listingschange", { detail: { error: "firestore_unavailable" } }));
     return;
   }
-  try {
-    firebaseDb.doc("siteSettings/catalog").onSnapshot((snapshot) => {
-      const ids = snapshot.exists ? snapshot.data().hiddenProductIds : [];
-      if (!Array.isArray(ids) || ids.some((id) => typeof id !== "string")) {
-        catalogVisibilityError = "catalog_visibility_invalid";
-      } else {
-        hiddenProductIds.clear();
-        ids.forEach((id) => hiddenProductIds.add(id));
-        catalogVisibilityError = "";
-        window.eloHiddenProductIds = new Set(hiddenProductIds);
-      }
-      catalogVisibilityReady = true;
-      announceCatalogVisibility();
-    }, (error) => {
-      catalogVisibilityReady = true;
-      catalogVisibilityError = ["unavailable", "permission-denied", "failed-precondition"].includes(error.code)
-        ? authText("profile.adminNotConfigured")
-        : error.message;
-      announceCatalogVisibility();
-    });
-  } catch (error) {
-    catalogVisibilityReady = true;
-    catalogVisibilityError = error.message;
-    announceCatalogVisibility();
-  }
-}
-
-function loadSiteContent() {
-  if (!firebaseDb) return;
-  firebaseDb.collection("productOverrides").onSnapshot((snapshot) => {
-    const overrides = {};
-    snapshot.forEach((document) => {
-      const data = document.data();
-      overrides[document.id] = {
-        name: typeof data.name === "string" ? data.name : "",
-        description: typeof data.description === "string" ? data.description : "",
-        price: Number.isInteger(data.price) && data.price >= 0 ? data.price : null
-      };
-    });
-    window.eloProductOverrides = overrides;
-    window.dispatchEvent(new CustomEvent("productoverrideschange", { detail: overrides }));
+  firebaseDb.collection("listings").where("listed", "==", true).onSnapshot((snapshot) => {
+    const listings = [];
+    snapshot.forEach((document) => listings.push({ id: document.id, ...document.data() }));
+    window.eloListings = listings;
+    window.dispatchEvent(new CustomEvent("listingschange", { detail: { listings } }));
   }, (error) => {
-    console.warn("Product overrides unavailable:", error);
+    console.warn("Listings unavailable:", error);
+    window.dispatchEvent(new CustomEvent("listingschange", { detail: { error: error.code || error.message } }));
   });
   firebaseDb.doc("siteSettings/faq").onSnapshot((snapshot) => {
     const items = snapshot.exists ? snapshot.data().items : null;
@@ -449,6 +404,7 @@ async function initializeFirebase() {
     firebaseNotice.textContent = authText("profile.firebaseMissing");
     firebaseNotice.hidden = false;
     if (steamCallback) showSteamLoginError(authText("profile.firebaseMissing"));
+    window.dispatchEvent(new CustomEvent("listingschange", { detail: { error: "firebase_not_configured" } }));
     return;
   }
 
@@ -481,7 +437,7 @@ async function initializeFirebase() {
           });
         }));
     } catch (error) {
-      catalogVisibilityError = error.message;
+      console.warn("Firestore unavailable:", error);
     }
     firebaseAuth.onAuthStateChanged(updateAccount, (error) => {
       const message = authText("profile.firebaseStateError", { message: error.message });
@@ -492,13 +448,13 @@ async function initializeFirebase() {
     window.eloFirebaseAuth = firebaseAuth;
     window.eloFirebaseDb = firebaseDb;
     window.dispatchEvent(new Event("elofirebaseready"));
-    loadCatalogVisibility();
     loadSiteContent();
     installFavoriteFeatures();
     await completeSteamSignIn();
   } catch (error) {
     firebaseNotice.hidden = false;
     firebaseNotice.textContent = authText("profile.firebaseInitError", { message: error.message });
+    window.dispatchEvent(new CustomEvent("listingschange", { detail: { error: "firebase_init_failed" } }));
     const message = authText("profile.firebaseInitError", { message: error.message });
     if (steamCallback) showSteamLoginError(message);
     else showAuthMessage(message);
