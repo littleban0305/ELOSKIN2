@@ -10,16 +10,46 @@ service cloud.firestore {
       return /databases/$(database)/documents/productFavorites/$(productId)/voters/$(userId);
     }
 
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email == "littleban0305@gmail.com"
+        && request.auth.token.email_verified == true;
+    }
+
     match /siteSettings/catalog {
       allow read: if true;
-      allow create, update: if request.auth != null
-        && request.auth.token.email == "littleban0305@gmail.com"
-        && request.auth.token.email_verified == true
+      allow create, update: if isAdmin()
         && request.resource.data.keys().hasOnly(["hiddenProductIds"])
         && request.resource.data.keys().hasAll(["hiddenProductIds"])
         && request.resource.data.hiddenProductIds is list
         && request.resource.data.hiddenProductIds.size() <= 2000;
       allow delete: if false;
+    }
+
+    match /siteSettings/faq {
+      allow read: if true;
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly(["items"])
+        && request.resource.data.items is list
+        && request.resource.data.items.size() <= 50;
+      allow delete: if false;
+    }
+
+    match /productOverrides/{productId} {
+      allow read: if true;
+      allow create, update: if isAdmin()
+        && productId.size() <= 1000
+        && request.resource.data.keys().hasOnly(["name", "price", "description"])
+        && request.resource.data.keys().hasAll(["name", "price", "description"])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() <= 100
+        && request.resource.data.description is string
+        && request.resource.data.description.size() <= 500
+        && (request.resource.data.price == null
+          || (request.resource.data.price is int
+            && request.resource.data.price >= 0
+            && request.resource.data.price <= 10000000));
+      allow delete: if isAdmin();
     }
 
     match /userProfiles/{userId} {

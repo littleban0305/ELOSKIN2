@@ -287,81 +287,24 @@ function updateAccount(user) {
     profileSetupUser = null;
     window.eloUserProfile = null;
   }
-  const isAdmin = user?.email?.toLowerCase() === ADMIN_EMAIL;
-  const adminPanel = document.querySelector("#admin-panel");
-  adminPanel.hidden = !isAdmin;
-  document.querySelector("#admin-verify-email").hidden = !isAdmin || user.emailVerified;
-  if (isAdmin) renderAdminProductManager(user);
+  const isAdmin = Boolean(user) && user.email?.toLowerCase() === ADMIN_EMAIL;
+  window.eloIsAdmin = isAdmin;
+  window.dispatchEvent(new CustomEvent("eloauthchange", {
+    detail: { user, isAdmin, emailVerified: Boolean(user?.emailVerified) }
+  }));
   if (!user) showAvatarMessage("");
 }
 
-function setCatalogStatus(message, kind = "") {
-  const status = document.querySelector("#admin-catalog-status");
-  status.textContent = message;
-  status.dataset.kind = kind;
-}
-
-function renderAdminProductManager(user) {
-  const list = document.querySelector("#admin-product-list");
-  const search = document.querySelector("#admin-product-search").value.trim().toLocaleLowerCase("zh-Hant");
-  if (!user.emailVerified) {
-    setCatalogStatus(authText("profile.adminEmailUnverified"), "error");
-    list.replaceChildren();
-    return;
-  }
-  if (catalogVisibilityError) {
-    setCatalogStatus(authText("profile.adminStatusError", { message: catalogVisibilityError }), "error");
-    list.replaceChildren();
-    return;
-  }
-  if (!catalogVisibilityReady) {
-    setCatalogStatus(authText("profile.adminStatusLoading"), "info");
-    list.replaceChildren();
-    return;
-  }
-
-  setCatalogStatus("");
-  const products = (window.eloProductCatalog || [])
-    .filter((product) => `${product.name} ${product.game} ${product.category}`.toLocaleLowerCase("zh-Hant").includes(search))
-    .slice(0, 100);
-  list.replaceChildren();
-  if (!products.length) {
-    setCatalogStatus(authText("profile.adminNoProducts"), "info");
-    return;
-  }
-
-  const fragment = document.createDocumentFragment();
-  for (const product of products) {
-    const visibilityId = window.eloProductVisibilityId(product);
-    const hidden = hiddenProductIds.has(visibilityId);
-    const row = document.createElement("div");
-    row.className = "admin-product-row";
-    const details = document.createElement("div");
-    details.className = "admin-product-details";
-    const name = document.createElement("strong");
-    name.textContent = product.name;
-    const metadata = document.createElement("span");
-    metadata.textContent = `${product.game} · ${product.category} · ${hidden ? authText("profile.adminUnlisted") : authText("profile.adminListed")}`;
-    details.append(name, metadata);
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "admin-toggle-button";
-    button.dataset.productVisibility = visibilityId;
-    button.textContent = hidden ? authText("profile.adminPublish") : authText("profile.adminTakeDown");
-    row.append(details, button);
-    fragment.append(row);
-  }
-  list.append(fragment);
-  if ((window.eloProductCatalog || []).filter((product) => `${product.name} ${product.game} ${product.category}`.toLocaleLowerCase("zh-Hant").includes(search)).length > 100) {
-    setCatalogStatus(authText("profile.adminShowingLimit"), "info");
-  }
+function announceCatalogVisibility() {
+  window.eloCatalogVisibility = { ready: catalogVisibilityReady, error: catalogVisibilityError };
+  window.dispatchEvent(new Event("catalogvisibilitychange"));
 }
 
 function loadCatalogVisibility() {
   if (!firebaseDb) {
     catalogVisibilityReady = true;
     catalogVisibilityError = authText("profile.adminNotConfigured");
-    window.dispatchEvent(new Event("catalogvisibilitychange"));
+    announceCatalogVisibility();
     return;
   }
   try {
@@ -376,25 +319,47 @@ function loadCatalogVisibility() {
         window.eloHiddenProductIds = new Set(hiddenProductIds);
       }
       catalogVisibilityReady = true;
-      window.dispatchEvent(new Event("catalogvisibilitychange"));
+      announceCatalogVisibility();
     }, (error) => {
       catalogVisibilityReady = true;
       catalogVisibilityError = ["unavailable", "permission-denied", "failed-precondition"].includes(error.code)
         ? authText("profile.adminNotConfigured")
         : error.message;
-      window.dispatchEvent(new Event("catalogvisibilitychange"));
-      if (window.eloAuthUser?.email?.toLowerCase() === ADMIN_EMAIL) {
-        setCatalogStatus(authText("profile.adminStatusError", { message: catalogVisibilityError }), "error");
-      }
+      announceCatalogVisibility();
     });
   } catch (error) {
     catalogVisibilityReady = true;
     catalogVisibilityError = error.message;
-    window.dispatchEvent(new Event("catalogvisibilitychange"));
-    if (window.eloAuthUser?.email?.toLowerCase() === ADMIN_EMAIL) {
-      setCatalogStatus(authText("profile.adminStatusError", { message: catalogVisibilityError }), "error");
-    }
+    announceCatalogVisibility();
   }
+}
+
+function loadSiteContent() {
+  if (!firebaseDb) return;
+  firebaseDb.collection("productOverrides").onSnapshot((snapshot) => {
+    const overrides = {};
+    snapshot.forEach((document) => {
+      const data = document.data();
+      overrides[document.id] = {
+        name: typeof data.name === "string" ? data.name : "",
+        description: typeof data.description === "string" ? data.description : "",
+        price: Number.isInteger(data.price) && data.price >= 0 ? data.price : null
+      };
+    });
+    window.eloProductOverrides = overrides;
+    window.dispatchEvent(new CustomEvent("productoverrideschange", { detail: overrides }));
+  }, (error) => {
+    console.warn("Product overrides unavailable:", error);
+  });
+  firebaseDb.doc("siteSettings/faq").onSnapshot((snapshot) => {
+    const items = snapshot.exists ? snapshot.data().items : null;
+    const valid = Array.isArray(items) && items.every((item) => item
+      && typeof item.question === "string" && typeof item.answer === "string");
+    window.eloFaqItems = valid ? items : null;
+    window.dispatchEvent(new CustomEvent("faqchange", { detail: { items: window.eloFaqItems, exists: snapshot.exists } }));
+  }, (error) => {
+    console.warn("FAQ unavailable:", error);
+  });
 }
 
 function favoriteDocumentId(product) {
@@ -465,74 +430,6 @@ function installFavoriteFeatures() {
   };
 }
 
-async function updateProductVisibility(visibilityId) {
-  if (!firebaseDb || !catalogVisibilityReady || catalogVisibilityError) {
-    setCatalogStatus(authText("profile.adminNotConfigured"), "error");
-    return;
-  }
-  const buttons = document.querySelectorAll("[data-product-visibility]");
-  buttons.forEach((button) => { button.disabled = true; });
-  setCatalogStatus(authText("profile.adminSaving"), "info");
-  try {
-    const reference = firebaseDb.doc("siteSettings/catalog");
-    const nextIds = await firebaseDb.runTransaction(async (transaction) => {
-      const snapshot = await transaction.get(reference);
-      const currentIds = snapshot.exists ? snapshot.data().hiddenProductIds || [] : [];
-      if (!Array.isArray(currentIds) || currentIds.some((id) => typeof id !== "string")) {
-        throw new Error("catalog_visibility_invalid");
-      }
-      const next = new Set(currentIds);
-      if (next.has(visibilityId)) next.delete(visibilityId);
-      else {
-        if (next.size >= 2000) throw new Error("catalog_visibility_limit_reached");
-        next.add(visibilityId);
-      }
-      transaction.set(reference, { hiddenProductIds: [...next] });
-      return [...next];
-    });
-    hiddenProductIds.clear();
-    nextIds.forEach((id) => hiddenProductIds.add(id));
-    window.eloHiddenProductIds = new Set(hiddenProductIds);
-    setCatalogStatus("");
-    window.dispatchEvent(new Event("catalogvisibilitychange"));
-  } catch (error) {
-    const message = error.message === "catalog_visibility_limit_reached"
-      ? authText("profile.adminCatalogLimitReached")
-      : error.message === "catalog_visibility_invalid"
-        ? authText("profile.adminCatalogDataInvalid")
-        : authText("profile.adminSaveError", { message: error.message });
-    setCatalogStatus(message, "error");
-    buttons.forEach((button) => { button.disabled = false; });
-    return;
-  }
-  renderAdminProductManager(firebaseAuth.currentUser);
-}
-
-document.querySelector("#admin-product-search").addEventListener("input", () => {
-  if (firebaseAuth?.currentUser) renderAdminProductManager(firebaseAuth.currentUser);
-});
-
-document.querySelector("#admin-product-list").addEventListener("click", (event) => {
-  const button = event.target.closest("[data-product-visibility]");
-  if (button) updateProductVisibility(button.dataset.productVisibility);
-});
-
-document.querySelector("#admin-verify-email").addEventListener("click", async () => {
-  try {
-    await firebaseAuth.currentUser.sendEmailVerification();
-    setCatalogStatus(authText("profile.adminVerificationSent"), "success");
-  } catch (error) {
-    setCatalogStatus(authText("profile.adminVerificationError", { message: error.message }), "error");
-  }
-});
-
-window.addEventListener("catalogvisibilitychange", () => {
-  if (firebaseAuth?.currentUser?.email?.toLowerCase() === ADMIN_EMAIL) renderAdminProductManager(firebaseAuth.currentUser);
-});
-window.addEventListener("catalogproductschange", () => {
-  if (firebaseAuth?.currentUser?.email?.toLowerCase() === ADMIN_EMAIL) renderAdminProductManager(firebaseAuth.currentUser);
-});
-
 function isConfigured(config) {
   return Boolean(config && config.apiKey && config.authDomain && config.projectId && config.appId);
 }
@@ -592,7 +489,11 @@ async function initializeFirebase() {
       else showAuthMessage(message);
     });
     firebaseReady = true;
+    window.eloFirebaseAuth = firebaseAuth;
+    window.eloFirebaseDb = firebaseDb;
+    window.dispatchEvent(new Event("elofirebaseready"));
     loadCatalogVisibility();
+    loadSiteContent();
     installFavoriteFeatures();
     await completeSteamSignIn();
   } catch (error) {

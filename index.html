@@ -11,11 +11,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css?v=60">
-    <script src="content.js?v=26" defer></script>
+    <link rel="stylesheet" href="admin.css?v=1">
+    <script src="content.js?v=27" defer></script>
     <script src="firebase-config.js?v=1" defer></script>
     <script src="steam-config.js?v=3" defer></script>
-    <script src="app.js?v=28" defer></script>
-    <script src="auth.js?v=21" defer></script>
+    <script src="app.js?v=29" defer></script>
+    <script src="auth.js?v=22" defer></script>
+    <script src="admin.js?v=1" defer></script>
   </head>
   <body>
     <header class="site-header">
@@ -27,6 +29,7 @@
         <a class="nav-link active" href="#home" data-page-link="home" data-copy="nav.home"></a>
         <a class="nav-link" href="#shop" data-page-link="shop" data-copy="nav.shop"></a>
         <a class="nav-link" href="#trade" data-page-link="trade" data-copy="nav.trade"></a>
+        <a class="nav-link" id="admin-nav-link" href="#admin" data-page-link="admin" data-copy="nav.admin" hidden></a>
         <span class="nav-active-indicator" aria-hidden="true"></span>
       </nav>
       <div class="header-actions header-utility-card">
@@ -71,44 +74,7 @@
             <h2 id="home-faq-title" data-copy="home.faqTitle"></h2>
             <p data-copy="home.faqSubtitle"></p>
           </div>
-          <div class="home-faq-list">
-            <div class="home-faq-item is-open">
-              <button class="home-faq-trigger" type="button" aria-expanded="true" aria-controls="faq-answer-purchase">
-                <span data-copy="home.faqItems.purchase.question"></span>
-                <span class="home-faq-icons" aria-hidden="true">
-                  <img class="home-faq-icon-add" src="assets/icon_new/add_circle_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="">
-                  <img class="home-faq-icon-minus" src="assets/icon_new/minus_circle_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="">
-                </span>
-              </button>
-              <div class="home-faq-answer" id="faq-answer-purchase" aria-hidden="false">
-                <div class="home-faq-answer-inner"><p data-copy="home.faqItems.purchase.answer"></p></div>
-              </div>
-            </div>
-            <div class="home-faq-item">
-              <button class="home-faq-trigger" type="button" aria-expanded="false" aria-controls="faq-answer-demo">
-                <span data-copy="home.faqItems.demo.question"></span>
-                <span class="home-faq-icons" aria-hidden="true">
-                  <img class="home-faq-icon-add" src="assets/icon_new/add_circle_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="">
-                  <img class="home-faq-icon-minus" src="assets/icon_new/minus_circle_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="">
-                </span>
-              </button>
-              <div class="home-faq-answer" id="faq-answer-demo" aria-hidden="true" inert>
-                <div class="home-faq-answer-inner"><p data-copy="home.faqItems.demo.answer"></p></div>
-              </div>
-            </div>
-            <div class="home-faq-item">
-              <button class="home-faq-trigger" type="button" aria-expanded="false" aria-controls="faq-answer-trade">
-                <span data-copy="home.faqItems.trade.question"></span>
-                <span class="home-faq-icons" aria-hidden="true">
-                  <img class="home-faq-icon-add" src="assets/icon_new/add_circle_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="">
-                  <img class="home-faq-icon-minus" src="assets/icon_new/minus_circle_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="">
-                </span>
-              </button>
-              <div class="home-faq-answer" id="faq-answer-trade" aria-hidden="true" inert>
-                <div class="home-faq-answer-inner"><p data-copy="home.faqItems.trade.answer"></p></div>
-              </div>
-            </div>
-          </div>
+          <div class="home-faq-list"></div>
         </section>
         <section class="home-discovery section-wrap" hidden>
           <form class="home-search" id="home-search-form">
@@ -225,22 +191,49 @@
             <button class="signout-button" id="sign-out" type="button" hidden data-copy="profile.signOut"></button>
           </section>
         </div>
-        <section class="admin-panel" id="admin-panel" hidden>
-          <div class="admin-panel-heading">
-            <div>
-              <h2 data-copy="profile.adminTitle"></h2>
-              <p data-copy="profile.adminDescription"></p>
-            </div>
-            <button class="admin-verify-button" id="admin-verify-email" type="button" hidden data-copy="profile.adminSendVerification"></button>
-          </div>
-          <p class="admin-catalog-status" id="admin-catalog-status" role="status" aria-live="polite"></p>
-          <label class="admin-search">
-            <span class="visually-hidden" data-copy="profile.adminSearchLabel"></span>
-            <input id="admin-product-search" type="search" data-copy-placeholder="profile.adminSearchPlaceholder">
-          </label>
-          <div class="admin-product-list" id="admin-product-list"></div>
-        </section>
         </div>
+      </section>
+
+      <section class="page-view section-wrap admin-page" id="page-admin" data-page-view="admin" hidden>
+        <div class="page-heading admin-heading">
+          <div>
+            <h1 data-copy="admin.title"></h1>
+            <p data-copy="admin.description"></p>
+          </div>
+          <p class="admin-save-indicator" id="admin-save-indicator" role="status" aria-live="polite"></p>
+        </div>
+        <div class="admin-notice" id="admin-notice" hidden>
+          <p id="admin-notice-text"></p>
+          <button class="admin-secondary-button" id="admin-verify-email" type="button" data-copy="admin.sendVerification" hidden></button>
+        </div>
+        <div class="admin-tabs" role="tablist" data-copy-aria="admin.tabsAria">
+          <button class="admin-tab active" id="admin-tab-products" type="button" role="tab" aria-selected="true" aria-controls="admin-products-panel" data-admin-tab="products" data-copy="admin.tabProducts"></button>
+          <button class="admin-tab" id="admin-tab-faq" type="button" role="tab" aria-selected="false" aria-controls="admin-faq-panel" data-admin-tab="faq" data-copy="admin.tabFaq"></button>
+        </div>
+        <section class="admin-card" id="admin-products-panel" role="tabpanel" aria-labelledby="admin-tab-products">
+          <div class="admin-toolbar">
+            <label class="admin-search">
+              <img src="assets/icon_new/search_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="" aria-hidden="true">
+              <input id="admin-product-search" type="search" data-copy-placeholder="admin.searchPlaceholder" data-copy-aria="admin.searchAria">
+            </label>
+            <select class="admin-select" id="admin-product-filter" data-copy-aria="admin.filterAria">
+              <option value="all" data-copy="admin.filterAll"></option>
+              <option value="listed" data-copy="admin.filterListed"></option>
+              <option value="unlisted" data-copy="admin.filterUnlisted"></option>
+              <option value="unpriced" data-copy="admin.filterUnpriced"></option>
+            </select>
+            <span class="admin-count" id="admin-product-count"></span>
+          </div>
+          <div class="admin-product-list" id="admin-product-list"></div>
+          <p class="admin-empty" id="admin-product-empty" data-copy="admin.noProducts" hidden></p>
+        </section>
+        <section class="admin-card" id="admin-faq-panel" role="tabpanel" aria-labelledby="admin-tab-faq" hidden>
+          <div class="admin-toolbar">
+            <p class="admin-hint" data-copy="admin.faqHint"></p>
+            <button class="admin-primary-button" id="admin-faq-add" type="button" data-copy="admin.faqAdd"></button>
+          </div>
+          <div class="admin-faq-list" id="admin-faq-list"></div>
+        </section>
       </section>
     </main>
 

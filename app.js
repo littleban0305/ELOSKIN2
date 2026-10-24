@@ -9,6 +9,9 @@ const demoProducts = [
   { id: "demo-case-night", name: "夜行武器箱", game: "CS2", category: copy.categories.case, kind: copy.categories.case, description: "", price: 520, stock: 8, art: "case", accent: "#6b86a3", wearCondition: "not-applicable", rarityColor: "base-grade", stattrak: false, hasStickers: false, hasCharm: false }
 ].map((product) => ({
   ...product,
+  baseName: product.name,
+  basePrice: product.price,
+  baseDescription: product.description,
   source: "demo",
   wear: copy.product.notApplicable,
   label: product.category.toUpperCase()
@@ -516,6 +519,9 @@ function steamInventoryProduct(item) {
     id: `steam-${item.assetId}`,
     assetId: item.assetId,
     source: "steam",
+    baseName: item.name,
+    basePrice: price,
+    baseDescription: type || copy.shop.steamDescription,
     name: item.name,
     marketHashName: item.marketHashName,
     game: "CS2",
@@ -565,6 +571,7 @@ async function loadSteamInventory() {
 
     const liveProducts = data.items.map(steamInventoryProduct);
     products.splice(0, products.length, ...products.filter((product) => product.source !== "steam" && (!liveProducts.length || product.source !== "demo")), ...liveProducts);
+    applyProductOverrides();
     for (const [id, quantity] of state.cart) {
       const currentProduct = products.find((product) => product.id === id);
       if (!currentProduct || currentProduct.stock < quantity || !Number.isFinite(currentProduct.price)) state.cart.delete(id);
@@ -586,6 +593,55 @@ async function loadSteamInventory() {
       : error instanceof Error ? error.message : t("shop.genericInventoryError");
     console.warn(`Steam inventory sync failed: ${message}`, error);
   }
+}
+
+function applyProductOverrides() {
+  const overrides = window.eloProductOverrides || {};
+  for (const product of products) {
+    const override = overrides[favoriteDocumentId(product)];
+    product.name = override?.name || product.baseName;
+    product.description = override?.description || product.baseDescription;
+    product.price = Number.isInteger(override?.price) ? override.price : product.basePrice;
+  }
+}
+
+function renderAllProductViews() {
+  for (const [id, quantity] of state.cart) {
+    const product = products.find((item) => item.id === id);
+    if (!product || !Number.isFinite(product.price) || product.stock < quantity) state.cart.delete(id);
+  }
+  renderProducts();
+  renderHomeProducts();
+  renderTrade();
+  renderTradeItems();
+  renderCart();
+}
+
+function defaultFaqItems() {
+  return Object.values(copy.home.faqItems).map(({ question, answer }) => ({ question, answer }));
+}
+
+function renderFaq() {
+  const items = (Array.isArray(window.eloFaqItems) ? window.eloFaqItems : defaultFaqItems())
+    .filter((item) => item.question.trim() || item.answer.trim());
+  const list = $(".home-faq-list");
+  list.innerHTML = items.map((item, index) => {
+    const open = index === 0;
+    return `
+      <div class="home-faq-item${open ? " is-open" : ""}">
+        <button class="home-faq-trigger" type="button" aria-expanded="${open}" aria-controls="faq-answer-${index}">
+          <span>${escapeHtml(item.question)}</span>
+          <span class="home-faq-icons" aria-hidden="true">
+            <img class="home-faq-icon-add" src="assets/icon_new/add_circle_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="">
+            <img class="home-faq-icon-minus" src="assets/icon_new/minus_circle_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="">
+          </span>
+        </button>
+        <div class="home-faq-answer" id="faq-answer-${index}" aria-hidden="${!open}"${open ? "" : " inert"}>
+          <div class="home-faq-answer-inner"><p>${escapeHtml(item.answer)}</p></div>
+        </div>
+      </div>`;
+  }).join("");
+  $(".home-faq").hidden = items.length === 0;
 }
 
 function showToast(message) {
@@ -614,7 +670,7 @@ function updateMarketIndicator() {
 }
 
 function navigateTo(page, shouldScroll = true) {
-  const validPages = ["home", "shop", "trade", "profile"];
+  const validPages = ["home", "shop", "trade", "profile", ...(window.eloIsAdmin ? ["admin"] : [])];
   const destination = validPages.includes(page) ? page : "home";
   document.querySelectorAll("[data-page-view]").forEach((view) => {
     const active = view.dataset.pageView === destination;
@@ -663,6 +719,14 @@ window.addEventListener("hashchange", () => {
   const destination = location.hash.slice(1);
   if (["guide", "safety", "marketplace"].includes(destination)) showHomeAnchor(destination);
   else navigateTo(destination);
+});
+window.addEventListener("eloauthchange", (event) => {
+  const isAdmin = Boolean(event.detail?.isAdmin);
+  $("#admin-nav-link").hidden = !isAdmin;
+  const onAdminPage = !$("#page-admin").hidden;
+  if (location.hash === "#admin" && isAdmin && !onAdminPage) navigateTo("admin", false);
+  else if (onAdminPage && !isAdmin) navigateTo("home", false);
+  else updateNavIndicator();
 });
 window.addEventListener("resize", () => {
   updateNavIndicator();
@@ -875,16 +939,23 @@ $("#trade-submit").addEventListener("click", () => {
   showToast(t("trade.proposalUnavailable"));
 });
 
-document.querySelectorAll(".home-faq-trigger").forEach((button) => {
-  button.addEventListener("click", () => {
-    const expanded = button.getAttribute("aria-expanded") !== "true";
-    const item = button.closest(".home-faq-item");
-    const answer = document.getElementById(button.getAttribute("aria-controls"));
-    button.setAttribute("aria-expanded", String(expanded));
-    item.classList.toggle("is-open", expanded);
-    answer.setAttribute("aria-hidden", String(!expanded));
-    answer.inert = !expanded;
-  });
+$(".home-faq-list").addEventListener("click", (event) => {
+  const button = event.target.closest(".home-faq-trigger");
+  if (!button) return;
+  const expanded = button.getAttribute("aria-expanded") !== "true";
+  const item = button.closest(".home-faq-item");
+  const answer = document.getElementById(button.getAttribute("aria-controls"));
+  button.setAttribute("aria-expanded", String(expanded));
+  item.classList.toggle("is-open", expanded);
+  answer.setAttribute("aria-hidden", String(!expanded));
+  answer.inert = !expanded;
+});
+
+window.addEventListener("faqchange", renderFaq);
+window.addEventListener("productoverrideschange", () => {
+  applyProductOverrides();
+  renderAllProductViews();
+  window.dispatchEvent(new Event("catalogproductschange"));
 });
 
 $("#home-more-products").addEventListener("click", () => {
@@ -1025,6 +1096,7 @@ $("#checkout").addEventListener("click", () => {
   showToast(t("cart.demoOrderComplete"));
 });
 
+renderFaq();
 renderFilters();
 renderTradeFilters();
 renderHomeCategories();
