@@ -156,3 +156,10 @@
   height: 100%;
   object-fit: contain;
 }
+
+.trade-own-price {
+  color: #50dbc5;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+}

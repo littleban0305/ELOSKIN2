@@ -361,6 +361,7 @@
       const next = [];
       snapshot.forEach((document) => next.push({ id: document.id, ...document.data() }));
       listings = next.sort((a, b) => (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0));
+      if (listings.some((listing) => listing.steam?.marketHashName)) window.eloPrices?.load();
       listingsLoaded = true;
       listingsError = "";
       refreshTagSuggestions();
@@ -446,11 +447,13 @@
     title.textContent = listing.name;
     title.title = listing.name;
     const details = document.createElement("span");
+    const listingMarketTwd = listing.steam?.marketHashName ? window.eloPrices?.twd(listing.steam.marketHashName) : null;
     details.textContent = [
       gameLabel(listing.game),
       categoryLabel(listing.category),
-      listing.source === "steam" ? text("admin.sourceSteam") : text("admin.sourceCustom")
-    ].join(" · ");
+      listing.source === "steam" ? text("admin.sourceSteam") : text("admin.sourceCustom"),
+      listingMarketTwd !== null && listingMarketTwd !== undefined ? text("admin.marketPrice", { twd: listingMarketTwd.toLocaleString() }) : ""
+    ].filter(Boolean).join(" · ");
     const state = document.createElement("span");
     state.className = "admin-row-state";
     meta.append(title, details, state);
@@ -882,6 +885,7 @@
       }
     }
     steamItems = [...grouped.values()].sort((a, b) => a.name.localeCompare(b.name, "zh-Hant"));
+    window.eloPrices?.load();
     steamLoadState = "loaded";
     renderSteamGrid();
   }
@@ -997,7 +1001,10 @@
     const listed = listedMarketNames();
     const visible = steamItems.filter((item) => !term
       || `${item.name} ${item.marketHashName} ${item.type}`.toLocaleLowerCase("zh-Hant").includes(term));
-    steamStatus.textContent = text("admin.steamLoaded", { count: visible.length });
+    steamStatus.textContent = [
+      text("admin.steamLoaded", { count: visible.length }),
+      window.eloPrices?.loaded() ? text("admin.marketPriceUpdated", { time: window.eloPrices.updatedLabel() }) : ""
+    ].filter(Boolean).join(" · ");
     const fragment = document.createDocumentFragment();
     for (const item of visible) {
       const button = document.createElement("button");
@@ -1010,8 +1017,15 @@
       name.textContent = item.name;
       name.title = item.name;
       const meta = document.createElement("span");
+      const marketTwd = window.eloPrices?.twd(item.marketHashName);
       meta.textContent = [item.type, text("admin.steamCount", { count: item.count })].filter(Boolean).join(" · ");
       button.append(art, name, meta);
+      if (marketTwd !== null && marketTwd !== undefined) {
+        const price = document.createElement("span");
+        price.className = "admin-steam-price";
+        price.textContent = text("admin.marketPrice", { twd: marketTwd.toLocaleString() });
+        button.append(price);
+      }
       if (listed.has(item.marketHashName)) {
         const badge = document.createElement("span");
         badge.className = "admin-steam-badge";
@@ -1043,6 +1057,9 @@
     createFields.category.value = detectCategoryKey(item.name, item.type);
     createFields.description.value = item.type;
     createFields.stock.value = String(item.count);
+    const marketTwd = window.eloPrices?.twd(item.marketHashName);
+    createFields.twd.value = marketTwd === null || marketTwd === undefined ? "" : String(marketTwd);
+    createFields.twd.dispatchEvent(new Event("input", { bubbles: true }));
     setCreateStatus("");
     updateCreatePreview();
     createFields.twd.focus();
@@ -1231,6 +1248,11 @@
 
   window.addEventListener("elofirebaseready", () => { if (isAdmin) refreshAll(); });
   window.addEventListener("faqchange", () => { if (isAdmin) loadFaqFromSite(); });
+  window.addEventListener("elopricesloaded", () => {
+    if (!isAdmin) return;
+    renderSteamGrid();
+    queueProductRender();
+  });
 
   window.addEventListener("beforeunload", (event) => {
     if (!isAdmin || pendingCount() === 0) return;

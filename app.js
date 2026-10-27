@@ -1070,6 +1070,12 @@ function restoreOwnInventory() {
   renderOwnInventory();
 }
 
+function ownItemPriceLabel(item) {
+  if (!window.eloPrices?.loaded()) return t("trade.priceLoading");
+  const ec = window.eloPrices.ec(item.marketHashName);
+  return ec === null ? t("trade.priceUnknown") : t("trade.priceEstimate", { ec: ec.toLocaleString() });
+}
+
 function renderOwnInventory() {
   const signedIn = Boolean(window.eloAuthUser);
   const steamId = ownInventory.steamId;
@@ -1079,6 +1085,7 @@ function renderOwnInventory() {
   if (steamId) link.href = `https://steamcommunity.com/inventory/${steamId}/730/2?l=tchinese&count=2000`;
   else link.removeAttribute("href");
   const hasItems = ownInventory.items.length > 0;
+  if (hasItems && window.eloPrices && !window.eloPrices.loaded()) window.eloPrices.load();
   $("#trade-inv-search").hidden = !hasItems;
   $("#trade-own-count").textContent = hasItems ? t("trade.inventoryCount", { count: ownInventory.items.length }) : "";
   paste.querySelector("summary").textContent = hasItems ? t("trade.inventoryReload") : t("trade.inventoryLoad");
@@ -1101,6 +1108,7 @@ function renderOwnInventory() {
         <span class="trade-own-art">${item.iconUrl ? `<img src="${escapeHtml(item.iconUrl)}" alt="" loading="lazy">` : ""}</span>
         <strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong>
         <small>${escapeHtml(item.type)}</small>
+        <em class="trade-own-price">${escapeHtml(ownItemPriceLabel(item))}</em>
       </button>`).join("");
 }
 
@@ -1134,12 +1142,19 @@ $("#trade-own-grid").addEventListener("click", (event) => {
     showToast(t("trade.offerLimit"));
     return;
   }
-  tradeState.offer.push({ id: `asset-${item.assetId}`, name: item.name, value: 0, assetId: item.assetId, marketHashName: item.marketHashName, iconUrl: item.iconUrl });
+  const marketEc = window.eloPrices?.ec(item.marketHashName) ?? null;
+  tradeState.offer.push({ id: `asset-${item.assetId}`, name: item.name, value: marketEc || 0, autoValue: true, assetId: item.assetId, marketHashName: item.marketHashName, iconUrl: item.iconUrl });
   renderTrade();
 });
 
 window.addEventListener("eloauthchange", restoreOwnInventory);
 window.addEventListener("eloprofilechange", restoreOwnInventory);
+window.addEventListener("elopricesloaded", () => {
+  for (const item of tradeState.offer) {
+    if (item.autoValue && !item.value) item.value = window.eloPrices.ec(item.marketHashName) || 0;
+  }
+  renderTrade();
+});
 
 $("#trade-offer-form").addEventListener("submit", (event) => {
   event.preventDefault();
