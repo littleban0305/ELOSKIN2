@@ -136,6 +136,7 @@ async function ensureUserProfile(user) {
     }
     const data = profile.data();
     window.eloUserProfile = data;
+    fillProfileForm(user, true);
     if (data.displayName && data.displayName !== user.displayName) {
       await user.updateProfile({ displayName: data.displayName });
       updateAccount(user);
@@ -187,12 +188,69 @@ profileSetupForm.addEventListener("submit", async (event) => {
     await user.updateProfile({ displayName });
     await firebaseDb.collection("userProfiles").doc(user.uid).set({ displayName, tradeUrl });
     window.eloUserProfile = { displayName, tradeUrl };
+    fillProfileForm(user, true);
     profileSetupModal.hidden = true;
     profileSetupStatus.textContent = authText("profile.setupSaved");
     updateAccount(user);
   } catch (error) {
     profileSetupStatus.textContent = authText("profile.setupSaveError", { message: error.message });
     profileSetupStatus.dataset.kind = "error";
+  } finally {
+    submit.disabled = false;
+  }
+});
+
+const profileEditForm = document.querySelector("#profile-edit-form");
+const profileEditName = document.querySelector("#profile-edit-name");
+const profileEditTradeUrl = document.querySelector("#profile-edit-trade-url");
+const profileEditStatus = document.querySelector("#profile-edit-status");
+
+function setProfileEditStatus(message, kind = "") {
+  profileEditStatus.textContent = message;
+  profileEditStatus.dataset.kind = kind;
+}
+
+function fillProfileForm(user, force = false) {
+  if (!user) return;
+  if (!force && profileEditForm.contains(document.activeElement)) return;
+  const profile = window.eloUserProfile || {};
+  profileEditName.dataset.uid = user.uid;
+  profileEditName.value = profile.displayName || user.displayName || "";
+  profileEditTradeUrl.value = profile.tradeUrl || "";
+}
+
+document.querySelector("#profile-login").addEventListener("click", openLoginModal);
+
+profileEditForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const user = firebaseAuth?.currentUser;
+  if (!user || !firebaseDb) {
+    setProfileEditStatus(authText("profile.setupFirestoreUnavailable"), "error");
+    return;
+  }
+  const displayName = profileEditName.value.trim();
+  const tradeUrl = profileEditTradeUrl.value.trim();
+  if (!displayName) {
+    setProfileEditStatus(authText("profile.setupNameRequired"), "error");
+    profileEditName.focus();
+    return;
+  }
+  if (!isValidSteamTradeUrl(tradeUrl)) {
+    setProfileEditStatus(authText("profile.setupInvalidTradeUrl"), "error");
+    profileEditTradeUrl.focus();
+    return;
+  }
+  const submit = document.querySelector("#profile-edit-submit");
+  submit.disabled = true;
+  setProfileEditStatus(authText("profile.profileSaving"), "info");
+  try {
+    await firebaseDb.collection("userProfiles").doc(user.uid).set({ displayName, tradeUrl });
+    await user.updateProfile({ displayName });
+    window.eloUserProfile = { displayName, tradeUrl };
+    updateAccount(user);
+    setProfileEditStatus(authText("profile.profileSaved"), "success");
+  } catch (error) {
+    setProfileEditStatus(authText("profile.setupSaveError", { message: error.message }), "error");
   } finally {
     submit.disabled = false;
   }
@@ -240,7 +298,8 @@ function updateAccount(user) {
   if (user?.isAnonymous) user = null;
   window.eloAuthUser = user;
   const steamId = user?.uid?.startsWith("steam:") ? user.uid.slice("steam:".length) : "";
-  const name = user?.displayName || user?.email?.split("@")[0] || (steamId ? `Steam ${steamId}` : authText("profile.guest"));
+  const savedName = user && window.eloUserProfile?.displayName;
+  const name = savedName || user?.displayName || user?.email?.split("@")[0] || (steamId ? `Steam ${steamId}` : authText("profile.guest"));
   const initial = [...name.trim()][0]?.toLocaleUpperCase("zh-Hant") || authText("profile.fallbackInitial");
   const avatarImage = document.querySelector("#profile-avatar-image");
   const avatarInitial = document.querySelector("#profile-avatar-initial");
@@ -264,6 +323,13 @@ function updateAccount(user) {
   if (avatarUrl) avatarImage.src = avatarUrl;
   else avatarImage.removeAttribute("src");
   document.querySelector("#profile-avatar").classList.toggle("signed-in", Boolean(user));
+  document.querySelector("#profile-guest").hidden = Boolean(user);
+  document.querySelector("#profile-signed-in").hidden = !user;
+  const providerId = steamId ? "steam" : user?.providerData?.[0]?.providerId || "";
+  document.querySelector("#profile-provider").textContent = !user ? ""
+    : providerId === "steam" ? authText("profile.providerSteam")
+      : providerId === "google.com" ? authText("profile.providerGoogle") : authText("profile.providerEmail");
+  if (user && document.querySelector("#profile-edit-name").dataset.uid !== user.uid) fillProfileForm(user);
   document.querySelector("#profile-shortcut").textContent = user ? initial : authText("nav.account");
   document.querySelector("#profile-shortcut").setAttribute("aria-label", user ? authText("nav.profileAria") : authText("nav.accountAria"));
   document.querySelector("#profile-shortcut").classList.toggle("signed-in", Boolean(user));
@@ -283,6 +349,7 @@ function updateAccount(user) {
     profileSetupModal.hidden = true;
     profileSetupUser = null;
     window.eloUserProfile = null;
+    checkedProfileUids.clear();
   }
   const isAdmin = Boolean(user) && user.email?.toLowerCase() === ADMIN_EMAIL;
   window.eloIsAdmin = isAdmin;
@@ -359,7 +426,7 @@ function installFavoriteFeatures() {
     let count = 0;
     let isFavorite = shouldFavorite;
 
-    await firebaseDb.runTransaction(async (transaction) => {
+    await favoriteDb.runTransaction(async (transaction) => {
       const vote = await transaction.get(voteReference);
       const counter = await transaction.get(countReference);
       count = counter.exists ? counter.data().count : 0;

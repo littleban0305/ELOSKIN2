@@ -1,0 +1,201 @@
+/* ELOSKIN2 個人頁面 */
+
+.account-guest[hidden],
+.account-layout[hidden],
+.account-status[hidden],
+#profile-favorites-grid[hidden] {
+  display: none !important;
+}
+
+.account-guest {
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+  padding: 56px 20px;
+  color: #a5b4b8;
+  text-align: center;
+  background: #10171d;
+  border-radius: 18px;
+}
+
+.account-guest p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.account-guest .admin-primary-button {
+  min-width: 140px;
+  min-height: 42px;
+  font-size: 14px;
+}
+
+.account-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+
+.account-card {
+  padding: 22px;
+  background: #10171d;
+  border-radius: 18px;
+}
+
+.account-card h2,
+.account-section-heading h2 {
+  margin: 0;
+  color: #e9eff1;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.account-identity {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.account-avatar {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  margin-bottom: 6px;
+  color: #07120f;
+  font-size: 38px;
+  font-weight: 800;
+  background: #50dbc5;
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px #151f25, 0 0 0 5px rgba(80, 219, 197, .35);
+}
+
+.account-avatar .account-avatar-initial {
+  font-size: 38px !important;
+  line-height: 1;
+}
+
+.account-avatar-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.account-avatar-image[hidden],
+.account-avatar-initial[hidden] {
+  display: none !important;
+}
+
+.account-identity h2 {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 20px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.account-sub {
+  max-width: 100%;
+  margin: 0;
+  overflow: hidden;
+  color: #829098;
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.account-provider {
+  padding: 3px 10px;
+  color: #50dbc5;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(80, 219, 197, .12);
+  border-radius: 999px;
+}
+
+.account-provider:empty { display: none; }
+
+.account-actions {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.account-actions button {
+  min-height: 38px;
+}
+
+.account-actions button[hidden] { display: none; }
+
+.account-status {
+  margin: 0;
+  color: #a5b4b8;
+  font-size: 12px;
+}
+
+.account-status[data-kind="success"] { color: #50dbc5; }
+.account-status[data-kind="error"] { color: #ff8f8f; }
+
+.account-settings {
+  display: grid;
+  gap: 16px;
+}
+
+.account-form {
+  display: grid;
+  gap: 14px;
+}
+
+.account-form-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+}
+
+.account-form-footer .admin-primary-button {
+  min-width: 110px;
+  min-height: 40px;
+  font-size: 13px;
+}
+
+.account-favorites {
+  grid-column: 1 / -1;
+  padding: 18px;
+  background: #10171d;
+  border-radius: 18px;
+}
+
+.account-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.account-section-heading span {
+  padding: 2px 9px;
+  color: #50dbc5;
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(80, 219, 197, .12);
+  border-radius: 999px;
+}
+
+@media (max-width: 760px) {
+  .account-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .account-form-footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+}

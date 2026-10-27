@@ -11,13 +11,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css?v=60">
-    <link rel="stylesheet" href="admin.css?v=4">
-    <script src="content.js?v=31" defer></script>
+    <link rel="stylesheet" href="admin.css?v=5">
+    <link rel="stylesheet" href="profile.css?v=1">
+    <script src="content.js?v=32" defer></script>
     <script src="firebase-config.js?v=1" defer></script>
     <script src="steam-config.js?v=4" defer></script>
-    <script src="app.js?v=30" defer></script>
-    <script src="auth.js?v=23" defer></script>
-    <script src="admin.js?v=5" defer></script>
+    <script src="app.js?v=31" defer></script>
+    <script src="auth.js?v=24" defer></script>
+    <script src="admin.js?v=6" defer></script>
   </head>
   <body>
     <header class="site-header">
@@ -179,27 +180,48 @@
 
       <section class="page-view section-wrap profile-page" id="page-profile" data-page-view="profile" hidden>
         <div class="page-heading"><div><h1 data-copy="profile.title"></h1></div></div>
-        <div hidden>
-        <div class="profile-layout">
-          <section class="profile-card">
-            <div class="profile-avatar" id="profile-avatar" data-copy-aria="profile.avatarAria"><span class="profile-avatar-initial" id="profile-avatar-initial">E</span><img class="profile-avatar-image" id="profile-avatar-image" alt="" hidden></div>
-            <input class="avatar-file-input" id="avatar-file" type="file" accept="image/png,image/jpeg,image/webp" hidden>
-            <button class="avatar-upload-button" id="avatar-upload" type="button" hidden data-copy="profile.avatarUpload"></button>
-            <p class="avatar-status" id="avatar-status" role="status" aria-live="polite" hidden></p>
-            <h2 id="profile-name" data-copy="profile.guest"></h2>
-            <p id="profile-email" data-copy="profile.guestDescription"></p>
-            <button class="signout-button" id="sign-out" type="button" hidden data-copy="profile.signOut"></button>
-          </section>
+        <div class="account-guest" id="profile-guest">
+          <p data-copy="profile.guestDescription"></p>
+          <button class="admin-primary-button" id="profile-login" type="button" data-copy="nav.account"></button>
         </div>
+        <div class="account-layout" id="profile-signed-in" hidden>
+          <section class="account-card account-identity">
+            <div class="account-avatar" id="profile-avatar" data-copy-aria="profile.avatarAria">
+              <span class="account-avatar-initial" id="profile-avatar-initial">E</span>
+              <img class="account-avatar-image" id="profile-avatar-image" alt="" hidden>
+            </div>
+            <input class="avatar-file-input" id="avatar-file" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+            <h2 id="profile-name" data-copy="profile.guest"></h2>
+            <p class="account-sub" id="profile-email"></p>
+            <span class="account-provider" id="profile-provider"></span>
+            <div class="account-actions">
+              <button class="admin-ghost-button" id="avatar-upload" type="button" hidden data-copy="profile.avatarUpload"></button>
+              <button class="admin-faq-delete" id="sign-out" type="button" hidden data-copy="profile.signOut"></button>
+            </div>
+            <p class="account-status" id="avatar-status" role="status" aria-live="polite" hidden></p>
+          </section>
+          <section class="account-card account-settings">
+            <h2 data-copy="profile.settingsTitle"></h2>
+            <form class="account-form" id="profile-edit-form" novalidate>
+              <label class="admin-field"><span class="admin-field-label" data-copy="profile.displayName"></span><input id="profile-edit-name" type="text" maxlength="30" autocomplete="nickname" required></label>
+              <label class="admin-field"><span class="admin-field-label" data-copy="profile.tradeUrl"></span><input id="profile-edit-trade-url" type="url" autocomplete="url" required data-copy-placeholder="profile.tradeUrlPlaceholder"></label>
+              <div class="account-form-footer">
+                <p class="account-status" id="profile-edit-status" role="status" aria-live="polite"></p>
+                <button class="admin-primary-button" id="profile-edit-submit" type="submit" data-copy="profile.saveChanges"></button>
+              </div>
+            </form>
+          </section>
+          <section class="account-favorites">
+            <div class="account-section-heading"><h2 data-copy="profile.favoritesTitle"></h2><span id="profile-favorites-count">0</span></div>
+            <div class="product-grid" id="profile-favorites-grid" aria-live="polite"></div>
+            <p class="admin-empty" id="profile-favorites-empty" data-copy="profile.favoritesEmpty" hidden></p>
+          </section>
         </div>
       </section>
 
       <section class="page-view section-wrap admin-page" id="page-admin" data-page-view="admin" hidden>
         <div class="page-heading admin-heading">
-          <div>
-            <h1 data-copy="admin.title"></h1>
-            <p data-copy="admin.description"></p>
-          </div>
+          <div><h1 data-copy="admin.title"></h1></div>
           <p class="admin-save-indicator" id="admin-save-indicator" role="status" aria-live="polite"></p>
         </div>
         <div class="admin-notice" id="admin-notice" hidden>
@@ -226,7 +248,6 @@
             </select>
             <span class="admin-count" id="admin-product-count"></span>
           </div>
-          <p class="admin-hint admin-rate-hint" data-copy="admin.twdRate"></p>
           <div class="admin-product-list" id="admin-product-list"></div>
           <p class="admin-empty" id="admin-product-empty" hidden></p>
         </section>
@@ -271,7 +292,6 @@
               <label class="admin-field"><span class="admin-field-label" data-copy="admin.fieldTwd"></span><input id="admin-create-twd" type="number" min="0" step="any" inputmode="decimal" data-copy-placeholder="admin.twdPlaceholder" data-copy-title="admin.twdRate"></label>
               <label class="admin-field"><span class="admin-field-label" data-copy="admin.fieldPrice"></span><input id="admin-create-price" type="number" min="0" max="10000000" step="1" inputmode="numeric" data-copy-placeholder="admin.pricePlaceholder"></label>
               <label class="admin-field"><span class="admin-field-label" data-copy="admin.fieldStock"></span><input id="admin-create-stock" type="number" min="0" max="100000" step="1" inputmode="numeric" value="1"></label>
-              <p class="admin-hint admin-rate-hint admin-field-wide" data-copy="admin.twdRate"></p>
               <label class="admin-field admin-field-wide" id="admin-create-image-field"><span class="admin-field-label" data-copy="admin.fieldImage"></span><input id="admin-create-image" type="url" maxlength="2048" data-copy-placeholder="admin.imagePlaceholder"></label>
               <label class="admin-field admin-field-wide"><span class="admin-field-label" data-copy="admin.fieldDescription"></span><textarea id="admin-create-description" rows="3" maxlength="500" data-copy-placeholder="admin.descriptionPlaceholder"></textarea></label>
               <div class="admin-field admin-field-wide"><span class="admin-field-label" data-copy="admin.fieldTags"></span><div id="admin-create-tags"></div></div>
@@ -285,7 +305,6 @@
         </section>
         <section class="admin-card" id="admin-faq-panel" role="tabpanel" aria-labelledby="admin-tab-faq" hidden>
           <div class="admin-toolbar">
-            <p class="admin-hint" data-copy="admin.faqHint"></p>
             <button class="admin-primary-button" id="admin-faq-add" type="button" data-copy="admin.faqAdd"></button>
           </div>
           <div class="admin-faq-list" id="admin-faq-list"></div>

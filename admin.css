@@ -859,3 +859,5 @@
   gap: 12px;
   margin-top: 8px;
 }
+
+.admin-create-preview p:empty { display: none; }

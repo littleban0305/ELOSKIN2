@@ -447,19 +447,34 @@ function renderHomeProducts() {
   const featured = uniqueProducts.sort((a, b) => sorter(a, b) || a.name.localeCompare(b.name, "zh-Hant")).slice(0, 5);
   $("#featured-grid").innerHTML = featured.map((product) => productCardMarkup(product)).join("");
   $("#featured-grid").hidden = featured.length === 0;
-  if (typeof window.eloGetProductFavorite === "function") {
-    for (const product of featured) {
-      const key = productFavoriteKey(product);
-      if (favoriteStatusChecks.has(key)) continue;
-      favoriteStatusChecks.add(key);
-      window.eloGetProductFavorite(product).then((isFavorite) => {
-        if (isFavorite) state.favorites.add(key);
-        else state.favorites.delete(key);
-        renderProducts();
-        renderHomeProducts();
-      }).catch(() => favoriteStatusChecks.delete(key));
-    }
-  }
+  featured.forEach(checkFavoriteStatus);
+}
+
+function checkFavoriteStatus(product) {
+  if (typeof window.eloGetProductFavorite !== "function") return;
+  const key = productFavoriteKey(product);
+  if (favoriteStatusChecks.has(key)) return;
+  favoriteStatusChecks.add(key);
+  window.eloGetProductFavorite(product).then((isFavorite) => {
+    const changed = isFavorite !== state.favorites.has(key);
+    if (isFavorite) state.favorites.add(key);
+    else state.favorites.delete(key);
+    if (!changed) return;
+    renderProducts();
+    renderHomeProducts();
+    renderProfileFavorites();
+  }).catch(() => favoriteStatusChecks.delete(key));
+}
+
+function renderProfileFavorites() {
+  const page = $("#page-profile");
+  if (!page || page.hidden || !window.eloAuthUser) return;
+  products.forEach(checkFavoriteStatus);
+  const favorites = products.filter((product) => state.favorites.has(productFavoriteKey(product)));
+  $("#profile-favorites-grid").innerHTML = favorites.map((product) => productCardMarkup(product)).join("");
+  $("#profile-favorites-grid").hidden = favorites.length === 0;
+  $("#profile-favorites-count").textContent = favorites.length;
+  $("#profile-favorites-empty").hidden = favorites.length > 0;
 }
 
 function tradeTotal(side) {
@@ -568,6 +583,7 @@ function renderAllProductViews() {
   renderTrade();
   renderTradeItems();
   renderCart();
+  renderProfileFavorites();
 }
 
 function defaultFaqItems() {
@@ -637,6 +653,7 @@ function navigateTo(page, shouldScroll = true) {
     else link.removeAttribute("aria-current");
   });
   updateNavIndicator();
+  if (destination === "profile") renderProfileFavorites();
   if (shouldScroll) window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -674,6 +691,7 @@ window.addEventListener("hashchange", () => {
   else navigateTo(destination);
 });
 window.addEventListener("eloauthchange", (event) => {
+  renderProfileFavorites();
   const isAdmin = Boolean(event.detail?.isAdmin);
   $("#admin-nav-link").hidden = !isAdmin;
   const onAdminPage = !$("#page-admin").hidden;
@@ -926,6 +944,7 @@ document.addEventListener("click", (event) => {
     renderProducts();
     renderTradeItems();
     renderHomeProducts();
+    renderProfileFavorites();
     showToast(shouldFavorite ? t("messages.favoriteAdded") : t("messages.favoriteRemoved"));
     const toggleFavorite = window.eloToggleProductFavorite;
     if (typeof toggleFavorite === "function") {
@@ -937,6 +956,7 @@ document.addEventListener("click", (event) => {
           renderProducts();
           renderTradeItems();
           renderHomeProducts();
+          renderProfileFavorites();
         }
       }).catch(() => {
         if (shouldFavorite) state.favorites.delete(key);
@@ -944,6 +964,7 @@ document.addEventListener("click", (event) => {
         renderProducts();
         renderTradeItems();
         renderHomeProducts();
+        renderProfileFavorites();
         showToast(t("home.marketUnavailable"));
       });
     }
@@ -977,6 +998,7 @@ window.addEventListener("favoritecountschanged", (event) => {
   renderProducts();
   renderTradeItems();
   renderHomeProducts();
+  renderProfileFavorites();
 });
 
 document.querySelectorAll("[data-requires-auth]").forEach((button) => {
