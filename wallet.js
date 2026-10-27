@@ -5,6 +5,7 @@
   const MAX_ATTACHMENTS = 3;
   const MAX_SOURCE_BYTES = 10 * 1024 * 1024;
   const MAX_DATA_URL_LENGTH = 850000;
+  const MAX_REQUEST_EC = 100000000;
   const OPEN_ORDER_STATUSES = ["pending", "processing"];
 
   let currentUser = null;
@@ -256,8 +257,13 @@
       parsedEc = parsedTwd === null ? 0 : Number.isNaN(parsedTwd) ? NaN : parsedTwd / TWD_PER_EC;
     }
     const requestedAmount = Math.round(parsedEc);
-    if (Number.isNaN(parsedEc) || requestedAmount > 100000000) {
+    if (Number.isNaN(parsedEc)) {
       setTopupStatus("wallet.amountInvalid", "error", { value: topupEc.value || topupTwd.value });
+      topupEc.focus();
+      return;
+    }
+    if (requestedAmount > MAX_REQUEST_EC) {
+      setTopupStatus("wallet.amountTooLarge", "error", { max: MAX_REQUEST_EC.toLocaleString(), twd: (MAX_REQUEST_EC * TWD_PER_EC).toLocaleString() });
       topupEc.focus();
       return;
     }
