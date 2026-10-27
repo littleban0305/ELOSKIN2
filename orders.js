@@ -109,6 +109,27 @@
     return false;
   }
 
+  function orderCharge(order) {
+    const total = Number(order.total) || 0;
+    return order.type === "trade" ? Math.max(0, total - (Number(order.offerTotal) || 0)) : total;
+  }
+
+  function openOrdersCharge() {
+    return userOrders.filter((order) => OPEN_STATUSES.includes(order.status)).reduce((sum, order) => sum + orderCharge(order), 0);
+  }
+
+  function hasEnoughBalance(charge, statusElement) {
+    const available = window.eloWallet?.available?.() ?? 0;
+    if (charge <= available) return true;
+    const message = text("orders.insufficientBalance", { need: charge.toLocaleString(), available: available.toLocaleString() });
+    if (statusElement) {
+      statusElement.textContent = message;
+      statusElement.dataset.kind = "error";
+    }
+    toast(message);
+    return false;
+  }
+
   function orderItem(product, quantity) {
     return {
       listingId: product.listingId || "",
@@ -165,6 +186,7 @@
       createdAt: now,
       updatedAt: now
     };
+    if (!hasEnoughBalance(orderCharge(order), status)) return;
     const checkout = $("#checkout");
     checkout.disabled = true;
     status.textContent = text("orders.submitting");
@@ -209,6 +231,7 @@
       createdAt: now,
       updatedAt: now
     };
+    if (!hasEnoughBalance(orderCharge(order))) return;
     const button = $("#trade-submit");
     button.disabled = true;
     try {
@@ -377,24 +400,47 @@
 
   $("#admin-order-filter").addEventListener("change", renderAdminOrders);
 
-  async function completeOrderStock(transaction, order) {
+  async function completeOrder(transaction, reference, order) {
+    const fresh = await transaction.get(reference);
+    if (!fresh.exists || fresh.data().status !== "processing") throw new Error("order_changed");
     const totals = new Map();
     for (const item of order.items || []) {
       if (!item.listingId) continue;
       totals.set(item.listingId, (totals.get(item.listingId) || 0) + (Number(item.quantity) || 1));
     }
-    const references = [...totals.keys()].map((id) => db().collection("listings").doc(id));
-    const snapshots = [];
-    for (const reference of references) snapshots.push(await transaction.get(reference));
+    const listingReferences = [...totals.keys()].map((id) => db().collection("listings").doc(id));
+    const listingSnapshots = [];
+    for (const listingReference of listingReferences) listingSnapshots.push(await transaction.get(listingReference));
+    const walletReference = db().collection("wallets").doc(order.uid);
+    const wallet = await transaction.get(walletReference);
+    const balance = wallet.exists ? Number(wallet.data().balance) || 0 : 0;
+    const charge = orderCharge(order);
+    if (balance < charge) {
+      throw new Error(text("orders.buyerInsufficient", { balance: balance.toLocaleString(), charge: charge.toLocaleString() }));
+    }
+
+    const now = Date.now();
     let clamped = false;
-    snapshots.forEach((snapshot, index) => {
+    listingSnapshots.forEach((snapshot, index) => {
       if (!snapshot.exists) return;
       const stock = Number(snapshot.data().stock) || 0;
-      const quantity = totals.get(references[index].id);
+      const quantity = totals.get(listingReferences[index].id);
       if (stock < quantity) clamped = true;
-      transaction.update(references[index], { stock: Math.max(0, stock - quantity), updatedAt: Date.now() });
+      transaction.update(listingReferences[index], { stock: Math.max(0, stock - quantity), updatedAt: now });
     });
-    return clamped;
+    if (charge > 0) {
+      transaction.set(walletReference, { balance: balance - charge, updatedAt: now });
+      transaction.set(db().collection("walletTransactions").doc(), {
+        uid: order.uid,
+        amount: -charge,
+        balanceAfter: balance - charge,
+        type: order.type,
+        refId: order.id,
+        note: text("orders.ledgerNote", { type: typeLabel(order.type), id: shortId(order.id) }),
+        createdAt: now
+      });
+    }
+    return { clamped, now };
   }
 
   async function changeStatus(card, nextStatus, mode) {
@@ -411,10 +457,9 @@
       let clamped = false;
       if (mode === "admin" && nextStatus === "completed") {
         await db().runTransaction(async (transaction) => {
-          const fresh = await transaction.get(reference);
-          if (!fresh.exists || fresh.data().status !== "processing") throw new Error("order_changed");
-          clamped = await completeOrderStock(transaction, order);
-          transaction.update(reference, { status: nextStatus, adminNote, updatedAt: Date.now() });
+          const result = await completeOrder(transaction, reference, order);
+          clamped = result.clamped;
+          transaction.update(reference, { status: nextStatus, adminNote, updatedAt: result.now });
         });
       } else if (mode === "admin") {
         await reference.update({ status: nextStatus, adminNote, updatedAt: Date.now() });
@@ -606,6 +651,7 @@
       snapshot.forEach((document) => next.push({ id: document.id, ...document.data() }));
       userOrders = next;
       renderProfileOrders();
+      window.dispatchEvent(new Event("eloordersupdated"));
     }, (error) => console.warn("Orders unavailable:", error)));
     listeners.push(db().collection("notifications").where("to", "==", uid).onSnapshot(
       (snapshot) => handleNotificationSnapshot("user", snapshot),
@@ -647,6 +693,6 @@
     if (event.detail?.page === "notifications") renderNotifications();
   });
 
-  window.eloOrders = { submitPurchase, submitTrade };
+  window.eloOrders = { submitPurchase, submitTrade, notify, openOrdersCharge };
   renderNotifications();
 })();

@@ -646,7 +646,7 @@ function updateMarketIndicator() {
 }
 
 function navigateTo(page, shouldScroll = true) {
-  const validPages = ["home", "shop", "trade", "profile", "notifications", ...(window.eloIsAdmin ? ["admin"] : [])];
+  const validPages = ["home", "shop", "trade", "profile", "notifications", "wallet", ...(window.eloIsAdmin ? ["admin"] : [])];
   const destination = validPages.includes(page) ? page : "home";
   document.querySelectorAll("[data-page-view]").forEach((view) => {
     const active = view.dataset.pageView === destination;

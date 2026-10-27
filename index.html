@@ -13,14 +13,16 @@
     <link rel="stylesheet" href="styles.css?v=60">
     <link rel="stylesheet" href="admin.css?v=5">
     <link rel="stylesheet" href="profile.css?v=2">
-    <link rel="stylesheet" href="orders.css?v=1">
-    <script src="content.js?v=33" defer></script>
+    <link rel="stylesheet" href="orders.css?v=2">
+    <link rel="stylesheet" href="wallet.css?v=1">
+    <script src="content.js?v=34" defer></script>
     <script src="firebase-config.js?v=1" defer></script>
     <script src="steam-config.js?v=4" defer></script>
-    <script src="app.js?v=32" defer></script>
+    <script src="app.js?v=33" defer></script>
     <script src="auth.js?v=25" defer></script>
     <script src="admin.js?v=7" defer></script>
-    <script src="orders.js?v=1" defer></script>
+    <script src="orders.js?v=2" defer></script>
+    <script src="wallet.js?v=1" defer></script>
   </head>
   <body>
     <header class="site-header">
@@ -36,6 +38,9 @@
         <span class="nav-active-indicator" aria-hidden="true"></span>
       </nav>
       <div class="header-actions header-utility-card">
+        <a class="wallet-chip" id="wallet-chip" href="#wallet" data-copy-aria="wallet.chipAria" hidden>
+          <span class="wallet-chip-amount" id="wallet-chip-amount">0</span><span class="wallet-chip-unit">EC</span><span class="wallet-chip-plus" aria-hidden="true">+</span>
+        </a>
         <a class="cart-button notification-button" id="open-notifications" href="#notifications" data-copy-aria="nav.notificationsAria" hidden>
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Zm7-6V11a7 7 0 0 0-5.5-6.84V3.5a1.5 1.5 0 0 0-3 0v.66A7 7 0 0 0 5 11v5l-2 2v1h18v-1l-2-2Z" fill="currentColor"/></svg>
           <span class="cart-count" id="notification-count" hidden>0</span>
@@ -230,6 +235,67 @@
         </div>
       </section>
 
+      <section class="page-view section-wrap wallet-page" id="page-wallet" data-page-view="wallet" hidden>
+        <div class="page-heading"><div><h1 data-copy="wallet.title"></h1></div></div>
+        <div class="account-guest" id="wallet-guest">
+          <p data-copy="wallet.loginRequired"></p>
+          <button class="admin-primary-button" id="wallet-login" type="button" data-copy="nav.account"></button>
+        </div>
+        <div class="wallet-layout" id="wallet-content" hidden>
+          <section class="account-card wallet-balance-card">
+            <span class="wallet-label" data-copy="wallet.balance"></span>
+            <strong class="wallet-balance"><span id="wallet-balance">0</span> <small>EC</small></strong>
+            <span class="wallet-sub" id="wallet-balance-twd"></span>
+            <div class="wallet-available">
+              <span><span data-copy="wallet.available"></span><strong><span id="wallet-available">0</span> EC</strong></span>
+              <span id="wallet-reserved-row"><span data-copy="wallet.reserved"></span><strong><span id="wallet-reserved">0</span> EC</strong></span>
+            </div>
+          </section>
+          <section class="account-card wallet-topup-card">
+            <h2 data-copy="wallet.topupTitle"></h2>
+            <div class="topup-methods" role="group" data-copy-aria="wallet.methodAria">
+              <button class="topup-method active" type="button" data-topup-method="admin" aria-pressed="true">
+                <strong data-copy="wallet.methodAdmin"></strong>
+                <span data-copy="wallet.methodAdminDesc"></span>
+              </button>
+              <button class="topup-method" type="button" data-topup-method="skin" aria-pressed="false" disabled>
+                <strong data-copy="wallet.methodSkin"></strong>
+                <span data-copy="wallet.comingSoon"></span>
+              </button>
+            </div>
+            <form class="topup-form" id="topup-form" novalidate>
+              <label class="admin-field"><span class="admin-field-label" data-copy="wallet.messageLabel"></span><textarea id="topup-message" rows="3" maxlength="1000" data-copy-placeholder="wallet.messagePlaceholder"></textarea></label>
+              <div class="topup-amounts">
+                <label class="admin-field"><span class="admin-field-label" data-copy="wallet.twdLabel"></span><input id="topup-twd" type="number" min="0" step="any" inputmode="decimal" data-copy-placeholder="admin.twdPlaceholder"></label>
+                <label class="admin-field"><span class="admin-field-label" data-copy="wallet.ecLabel"></span><input id="topup-ec" type="number" min="0" step="1" inputmode="numeric"></label>
+              </div>
+              <div class="admin-field">
+                <span class="admin-field-label" data-copy="wallet.attachments"></span>
+                <div class="topup-files">
+                  <div class="topup-previews" id="topup-previews"></div>
+                  <button class="admin-ghost-button" id="topup-file-button" type="button" data-copy="wallet.addAttachment"></button>
+                  <input id="topup-files" type="file" accept="image/png,image/jpeg,image/webp" multiple hidden>
+                </div>
+              </div>
+              <div class="account-form-footer">
+                <p class="account-status" id="topup-status" role="status" aria-live="polite"></p>
+                <button class="admin-primary-button" id="topup-submit" type="submit" data-copy="wallet.submit"></button>
+              </div>
+            </form>
+          </section>
+          <section class="account-favorites">
+            <div class="account-section-heading"><h2 data-copy="wallet.requestsTitle"></h2></div>
+            <div class="order-list" id="wallet-topups"></div>
+            <p class="admin-empty" id="wallet-topups-empty" data-copy="wallet.requestsEmpty" hidden></p>
+          </section>
+          <section class="account-favorites">
+            <div class="account-section-heading"><h2 data-copy="wallet.ledgerTitle"></h2></div>
+            <div class="wallet-ledger" id="wallet-ledger"></div>
+            <p class="admin-empty" id="wallet-ledger-empty" data-copy="wallet.ledgerEmpty" hidden></p>
+          </section>
+        </div>
+      </section>
+
       <section class="page-view section-wrap notifications-page" id="page-notifications" data-page-view="notifications" hidden>
         <div class="page-heading notifications-heading">
           <div><h1 data-copy="notifications.title"></h1></div>
@@ -256,6 +322,7 @@
           <button class="admin-tab active" id="admin-tab-products" type="button" role="tab" aria-selected="true" aria-controls="admin-products-panel" data-admin-tab="products" data-copy="admin.tabProducts"></button>
           <button class="admin-tab" id="admin-tab-create" type="button" role="tab" aria-selected="false" aria-controls="admin-create-panel" data-admin-tab="create" data-copy="admin.tabCreate"></button>
           <button class="admin-tab" id="admin-tab-orders" type="button" role="tab" aria-selected="false" aria-controls="admin-orders-panel" data-admin-tab="orders"><span data-copy="admin.tabOrders"></span><span class="admin-tab-badge" id="admin-orders-badge" hidden>0</span></button>
+          <button class="admin-tab" id="admin-tab-topups" type="button" role="tab" aria-selected="false" aria-controls="admin-topups-panel" data-admin-tab="topups"><span data-copy="wallet.adminTab"></span><span class="admin-tab-badge" id="admin-topups-badge" hidden>0</span></button>
           <button class="admin-tab" id="admin-tab-faq" type="button" role="tab" aria-selected="false" aria-controls="admin-faq-panel" data-admin-tab="faq" data-copy="admin.tabFaq"></button>
         </div>
         <datalist id="admin-tag-suggestions"></datalist>
@@ -343,6 +410,20 @@
           <div class="order-list" id="admin-order-list"></div>
           <p class="admin-empty" id="admin-order-empty" data-copy="orders.adminEmpty" hidden></p>
         </section>
+        <section class="admin-card" id="admin-topups-panel" role="tabpanel" aria-labelledby="admin-tab-topups" hidden>
+          <div class="admin-toolbar">
+            <select class="admin-select" id="admin-topup-filter" data-copy-aria="wallet.filterAria">
+              <option value="pending" data-copy="wallet.statusPending"></option>
+              <option value="approved" data-copy="wallet.statusApproved"></option>
+              <option value="rejected" data-copy="wallet.statusRejected"></option>
+              <option value="cancelled" data-copy="wallet.statusCancelled"></option>
+              <option value="all" data-copy="orders.filterAll"></option>
+            </select>
+            <span class="admin-count" id="admin-topup-count"></span>
+          </div>
+          <div class="order-list" id="admin-topup-list"></div>
+          <p class="admin-empty" id="admin-topup-empty" data-copy="wallet.adminEmpty" hidden></p>
+        </section>
         <section class="admin-card" id="admin-faq-panel" role="tabpanel" aria-labelledby="admin-tab-faq" hidden>
           <div class="admin-toolbar">
             <button class="admin-primary-button" id="admin-faq-add" type="button" data-copy="admin.faqAdd"></button>
@@ -357,6 +438,7 @@
     </footer>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <div class="lightbox" id="lightbox" hidden><img id="lightbox-image" alt=""></div>
     <div class="notify-prompt" id="notify-prompt" role="dialog" aria-live="polite" hidden>
       <p id="notify-prompt-text"></p>
       <div class="notify-prompt-actions">

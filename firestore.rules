@@ -104,6 +104,70 @@ service cloud.firestore {
         && (resource.data.to == request.auth.uid || (resource.data.to == "admin" && isAdmin()));
     }
 
+    match /wallets/{userId} {
+      allow read: if isAdmin() || (request.auth != null && request.auth.uid == userId);
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly(["balance", "updatedAt"])
+        && request.resource.data.balance is int && request.resource.data.balance >= 0
+        && request.resource.data.updatedAt is int;
+      allow delete: if false;
+    }
+
+    match /walletTransactions/{entryId} {
+      allow read: if isAdmin() || (request.auth != null && resource.data.uid == request.auth.uid);
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly(["uid", "amount", "balanceAfter", "type", "refId", "note", "createdAt"])
+        && request.resource.data.amount is int
+        && request.resource.data.balanceAfter is int && request.resource.data.balanceAfter >= 0
+        && request.resource.data.type in ["topup", "purchase", "trade", "adjust"]
+        && request.resource.data.note is string && request.resource.data.note.size() <= 200
+        && request.resource.data.createdAt is int;
+      allow update, delete: if false;
+    }
+
+    match /topups/{topupId} {
+      allow read: if isAdmin() || (request.auth != null && resource.data.uid == request.auth.uid);
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(["uid", "userName", "message", "requestedAmount", "attachmentCount", "status", "creditedAmount", "adminNote", "createdAt", "updatedAt"])
+        && request.resource.data.keys().hasAll(["uid", "userName", "message", "requestedAmount", "attachmentCount", "status", "creditedAmount", "adminNote", "createdAt", "updatedAt"])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.userName is string && request.resource.data.userName.size() <= 30
+        && request.resource.data.message is string && request.resource.data.message.size() > 0 && request.resource.data.message.size() <= 1000
+        && request.resource.data.requestedAmount is int && request.resource.data.requestedAmount >= 0
+        && request.resource.data.attachmentCount is int && request.resource.data.attachmentCount >= 0 && request.resource.data.attachmentCount <= 3
+        && request.resource.data.status == "pending"
+        && request.resource.data.creditedAmount == 0
+        && request.resource.data.adminNote == ""
+        && request.resource.data.createdAt is int && request.resource.data.updatedAt is int;
+      allow update: if (isAdmin()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "creditedAmount", "adminNote", "updatedAt"])
+          && request.resource.data.status in ["pending", "approved", "rejected", "cancelled"]
+          && request.resource.data.creditedAmount is int && request.resource.data.creditedAmount >= 0
+          && request.resource.data.adminNote is string && request.resource.data.adminNote.size() <= 300)
+        || (request.auth != null
+          && resource.data.uid == request.auth.uid
+          && resource.data.status == "pending"
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "updatedAt"])
+          && request.resource.data.status == "cancelled");
+      allow delete: if false;
+
+      match /attachments/{attachmentId} {
+        allow read: if isAdmin()
+          || (request.auth != null && get(/databases/$(database)/documents/topups/$(topupId)).data.uid == request.auth.uid);
+        allow create: if request.auth != null
+          && get(/databases/$(database)/documents/topups/$(topupId)).data.uid == request.auth.uid
+          && get(/databases/$(database)/documents/topups/$(topupId)).data.status == "pending"
+          && attachmentId in ["0", "1", "2"]
+          && request.resource.data.keys().hasOnly(["dataUrl", "name", "createdAt"])
+          && request.resource.data.dataUrl is string
+          && request.resource.data.dataUrl.size() <= 900000
+          && request.resource.data.dataUrl.matches("^data:image/(jpeg|png|webp);base64,.*")
+          && request.resource.data.name is string && request.resource.data.name.size() <= 100
+          && request.resource.data.createdAt is int;
+        allow update, delete: if false;
+      }
+    }
+
     match /userProfiles/{userId} {
       allow read: if request.auth != null && request.auth.uid == userId;
       allow create, update: if request.auth != null

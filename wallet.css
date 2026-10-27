@@ -1,0 +1,268 @@
+/* ELOSKIN2 EC 錢包與儲值 */
+
+.wallet-chip[hidden],
+.wallet-layout[hidden],
+#wallet-guest[hidden],
+#wallet-reserved-row[hidden],
+.lightbox[hidden] {
+  display: none !important;
+}
+
+.wallet-chip {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px 0 12px;
+  color: #e9eff1;
+  background: #151f25;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px rgba(80, 219, 197, .25);
+  transition: box-shadow .2s ease;
+}
+
+.wallet-chip:hover { box-shadow: inset 0 0 0 1px rgba(80, 219, 197, .7); }
+
+.wallet-chip-amount {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.wallet-chip-unit { color: #50dbc5; font-weight: 700; }
+
+.wallet-chip-plus {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  margin-left: 4px;
+  color: #07120f;
+  font-weight: 800;
+  background: #50dbc5;
+  border-radius: 50%;
+}
+
+.wallet-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+
+.wallet-layout > .account-favorites { grid-column: 1 / -1; }
+
+.wallet-balance-card {
+  display: grid;
+  gap: 6px;
+}
+
+.wallet-label { color: #829098; }
+
+.wallet-balance {
+  color: #50dbc5;
+  font-variant-numeric: tabular-nums;
+}
+
+.wallet-balance #wallet-balance {
+  font-size: 40px !important;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.wallet-sub { color: #829098; }
+
+.wallet-available {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 12px;
+  border-top: 1px solid #1f2b31;
+}
+
+.wallet-available > span {
+  display: flex;
+  justify-content: space-between;
+  color: #a5b4b8;
+}
+
+.wallet-available strong { color: #e9eff1; }
+
+.wallet-topup-card {
+  display: grid;
+  gap: 14px;
+}
+
+.topup-methods {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.topup-method {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  color: #a5b4b8;
+  text-align: left;
+  background: #151f25;
+  border: 0;
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 1px transparent;
+  cursor: pointer;
+}
+
+.topup-method strong { color: #e9eff1; }
+.topup-method.active { box-shadow: inset 0 0 0 2px #50dbc5; }
+.topup-method:disabled { opacity: .5; cursor: not-allowed; }
+.topup-method:focus-visible { outline: 2px solid #50dbc5; outline-offset: 2px; }
+
+.topup-form {
+  display: grid;
+  gap: 12px;
+}
+
+.topup-form textarea {
+  width: 100%;
+  padding: 8px 10px;
+  color: #eef3f4;
+  font: inherit;
+  background: #182229;
+  border: 0;
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 1px rgba(164, 186, 191, .12);
+  resize: vertical;
+}
+
+.topup-form textarea:focus {
+  outline: 0;
+  box-shadow: inset 0 0 0 1px rgba(80, 219, 197, .72), 0 0 0 3px rgba(80, 219, 197, .1);
+}
+
+.topup-amounts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.topup-files {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.topup-previews {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.topup-preview {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  overflow: hidden;
+  background: #0d1418;
+  border-radius: 10px;
+}
+
+.topup-preview img,
+.topup-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.topup-preview button {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  color: #fff;
+  background: rgba(0, 0, 0, .65);
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.topup-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.topup-thumb {
+  width: 96px;
+  height: 96px;
+  overflow: hidden;
+  padding: 0;
+  background: #0d1418;
+  border: 0;
+  border-radius: 10px;
+  cursor: zoom-in;
+}
+
+.topup-status-pending { color: #f1c35b; background: rgba(241, 195, 91, .12); }
+.topup-status-approved { color: #50dbc5; background: rgba(80, 219, 197, .12); }
+.topup-status-rejected,
+.topup-status-cancelled { color: #94a0a8; background: #1c2b30; }
+
+.topup-credit-input { flex: 0 1 140px !important; }
+
+.wallet-ledger {
+  display: grid;
+  gap: 4px;
+}
+
+.wallet-ledger-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 12px;
+  background: #151f25;
+  border-radius: 10px;
+}
+
+.wallet-ledger-note {
+  overflow: hidden;
+  color: #dce5e8;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.wallet-ledger-time { color: #829098; }
+.wallet-ledger-row .is-income { color: #50dbc5; }
+.wallet-ledger-row .is-expense { color: #ff9a8a; }
+
+.lightbox {
+  position: fixed;
+  z-index: 80;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, .85);
+  cursor: zoom-out;
+}
+
+.lightbox img {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 10px;
+}
+
+@media (max-width: 760px) {
+  .wallet-layout { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 720px) {
+  .wallet-chip { padding-left: 9px; }
+  .wallet-chip-unit { display: none; }
+  .wallet-ledger-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .wallet-ledger-time { grid-column: 1; grid-row: 2; }
+}
