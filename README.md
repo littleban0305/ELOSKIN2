@@ -39,6 +39,7 @@ GitHub Pages 是靜態網站，不能直接讀取 Steam 庫存 API（Steam 不�
    - 到 https://steamcommunity.com/dev/apikey 申請金鑰（網域可填 `littleban0305.github.io`）。
    - Cloudflare Dashboard → Workers & Pages → `eloskin2` → Settings → Variables and Secrets → Add → **Secret**，名稱 `STEAM_API_KEY`，值為金鑰。
    - 把最新版 `steam-inventory-worker.js` 貼進 Worker 編輯器並部署。金鑰只放在 Worker Secret，不要放進前端或 Git。
+7. 如果 Worker 還是讀不到（例如 Steam API 回傳空的庫存），管理頁的「從 Steam 匯入」會自動展開「貼上匯入」：開啟 Steam 庫存資料頁，Ctrl+A 全選、Ctrl+C 複製，貼回管理頁按「讀取」即可。這個方式由管理員自己的瀏覽器讀取，不經過 Worker。
 
 Steam 交易連結會公開在網站前端；任何能瀏覽網站的人都能看到該連結。不要將 Steam 密碼或登入 Cookie 放進 Worker 或前端；Steam API 金鑰只能放在 Worker 的 Secret。
 

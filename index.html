@@ -11,13 +11,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css?v=60">
-    <link rel="stylesheet" href="admin.css?v=2">
-    <script src="content.js?v=29" defer></script>
+    <link rel="stylesheet" href="admin.css?v=3">
+    <script src="content.js?v=30" defer></script>
     <script src="firebase-config.js?v=1" defer></script>
-    <script src="steam-config.js?v=3" defer></script>
+    <script src="steam-config.js?v=4" defer></script>
     <script src="app.js?v=30" defer></script>
     <script src="auth.js?v=23" defer></script>
-    <script src="admin.js?v=3" defer></script>
+    <script src="admin.js?v=4" defer></script>
   </head>
   <body>
     <header class="site-header">
@@ -243,6 +243,19 @@
               <button class="admin-ghost-button" id="admin-steam-reload" type="button" data-copy="admin.steamReload"></button>
               <span class="admin-count" id="admin-steam-status" role="status" aria-live="polite"></span>
             </div>
+            <details class="admin-steam-paste" id="admin-steam-paste">
+              <summary data-copy="admin.pasteSummary"></summary>
+              <ol class="admin-paste-steps">
+                <li><a id="admin-steam-open" target="_blank" rel="noopener noreferrer" data-copy="admin.pasteStepOpen"></a></li>
+                <li data-copy="admin.pasteStepCopy"></li>
+                <li data-copy="admin.pasteStepPaste"></li>
+              </ol>
+              <textarea id="admin-steam-paste-input" rows="4" spellcheck="false" data-copy-placeholder="admin.pastePlaceholder" data-copy-aria="admin.pastePlaceholder"></textarea>
+              <div class="admin-paste-actions">
+                <button class="admin-primary-button" id="admin-steam-paste-load" type="button" data-copy="admin.pasteLoad"></button>
+                <span class="admin-create-status" id="admin-steam-paste-status" role="status" aria-live="polite"></span>
+              </div>
+            </details>
             <div class="admin-steam-grid" id="admin-steam-grid"></div>
           </div>
           <form class="admin-create-form" id="admin-create-form" novalidate>

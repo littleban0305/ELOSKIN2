@@ -798,11 +798,44 @@
     return keys[code] ? text(keys[code]) : text("shop.workerHttpError", { status });
   }
 
+  const STEAM_ICON_BASE = "https://community.cloudflare.steamstatic.com/economy/image/";
+
+  function applySteamItems(items) {
+    const grouped = new Map();
+    for (const item of items) {
+      const key = item.marketHashName || item.name;
+      const entry = grouped.get(key);
+      if (entry) {
+        entry.count += Number(item.amount) || 1;
+        entry.assetIds.push(String(item.assetId));
+      } else {
+        grouped.set(key, {
+          key,
+          name: String(item.name || key),
+          marketHashName: String(item.marketHashName || ""),
+          type: String(item.type || ""),
+          iconUrl: /^https:\/\//.test(item.iconUrl || "") ? item.iconUrl : "",
+          count: Number(item.amount) || 1,
+          assetIds: [String(item.assetId)]
+        });
+      }
+    }
+    steamItems = [...grouped.values()].sort((a, b) => a.name.localeCompare(b.name, "zh-Hant"));
+    steamLoadState = "loaded";
+    renderSteamGrid();
+  }
+
+  function showPastePanel(open) {
+    steamPaste.hidden = false;
+    if (open) steamPaste.open = true;
+  }
+
   async function loadSteamInventory() {
     const endpoint = window.ELOSKIN2_STEAM_CONFIG?.inventoryEndpoint;
     if (!endpoint) {
       steamLoadState = "error";
       steamStatus.textContent = text("admin.steamNotConfigured");
+      showPastePanel(true);
       return;
     }
     steamLoadState = "loading";
@@ -818,33 +851,79 @@
       }
       if (!response.ok) throw new Error(steamErrorMessage(data, response.status));
       if (!Array.isArray(data.items)) throw new Error(text("shop.missingItems"));
-      const grouped = new Map();
-      for (const item of data.items) {
-        const key = item.marketHashName || item.name;
-        const entry = grouped.get(key);
-        if (entry) {
-          entry.count += Number(item.amount) || 1;
-          entry.assetIds.push(String(item.assetId));
-        } else {
-          grouped.set(key, {
-            key,
-            name: String(item.name || key),
-            marketHashName: String(item.marketHashName || ""),
-            type: String(item.type || ""),
-            iconUrl: /^https:\/\//.test(item.iconUrl || "") ? item.iconUrl : "",
-            count: Number(item.amount) || 1,
-            assetIds: [String(item.assetId)]
-          });
-        }
+      if (!data.items.length) {
+        steamLoadState = "error";
+        steamStatus.textContent = text("admin.steamWorkerEmpty");
+        showPastePanel(true);
+        return;
       }
-      steamItems = [...grouped.values()].sort((a, b) => a.name.localeCompare(b.name, "zh-Hant"));
-      steamLoadState = "loaded";
-      renderSteamGrid();
+      applySteamItems(data.items);
     } catch (error) {
       steamLoadState = "error";
       steamStatus.textContent = error instanceof TypeError ? text("shop.workerUnavailable") : error.message;
+      showPastePanel(true);
     }
   }
+
+  function parsePastedInventory(raw) {
+    let parsed;
+    const start = raw.indexOf("{");
+    const end = raw.lastIndexOf("}");
+    try {
+      if (start < 0 || end <= start) throw new Error("no_json");
+      parsed = JSON.parse(raw.slice(start, end + 1));
+    } catch {
+      throw new Error(text("admin.pasteInvalid"));
+    }
+    const data = parsed?.response && typeof parsed.response === "object" ? parsed.response : parsed;
+    if (!Array.isArray(data?.assets) || !Array.isArray(data?.descriptions)) {
+      throw new Error(text(parsed?.success === false || parsed === null ? "admin.pastePrivate" : "admin.pasteInvalid"));
+    }
+    const descriptions = new Map(data.descriptions.map((description) => [`${description.classid}_${description.instanceid}`, description]));
+    const items = [];
+    for (const asset of data.assets) {
+      const description = descriptions.get(`${asset.classid}_${asset.instanceid}`);
+      if (!description || Number(description.tradable) !== 1) continue;
+      const icon = typeof description.icon_url === "string" && description.icon_url
+        ? STEAM_ICON_BASE + description.icon_url.split("/").map(encodeURIComponent).join("/")
+        : "";
+      items.push({
+        assetId: String(asset.assetid),
+        amount: Math.max(1, Number.parseInt(asset.amount, 10) || 1),
+        name: String(description.name || description.market_hash_name || "CS2"),
+        marketHashName: String(description.market_hash_name || description.name || ""),
+        type: String(description.type || ""),
+        iconUrl: icon
+      });
+    }
+    return { items, truncated: Number(data.more_items) === 1 || data.more_items === true };
+  }
+
+  const steamPaste = $("#admin-steam-paste");
+  const steamPasteInput = $("#admin-steam-paste-input");
+  const steamPasteStatus = $("#admin-steam-paste-status");
+  const steamOpenLink = $("#admin-steam-open");
+  const inventorySteamId = window.ELOSKIN2_STEAM_CONFIG?.inventorySteamId || "";
+  if (inventorySteamId) {
+    steamOpenLink.href = `https://steamcommunity.com/inventory/${encodeURIComponent(inventorySteamId)}/730/2?l=tchinese&count=2000`;
+  } else {
+    steamOpenLink.removeAttribute("href");
+  }
+
+  $("#admin-steam-paste-load").addEventListener("click", () => {
+    try {
+      const { items, truncated } = parsePastedInventory(steamPasteInput.value);
+      if (!items.length) throw new Error(text("admin.pasteNoTradable"));
+      applySteamItems(items);
+      steamPasteInput.value = "";
+      steamPasteStatus.dataset.kind = "success";
+      steamPasteStatus.textContent = text(truncated ? "admin.pasteLoadedTruncated" : "admin.pasteLoaded", { count: items.length });
+      steamPaste.open = false;
+    } catch (error) {
+      steamPasteStatus.dataset.kind = "error";
+      steamPasteStatus.textContent = error.message;
+    }
+  });
 
   function listedMarketNames() {
     return new Set(listings.filter((listing) => listing.source === "steam" && listing.steam?.marketHashName)

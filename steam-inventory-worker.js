@@ -474,6 +474,11 @@ async function fetchApiPage(startAssetId, apiKey) {
   const data = body?.response;
   if (!data || typeof data !== "object") return { error: "inventory_unavailable" };
   return {
+    debug: {
+      fields: Object.keys(data).slice(0, 20),
+      totalInventoryCount: data.total_inventory_count ?? null,
+      assetCount: Array.isArray(data.assets) ? data.assets.length : null
+    },
     data: {
       assets: Array.isArray(data.assets) ? data.assets : [],
       descriptions: Array.isArray(data.descriptions) ? data.descriptions : [],
@@ -492,11 +497,13 @@ async function fetchSteamInventory(env) {
   let startAssetId = "";
   let reportedTotal = 0;
   let hasMore = false;
+  let debug = null;
 
   for (let page = 0; page < MAX_PAGES; page += 1) {
     const result = apiKey ? await fetchApiPage(startAssetId, apiKey) : await fetchCommunityPage(startAssetId);
     if (result.error) return { ...result, source };
     const pageData = result.data;
+    if (page === 0 && result.debug) debug = result.debug;
     if (!Array.isArray(pageData.assets) || !Array.isArray(pageData.descriptions)) {
       return { error: "inventory_unavailable", source };
     }
@@ -515,7 +522,8 @@ async function fetchSteamInventory(env) {
     items: inventoryItems(assets, [...descriptionsByKey.values()]),
     totalInventoryCount: reportedTotal,
     truncated: hasMore,
-    source
+    source,
+    debug: assets.length ? null : debug
   };
 }
 
@@ -577,7 +585,8 @@ export default {
       items: result.items,
       totalInventoryCount: result.totalInventoryCount,
       tradableQuantity: result.items.reduce((total, item) => total + item.amount, 0),
-      truncated: result.truncated
+      truncated: result.truncated,
+      ...(result.debug ? { debug: result.debug } : {})
     };
     await cache.put(cacheKey, new Response(JSON.stringify(inventory), {
       headers: {

@@ -791,3 +791,62 @@
     align-items: stretch;
   }
 }
+
+/* ---------- 貼上匯入 ---------- */
+
+.admin-steam-paste[hidden] { display: none !important; }
+
+.admin-steam-paste {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  background: #10171d;
+  border-radius: 12px;
+}
+
+.admin-steam-paste summary {
+  color: #50dbc5;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-paste-steps {
+  margin: 10px 0;
+  padding-left: 4px;
+  list-style: none;
+  color: #a5b4b8;
+  font-size: 13px;
+  line-height: 1.9;
+}
+
+.admin-paste-steps a {
+  color: #50dbc5;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.admin-steam-paste textarea {
+  width: 100%;
+  min-height: 90px;
+  padding: 8px 10px;
+  color: #eef3f4;
+  font: 12px/1.5 ui-monospace, Consolas, monospace;
+  background: #182229;
+  border: 0;
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 1px rgba(164, 186, 191, .12);
+  resize: vertical;
+}
+
+.admin-steam-paste textarea:focus {
+  outline: 0;
+  box-shadow: inset 0 0 0 1px rgba(80, 219, 197, .72), 0 0 0 3px rgba(80, 219, 197, .1);
+}
+
+.admin-paste-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
