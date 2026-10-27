@@ -48,6 +48,62 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    function validOrderCreate(data) {
+      return data.keys().hasOnly(["type", "uid", "buyerName", "tradeUrl", "items", "offerItems", "total", "offerTotal", "note", "adminNote", "status", "createdAt", "updatedAt"])
+        && data.keys().hasAll(["type", "uid", "buyerName", "tradeUrl", "items", "offerItems", "total", "offerTotal", "note", "adminNote", "status", "createdAt", "updatedAt"])
+        && data.type in ["purchase", "trade"]
+        && data.uid == request.auth.uid
+        && data.buyerName is string && data.buyerName.size() <= 30
+        && data.tradeUrl is string && data.tradeUrl.size() <= 200
+        && data.items is list && data.items.size() > 0 && data.items.size() <= 30
+        && data.offerItems is list && data.offerItems.size() <= 20
+        && (data.type == "trade" || data.offerItems.size() == 0)
+        && data.total is int && data.total >= 0
+        && data.offerTotal is int && data.offerTotal >= 0
+        && data.note is string && data.note.size() <= 500
+        && data.adminNote == ""
+        && data.status == "pending"
+        && data.createdAt is int && data.updatedAt is int;
+    }
+
+    match /orders/{orderId} {
+      allow read: if isAdmin() || (request.auth != null && resource.data.uid == request.auth.uid);
+      allow create: if request.auth != null && validOrderCreate(request.resource.data);
+      allow update: if (isAdmin()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "adminNote", "updatedAt"])
+          && request.resource.data.status in ["pending", "processing", "completed", "cancelled"]
+          && request.resource.data.adminNote is string && request.resource.data.adminNote.size() <= 300)
+        || (request.auth != null
+          && resource.data.uid == request.auth.uid
+          && resource.data.status == "pending"
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "updatedAt"])
+          && request.resource.data.status == "cancelled");
+      allow delete: if false;
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if request.auth != null
+        && (resource.data.to == request.auth.uid || (resource.data.to == "admin" && isAdmin()));
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(["to", "from", "title", "body", "link", "orderId", "read", "createdAt"])
+        && request.resource.data.keys().hasAll(["to", "from", "title", "body", "link", "orderId", "read", "createdAt"])
+        && request.resource.data.from == request.auth.uid
+        && (request.resource.data.to == "admin" || isAdmin())
+        && request.resource.data.to is string && request.resource.data.to.size() <= 200
+        && request.resource.data.title is string && request.resource.data.title.size() <= 100
+        && request.resource.data.body is string && request.resource.data.body.size() <= 300
+        && request.resource.data.link is string && request.resource.data.link.size() <= 100
+        && request.resource.data.orderId is string && request.resource.data.orderId.size() <= 100
+        && request.resource.data.read == false
+        && request.resource.data.createdAt is int;
+      allow update: if request.auth != null
+        && (resource.data.to == request.auth.uid || (resource.data.to == "admin" && isAdmin()))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["read"])
+        && request.resource.data.read == true;
+      allow delete: if request.auth != null
+        && (resource.data.to == request.auth.uid || (resource.data.to == "admin" && isAdmin()));
+    }
+
     match /userProfiles/{userId} {
       allow read: if request.auth != null && request.auth.uid == userId;
       allow create, update: if request.auth != null

@@ -12,13 +12,15 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css?v=60">
     <link rel="stylesheet" href="admin.css?v=5">
-    <link rel="stylesheet" href="profile.css?v=1">
-    <script src="content.js?v=32" defer></script>
+    <link rel="stylesheet" href="profile.css?v=2">
+    <link rel="stylesheet" href="orders.css?v=1">
+    <script src="content.js?v=33" defer></script>
     <script src="firebase-config.js?v=1" defer></script>
     <script src="steam-config.js?v=4" defer></script>
-    <script src="app.js?v=31" defer></script>
-    <script src="auth.js?v=24" defer></script>
-    <script src="admin.js?v=6" defer></script>
+    <script src="app.js?v=32" defer></script>
+    <script src="auth.js?v=25" defer></script>
+    <script src="admin.js?v=7" defer></script>
+    <script src="orders.js?v=1" defer></script>
   </head>
   <body>
     <header class="site-header">
@@ -34,6 +36,10 @@
         <span class="nav-active-indicator" aria-hidden="true"></span>
       </nav>
       <div class="header-actions header-utility-card">
+        <a class="cart-button notification-button" id="open-notifications" href="#notifications" data-copy-aria="nav.notificationsAria" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Zm7-6V11a7 7 0 0 0-5.5-6.84V3.5a1.5 1.5 0 0 0-3 0v.66A7 7 0 0 0 5 11v5l-2 2v1h18v-1l-2-2Z" fill="currentColor"/></svg>
+          <span class="cart-count" id="notification-count" hidden>0</span>
+        </a>
         <button class="cart-button" id="open-cart" type="button" data-copy-aria="nav.cartAria" hidden>
           <img src="assets/icon_new/shopping_cart_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="" aria-hidden="true">
           <span class="cart-count" id="cart-count">0</span>
@@ -120,16 +126,16 @@
               <span class="trade-total"><span id="trade-your-total">0</span><small data-copy="product.currency"></small></span>
             </div>
             <div class="trade-selected-list" id="trade-offer-items" aria-live="polite"></div>
-            <section class="trade-inventory-section" aria-labelledby="trade-own-inventory-title">
+            <section class="trade-inventory-section trade-offer-section" aria-labelledby="trade-own-inventory-title">
               <div class="trade-inventory-heading">
-                <h3 id="trade-own-inventory-title" data-copy="trade.ownItems"></h3>
-                <span id="trade-own-item-count">0</span>
+                <h3 id="trade-own-inventory-title" data-copy="trade.offerTitle"></h3>
               </div>
-              <div class="trade-inventory-grid" id="trade-own-grid" aria-live="polite"></div>
-              <div class="trade-own-empty" id="trade-own-empty" hidden>
-                <p data-copy="trade.connectDescription"></p>
-                <a href="#profile" data-copy="trade.loginButton"></a>
-              </div>
+              <form class="trade-offer-form" id="trade-offer-form" novalidate>
+                <label class="admin-field"><span class="admin-field-label" data-copy="trade.offerName"></span><input id="trade-offer-name" type="text" maxlength="100" data-copy-placeholder="trade.offerNamePlaceholder"></label>
+                <label class="admin-field"><span class="admin-field-label" data-copy="trade.offerValue"></span><input id="trade-offer-value" type="number" min="0" step="1" inputmode="numeric" data-copy-placeholder="trade.offerValuePlaceholder"></label>
+                <button class="admin-ghost-button" type="submit" data-copy="trade.offerAdd"></button>
+              </form>
+              <label class="admin-field trade-note-field"><span class="admin-field-label" data-copy="orders.note"></span><textarea id="trade-note" rows="2" maxlength="500" data-copy-placeholder="orders.notePlaceholder"></textarea></label>
             </section>
           </section>
 
@@ -211,12 +217,30 @@
               </div>
             </form>
           </section>
+          <section class="account-favorites account-orders">
+            <div class="account-section-heading"><h2 data-copy="orders.myOrders"></h2><span id="profile-orders-count">0</span></div>
+            <div class="order-list" id="profile-orders-list"></div>
+            <p class="admin-empty" id="profile-orders-empty" data-copy="orders.empty" hidden></p>
+          </section>
           <section class="account-favorites">
             <div class="account-section-heading"><h2 data-copy="profile.favoritesTitle"></h2><span id="profile-favorites-count">0</span></div>
             <div class="product-grid" id="profile-favorites-grid" aria-live="polite"></div>
             <p class="admin-empty" id="profile-favorites-empty" data-copy="profile.favoritesEmpty" hidden></p>
           </section>
         </div>
+      </section>
+
+      <section class="page-view section-wrap notifications-page" id="page-notifications" data-page-view="notifications" hidden>
+        <div class="page-heading notifications-heading">
+          <div><h1 data-copy="notifications.title"></h1></div>
+          <button class="admin-ghost-button" id="notifications-read-all" type="button" data-copy="notifications.readAll"></button>
+        </div>
+        <div class="account-guest" id="notifications-guest">
+          <p data-copy="notifications.loginRequired"></p>
+          <button class="admin-primary-button" id="notifications-login" type="button" data-copy="nav.account"></button>
+        </div>
+        <div class="notification-list" id="notification-list"></div>
+        <p class="admin-empty" id="notifications-empty" data-copy="notifications.empty" hidden></p>
       </section>
 
       <section class="page-view section-wrap admin-page" id="page-admin" data-page-view="admin" hidden>
@@ -231,6 +255,7 @@
         <div class="admin-tabs" role="tablist" data-copy-aria="admin.tabsAria">
           <button class="admin-tab active" id="admin-tab-products" type="button" role="tab" aria-selected="true" aria-controls="admin-products-panel" data-admin-tab="products" data-copy="admin.tabProducts"></button>
           <button class="admin-tab" id="admin-tab-create" type="button" role="tab" aria-selected="false" aria-controls="admin-create-panel" data-admin-tab="create" data-copy="admin.tabCreate"></button>
+          <button class="admin-tab" id="admin-tab-orders" type="button" role="tab" aria-selected="false" aria-controls="admin-orders-panel" data-admin-tab="orders"><span data-copy="admin.tabOrders"></span><span class="admin-tab-badge" id="admin-orders-badge" hidden>0</span></button>
           <button class="admin-tab" id="admin-tab-faq" type="button" role="tab" aria-selected="false" aria-controls="admin-faq-panel" data-admin-tab="faq" data-copy="admin.tabFaq"></button>
         </div>
         <datalist id="admin-tag-suggestions"></datalist>
@@ -303,6 +328,21 @@
             </div>
           </form>
         </section>
+        <section class="admin-card" id="admin-orders-panel" role="tabpanel" aria-labelledby="admin-tab-orders" hidden>
+          <div class="admin-toolbar">
+            <select class="admin-select" id="admin-order-filter" data-copy-aria="orders.filterAria">
+              <option value="open" data-copy="orders.filterOpen"></option>
+              <option value="pending" data-copy="orders.statusPending"></option>
+              <option value="processing" data-copy="orders.statusProcessing"></option>
+              <option value="completed" data-copy="orders.statusCompleted"></option>
+              <option value="cancelled" data-copy="orders.statusCancelled"></option>
+              <option value="all" data-copy="orders.filterAll"></option>
+            </select>
+            <span class="admin-count" id="admin-order-count"></span>
+          </div>
+          <div class="order-list" id="admin-order-list"></div>
+          <p class="admin-empty" id="admin-order-empty" data-copy="orders.adminEmpty" hidden></p>
+        </section>
         <section class="admin-card" id="admin-faq-panel" role="tabpanel" aria-labelledby="admin-tab-faq" hidden>
           <div class="admin-toolbar">
             <button class="admin-primary-button" id="admin-faq-add" type="button" data-copy="admin.faqAdd"></button>
@@ -317,6 +357,13 @@
     </footer>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <div class="notify-prompt" id="notify-prompt" role="dialog" aria-live="polite" hidden>
+      <p id="notify-prompt-text"></p>
+      <div class="notify-prompt-actions">
+        <button class="admin-primary-button" id="notify-prompt-allow" type="button" data-copy="notifications.promptAllow"></button>
+        <button class="admin-ghost-button" id="notify-prompt-later" type="button" data-copy="notifications.promptLater"></button>
+      </div>
+    </div>
     <div class="modal-backdrop login-modal-backdrop" id="login-modal" hidden>
       <section class="login-modal" role="dialog" aria-modal="true" aria-labelledby="login-modal-title">
         <header class="login-modal-header">
@@ -377,6 +424,8 @@
       <section class="cart-modal" role="dialog" aria-modal="true" aria-labelledby="cart-title">
         <div class="cart-head"><div><h2 id="cart-title" data-copy="cart.title"></h2></div><button class="close-button" id="close-cart" type="button" data-copy-aria="cart.closeAria"><img src="assets/icon_new/close_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="" aria-hidden="true"></button></div>
         <div class="cart-items" id="cart-items"></div><div class="cart-empty" id="cart-empty" data-copy="cart.empty"></div>
+        <label class="admin-field cart-note-field"><span class="admin-field-label" data-copy="orders.note"></span><textarea id="cart-note" rows="2" maxlength="500" data-copy-placeholder="orders.notePlaceholder"></textarea></label>
+        <p class="account-status cart-status" id="cart-status" role="status" aria-live="polite"></p>
         <div class="cart-footer"><div class="cart-total"><span data-copy="cart.total"></span><strong><span class="currency-symbol" data-copy="product.currency"></span><span id="cart-total">0</span></strong></div><button class="checkout-button" id="checkout" type="button" data-copy="cart.checkout"></button></div>
       </section>
     </div>

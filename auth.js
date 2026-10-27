@@ -330,7 +330,23 @@ function updateAccount(user) {
     : providerId === "steam" ? authText("profile.providerSteam")
       : providerId === "google.com" ? authText("profile.providerGoogle") : authText("profile.providerEmail");
   if (user && document.querySelector("#profile-edit-name").dataset.uid !== user.uid) fillProfileForm(user);
-  document.querySelector("#profile-shortcut").textContent = user ? initial : authText("nav.account");
+  const shortcut = document.querySelector("#profile-shortcut");
+  shortcut.replaceChildren();
+  shortcut.classList.toggle("has-avatar", Boolean(user && avatarUrl));
+  if (user && avatarUrl) {
+    const navAvatar = document.createElement("img");
+    navAvatar.className = "nav-avatar";
+    navAvatar.alt = "";
+    navAvatar.referrerPolicy = "no-referrer";
+    navAvatar.addEventListener("error", () => {
+      shortcut.classList.remove("has-avatar");
+      shortcut.textContent = initial;
+    });
+    navAvatar.src = avatarUrl;
+    shortcut.append(navAvatar);
+  } else {
+    shortcut.textContent = user ? initial : authText("nav.account");
+  }
   document.querySelector("#profile-shortcut").setAttribute("aria-label", user ? authText("nav.profileAria") : authText("nav.accountAria"));
   document.querySelector("#profile-shortcut").classList.toggle("signed-in", Boolean(user));
   document.querySelector("#open-cart").hidden = !user;

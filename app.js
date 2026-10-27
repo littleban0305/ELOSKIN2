@@ -383,7 +383,7 @@ function productCardMarkup(product, tradeMode = false, tradeSide = "receive") {
     : priced && product.stock > 0
     ? t("product.addToCart", { name: product.name })
     : !priced ? t("product.unpriced", { name: product.name }) : t("product.outOfStock", { name: product.name });
-  const tradeSelected = tradeMode && (tradeState.offer.includes(product.id) || tradeState.receive.includes(product.id));
+  const tradeSelected = tradeMode && tradeState.receive.includes(product.id);
   const tradeActionLabel = tradeSelected ? t("trade.selectedItemLabel") : t(tradeSide === "offer" ? "trade.addToOffer" : "trade.addToReceive");
   const actionButton = tradeMode
     ? `<button class="add-button" type="button" data-trade-add="${escapeHtml(product.id)}" data-trade-side="${tradeSide}" aria-label="${escapeHtml(tradeActionLabel)}：${safeName}" ${tradeSelected || product.stock === 0 || !priced ? "disabled" : ""}><img src="assets/icon_new/add_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="" aria-hidden="true"></button>`
@@ -478,10 +478,24 @@ function renderProfileFavorites() {
 }
 
 function tradeTotal(side) {
+  if (side === "offer") return tradeState.offer.reduce((total, item) => total + (Number(item.value) || 0), 0);
   return tradeState[side].reduce((total, id) => {
     const product = products.find((item) => item.id === id);
     return total + (Number.isFinite(product?.price) ? product.price : 0);
   }, 0);
+}
+
+function renderOfferSide() {
+  const container = $("#trade-offer-items");
+  const selectedMarkup = tradeState.offer.map((item) => {
+    const removeLabel = t("trade.removeOffer", { name: item.name });
+    return `<div class="trade-selected-item"><div class="trade-selected-art"><span class="product-art-placeholder" aria-hidden="true">${escapeHtml(copy.games.cs2)}</span></div><div class="trade-selected-info"><strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong><small>${item.value ? `${Number(item.value).toLocaleString()} EC` : escapeHtml(t("trade.offerNoValue"))}</small></div><button type="button" data-trade-remove="${escapeHtml(item.id)}" data-trade-side="offer" aria-label="${escapeHtml(removeLabel)}">×</button></div>`;
+  }).join("");
+  const placeholders = Array.from({ length: Math.max(0, 4 - tradeState.offer.length) }, () =>
+    `<div class="trade-slot"><span aria-hidden="true">+</span><small>${escapeHtml(t("trade.emptyOffer"))}</small></div>`
+  ).join("");
+  container.innerHTML = selectedMarkup + placeholders;
+  $("#trade-your-total").textContent = tradeTotal("offer").toLocaleString();
 }
 
 function renderTradeSide(side, container, emptyKey, totalElement) {
@@ -503,7 +517,7 @@ function renderTradeSide(side, container, emptyKey, totalElement) {
 }
 
 function renderTrade() {
-  renderTradeSide("offer", $("#trade-offer-items"), "trade.emptyOffer", $("#trade-your-total"));
+  renderOfferSide();
   renderTradeSide("receive", $("#trade-receive-items"), "trade.emptyReceive", $("#trade-receive-total"));
   const difference = tradeTotal("receive") - tradeTotal("offer");
   $("#trade-after-balance-value").textContent = Math.max(0, difference).toLocaleString();
@@ -511,11 +525,6 @@ function renderTrade() {
 
 function renderTradeItems() {
   const visibleItems = visibleProducts(tradeState).filter((product) => Number.isFinite(product.price) && product.price > 0 && product.stock > 0);
-  const ownItems = visibleItems.filter((product) => product.source === "steam");
-  $("#trade-own-item-count").textContent = ownItems.length;
-  $("#trade-own-grid").innerHTML = ownItems.map((product) => productCardMarkup(product, true, "offer")).join("");
-  $("#trade-own-grid").hidden = ownItems.length === 0;
-  $("#trade-own-empty").hidden = ownItems.length > 0;
   $("#trade-item-count").textContent = visibleItems.length;
   $("#trade-grid").innerHTML = visibleItems.map((product) => productCardMarkup(product, true, "receive")).join("");
   $("#trade-empty").hidden = visibleItems.length > 0 || !catalogLoaded;
@@ -553,9 +562,7 @@ function renderCart() {
 function setCatalog(nextProducts) {
   products.splice(0, products.length, ...nextProducts);
   catalogLoaded = true;
-  for (const side of ["offer", "receive"]) {
-    tradeState[side] = tradeState[side].filter((id) => products.some((product) => product.id === id));
-  }
+  tradeState.receive = tradeState.receive.filter((id) => products.some((product) => product.id === id));
   renderAllProductViews();
   window.dispatchEvent(new Event("catalogproductschange"));
 }
@@ -639,7 +646,7 @@ function updateMarketIndicator() {
 }
 
 function navigateTo(page, shouldScroll = true) {
-  const validPages = ["home", "shop", "trade", "profile", ...(window.eloIsAdmin ? ["admin"] : [])];
+  const validPages = ["home", "shop", "trade", "profile", "notifications", ...(window.eloIsAdmin ? ["admin"] : [])];
   const destination = validPages.includes(page) ? page : "home";
   document.querySelectorAll("[data-page-view]").forEach((view) => {
     const active = view.dataset.pageView === destination;
@@ -654,6 +661,7 @@ function navigateTo(page, shouldScroll = true) {
   });
   updateNavIndicator();
   if (destination === "profile") renderProfileFavorites();
+  window.dispatchEvent(new CustomEvent("elopagechange", { detail: { page: destination } }));
   if (shouldScroll) window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -877,37 +885,64 @@ function handleTradeInventoryClick(event) {
   if (!button) return;
   const product = products.find((item) => item.id === button.dataset.tradeAdd);
   if (!product || !isProductPublished(product) || product.stock === 0 || !Number.isFinite(product.price)) return;
-  if (tradeState.offer.includes(product.id) || tradeState.receive.includes(product.id)) {
+  if (tradeState.receive.includes(product.id)) {
     showToast(t("trade.alreadySelected"));
     return;
   }
-  const selected = tradeState[button.dataset.tradeSide];
-  selected.push(product.id);
+  tradeState.receive.push(product.id);
   renderTrade();
   renderTradeItems();
 }
 
-$("#trade-own-grid").addEventListener("click", handleTradeInventoryClick);
 $("#trade-grid").addEventListener("click", handleTradeInventoryClick);
 
 for (const side of ["offer", "receive"]) {
   $(`#trade-${side}-items`).addEventListener("click", (event) => {
     const button = event.target.closest("[data-trade-remove]");
     if (!button) return;
-    const selected = tradeState[button.dataset.tradeSide];
-    const index = selected.indexOf(button.dataset.tradeRemove);
-    if (index !== -1) selected.splice(index, 1);
+    const removeId = button.dataset.tradeRemove;
+    if (button.dataset.tradeSide === "offer") {
+      tradeState.offer = tradeState.offer.filter((item) => item.id !== removeId);
+    } else {
+      tradeState.receive = tradeState.receive.filter((id) => id !== removeId);
+    }
     renderTrade();
     renderTradeItems();
   });
 }
+
+$("#trade-offer-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const name = $("#trade-offer-name").value.trim();
+  const valueText = $("#trade-offer-value").value.trim();
+  const value = valueText === "" ? 0 : Number(valueText);
+  if (!name) {
+    showToast(t("trade.offerNameRequired"));
+    $("#trade-offer-name").focus();
+    return;
+  }
+  if (!Number.isInteger(value) || value < 0 || value > 10000000) {
+    showToast(t("trade.offerValueInvalid"));
+    $("#trade-offer-value").focus();
+    return;
+  }
+  if (tradeState.offer.length >= 20) {
+    showToast(t("trade.offerLimit"));
+    return;
+  }
+  tradeState.offer.push({ id: `offer-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, name: name.slice(0, 100), value });
+  $("#trade-offer-name").value = "";
+  $("#trade-offer-value").value = "";
+  $("#trade-offer-name").focus();
+  renderTrade();
+});
 
 $("#trade-submit").addEventListener("click", () => {
   if (!tradeState.offer.length || !tradeState.receive.length) {
     showToast(t("trade.itemsRequired"));
     return;
   }
-  showToast(t("trade.proposalUnavailable"));
+  window.eloOrders?.submitTrade();
 });
 
 $(".home-faq-list").addEventListener("click", (event) => {
@@ -1045,11 +1080,34 @@ $("#cart-items").addEventListener("click", (event) => {
 
 $("#checkout").addEventListener("click", () => {
   if (state.cart.size === 0) return;
-  state.cart.clear();
-  renderCart();
-  closeCart();
-  showToast(t("cart.demoOrderComplete"));
+  window.eloOrders?.submitPurchase();
 });
+
+window.eloApp = {
+  products,
+  showToast,
+  escapeHtml,
+  navigateTo,
+  closeCart,
+  cartEntries: () => [...state.cart.entries()].map(([id, quantity]) => ({ product: products.find((item) => item.id === id), quantity }))
+    .filter((entry) => entry.product),
+  clearCart: () => {
+    state.cart.clear();
+    renderCart();
+  },
+  tradeSelection: () => ({
+    offer: tradeState.offer.map((item) => ({ ...item })),
+    receive: tradeState.receive.map((id) => products.find((item) => item.id === id)).filter(Boolean),
+    offerTotal: tradeTotal("offer"),
+    receiveTotal: tradeTotal("receive")
+  }),
+  clearTrade: () => {
+    tradeState.offer = [];
+    tradeState.receive = [];
+    renderTrade();
+    renderTradeItems();
+  }
+};
 
 renderFaq();
 renderFilters();

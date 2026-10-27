@@ -56,7 +56,7 @@ Steam 交易連結會公開在網站前端；任何能瀏覽網站的人都能�
    - `STEAM_STATE_SECRET`：自行產生至少 32 個隨機位元組的隨機字串，用於簽署 Steam 登入狀態 Cookie。
 
    可在 Cloudflare Dashboard → Workers & Pages → 選擇 `eloskin2` Worker → Settings → Variables and Secrets → Add → **Secret** 新增上述值。Worker 會用 HttpOnly、Secure、SameSite=Lax Cookie 綁定 Steam OpenID 回呼與原始網站，驗證成功後才簽發短效 Firebase Custom Token。`ALLOWED_ORIGINS` 必須包含 `https://littleban0305.github.io`；程式中的 `steam-config.js` 已設定 `authEndpoint` 指向此 Worker。設定 Secret 後重新部署 Worker。
-7. 管理者 `littleban0305@gmail.com` 登入後，導覽列會出現「管理」頁面：「商品」分頁可編輯名稱、EC 價格、數量、說明、標籤、上／下架與刪除；「上架物品」分頁可自創物品或從 Steam 匯入；「Q&A」分頁可編輯首頁常見問題。變更會自動儲存到 Firestore（`listings`、`siteSettings/faq`）。這些功能需要 Firestore：在 Firebase Console → **Firestore Database** 建立資料庫（選擇免費 Spark 方案可用的區域），然後將 [firestore.rules](./firestore.rules) 貼入 Firestore Rules 並發布。未上架的物品只有管理員讀得到。個人顯示名稱與 Steam 交易連結只允許本人讀寫；收藏者資料只允許本人讀取，公開計數只能隨收藏投票交易更新。管理者首次以 Email/Password 登入時，需先驗證該信箱；Google 登入使用已驗證的 Google 帳號。Firestore 免費方案不需 Blaze，但受 Firebase 免費配額限制。
+7. 管理者 `littleban0305@gmail.com` 登入後，導覽列會出現「管理」頁面：「商品」分頁可編輯名稱、EC 價格、數量、說明、標籤、上／下架與刪除；「上架物品」分頁可自創物品或從 Steam 匯入；「Q&A」分頁可編輯首頁常見問題。變更會自動儲存到 Firestore（`listings`、`siteSettings/faq`）。這些功能需要 Firestore：在 Firebase Console → **Firestore Database** 建立資料庫（選擇免費 Spark 方案可用的區域），然後將 [firestore.rules](./firestore.rules) 貼入 Firestore Rules 並發布。未上架的物品只有管理員讀得到。訂單（`orders`）與通知（`notifications`）：使用者在購物車送出訂單、或在交易頁確認交易時會建立訂單並通知管理員；管理員在「管理 → 訂單」接受、完成出貨或取消，完成時會自動扣庫存，並通知買家。右上角的鈴鐺是通知頁；網站開著時會跳出系統通知（需要使用者允許，沒允許時每次進站都會詢問）。網站關著時收不到推播，因為推播需要 Firebase Cloud Functions（Blaze 方案）。個人顯示名稱與 Steam 交易連結只允許本人讀寫；收藏者資料只允許本人讀取，公開計數只能隨收藏投票交易更新。管理者首次以 Email/Password 登入時，需先驗證該信箱；Google 登入使用已驗證的 Google 帳號。Firestore 免費方案不需 Blaze，但受 Firebase 免費配額限制。
 
 ELOSKIN2 的目標使用者是受邀朋友，但目前原型尚未設定朋友白名單或頁面存取限制；不要把它當作已啟用的私人網站。
 

@@ -1,0 +1,418 @@
+/* ELOSKIN2 訂單、通知、導覽列頭像 */
+
+/* ---------- 導覽列 ---------- */
+
+.notification-button[hidden] { display: none !important; }
+
+.notification-button {
+  display: inline-flex;
+  align-items: center;
+  color: #dce5e8;
+}
+
+.notification-button svg {
+  width: 20px;
+  height: 20px;
+}
+
+.notification-button:hover { color: #50dbc5; }
+
+.account-button.has-avatar {
+  overflow: hidden;
+  padding: 0 !important;
+}
+
+.nav-avatar {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+.admin-tab-badge {
+  min-width: 18px;
+  height: 18px;
+  display: inline-grid;
+  place-items: center;
+  margin-left: 6px;
+  padding: 0 5px;
+  color: #fff;
+  font-size: 10px;
+  background: #c4554a;
+  border-radius: 999px;
+}
+
+.admin-tab-badge[hidden] { display: none !important; }
+
+/* ---------- 交易頁：提供物品 ---------- */
+
+.trade-offer-section {
+  display: grid;
+  gap: 10px;
+}
+
+.trade-offer-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 110px auto;
+  align-items: end;
+  gap: 8px;
+}
+
+.trade-offer-form .admin-ghost-button {
+  min-height: 38px;
+}
+
+.trade-note-field textarea,
+.cart-note-field textarea {
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 10px;
+  color: #eef3f4;
+  font: inherit;
+  background: #182229;
+  border: 0;
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 1px rgba(164, 186, 191, .12);
+  resize: vertical;
+}
+
+.trade-note-field textarea:focus,
+.cart-note-field textarea:focus {
+  outline: 0;
+  box-shadow: inset 0 0 0 1px rgba(80, 219, 197, .72), 0 0 0 3px rgba(80, 219, 197, .1);
+}
+
+.cart-note-field {
+  margin-top: 12px;
+}
+
+.cart-status {
+  min-height: 16px;
+  margin-top: 8px;
+}
+
+/* ---------- 訂單卡片 ---------- */
+
+.order-list {
+  display: grid;
+  gap: 10px;
+}
+
+.order-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  background: #151f25;
+  border-left: 3px solid #50dbc5;
+  border-radius: 14px;
+}
+
+.order-card.status-pending { border-left-color: #f1c35b; }
+.order-card.status-processing { border-left-color: #6fa8ff; }
+.order-card.status-completed { border-left-color: #50dbc5; }
+.order-card.status-cancelled { border-left-color: #5d6b72; opacity: .7; }
+
+.order-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.order-number { color: #e9eff1; }
+
+.order-type,
+.order-status {
+  padding: 2px 9px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 999px;
+}
+
+.order-type { color: #a5b4b8; background: #1c2b30; }
+.order-status-pending { color: #f1c35b; background: rgba(241, 195, 91, .12); }
+.order-status-processing { color: #8cbcff; background: rgba(111, 168, 255, .14); }
+.order-status-completed { color: #50dbc5; background: rgba(80, 219, 197, .12); }
+.order-status-cancelled { color: #94a0a8; background: #1c2b30; }
+
+.order-time {
+  margin-left: auto;
+  color: #829098;
+  font-size: 12px;
+}
+
+.order-buyer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  color: #dce5e8;
+  font-size: 13px;
+}
+
+.order-trade-link {
+  color: #50dbc5;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.order-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+}
+
+.order-group {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+}
+
+.order-group-label {
+  color: #829098;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.order-item {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  background: #10171d;
+  border-radius: 10px;
+}
+
+.order-item-art {
+  width: 40px;
+  height: 30px;
+  overflow: hidden;
+  background: #0d1418;
+  border-radius: 6px;
+}
+
+.order-item-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.order-item-name {
+  overflow: hidden;
+  color: #e9eff1;
+  font-size: 13px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.order-item-meta {
+  color: #829098;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.order-totals {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 14px;
+  color: #a5b4b8;
+  font-size: 13px;
+}
+
+.order-totals strong { color: #50dbc5; }
+
+.order-note {
+  margin: 0;
+  padding: 8px 10px;
+  color: #dce5e8;
+  font-size: 13px;
+  line-height: 1.6;
+  background: #10171d;
+  border-radius: 10px;
+}
+
+.order-note-label { color: #829098; }
+.order-admin-note { background: rgba(80, 219, 197, .08); }
+
+.order-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.order-actions button { min-height: 36px; }
+
+.order-admin-note-input {
+  flex: 1 1 220px;
+  min-height: 36px;
+  padding: 6px 10px;
+  color: #eef3f4;
+  font: inherit;
+  background: #182229;
+  border: 0;
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 1px rgba(164, 186, 191, .12);
+}
+
+.order-admin-note-input:focus {
+  outline: 0;
+  box-shadow: inset 0 0 0 1px rgba(80, 219, 197, .72);
+}
+
+.order-action-status {
+  width: 100%;
+  color: #a5b4b8;
+  font-size: 12px;
+  text-align: right;
+}
+
+.order-action-status:empty { display: none; }
+.order-action-status[data-kind="error"] { color: #ff8f8f; }
+
+/* ---------- 通知頁 ---------- */
+
+.notifications-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.notifications-heading .admin-ghost-button[hidden],
+.notification-list[hidden],
+#notifications-guest[hidden] {
+  display: none !important;
+}
+
+.notification-list {
+  display: grid;
+  gap: 6px;
+}
+
+.notification-item {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+  padding: 14px 16px;
+  color: #a5b4b8;
+  text-align: left;
+  background: #10171d;
+  border: 0;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: background .2s ease;
+}
+
+.notification-item:hover { background: #151f25; }
+.notification-item:focus-visible { outline: 2px solid #50dbc5; outline-offset: 2px; }
+
+.notification-dot {
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 50%;
+}
+
+.notification-item.is-unread .notification-dot { background: #50dbc5; }
+.notification-item.is-unread strong { color: #e9eff1; }
+
+.notification-content {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.notification-content strong {
+  color: #a5b4b8;
+  font-size: 14px;
+}
+
+.notification-content span {
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.notification-time {
+  color: #829098;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* ---------- 系統通知詢問 ---------- */
+
+.notify-prompt[hidden] { display: none !important; }
+
+.notify-prompt {
+  position: fixed;
+  z-index: 60;
+  right: 20px;
+  bottom: 20px;
+  width: min(360px, calc(100vw - 32px));
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  color: #dce5e8;
+  background: #151f25;
+  border-radius: 16px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, .45), inset 0 0 0 1px rgba(80, 219, 197, .25);
+}
+
+.notify-prompt p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.notify-prompt-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.notify-prompt-actions button { min-height: 36px; }
+.notify-prompt-actions button[hidden] { display: none; }
+
+@media (max-width: 720px) {
+  .notify-prompt {
+    right: 16px;
+    bottom: 64px;
+  }
+
+  .trade-offer-form {
+    grid-template-columns: minmax(0, 1fr) 90px;
+  }
+
+  .trade-offer-form .admin-ghost-button { grid-column: 1 / -1; }
+
+  .order-time { margin-left: 0; width: 100%; }
+}
+
+/* ---------- 手機版導覽列固定在底部，避免蓋住右上角按鈕 ---------- */
+
+@media (max-width: 720px) {
+  /* backdrop-filter 會讓 fixed 的導覽列以頁首為定位基準，手機版關掉 */
+  .site-header {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  .main-nav {
+    top: auto !important;
+    bottom: 10px !important;
+  }
+
+  body {
+    padding-bottom: 64px;
+  }
+
+  .toast {
+    bottom: 64px !important;
+  }
+}
