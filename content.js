@@ -544,6 +544,21 @@ window.ELOSKIN2_TEXT = {
     buyerInsufficient: "買家餘額不足（餘額 {balance} EC，需要 {charge} EC）",
     ledgerNote: "{type}訂單 #{id}"
   },
+  inventory: {
+    quickTitle: "一鍵讀取（推薦）",
+    quickDesktop: "電腦：把下面的「ELOSKIN 讀取庫存」拖到瀏覽器的書籤列，之後打開 Steam 網站點一下這個書籤就會自動讀取並跳回來。",
+    quickMobile: "手機：按「複製書籤程式碼」，隨便新增一個書籤，把書籤網址改成剛剛複製的內容、名稱改成 ELOSKIN；之後打開 Steam 網站，在網址列輸入 ELOSKIN 並點選那個書籤。",
+    bookmarkName: "ELOSKIN 讀取庫存",
+    copyCode: "複製書籤程式碼",
+    copied: "已複製，接著新增書籤並把網址換成這段內容",
+    copyFailed: "沒辦法自動複製，請長按下面的按鈕複製連結",
+    dragHint: "請把這個按鈕拖到書籤列，不是直接點喔",
+    openSteam: "開啟 Steam 網站",
+    manualTitle: "或手動複製貼上",
+    truncated: "內容被截斷了，只讀到 {count} 件（手機複製常會這樣），建議改用上面的一鍵讀取",
+    imported: "已從 Steam 讀取 {count} 件可交易物品",
+    wrongAccount: "讀到的不是你交易連結的帳號，請確認個人頁的 Steam 交易連結"
+  },
   wallet: {
     title: "儲值",
     chipAria: "EC 餘額與儲值",

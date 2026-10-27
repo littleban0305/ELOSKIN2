@@ -1013,45 +1013,33 @@ function inventoryStorageKey() {
   return window.eloAuthUser ? `eloskin2.inventory.${window.eloAuthUser.uid}` : "";
 }
 
-function parseSteamInventory(raw) {
-  const start = raw.indexOf("{");
-  const end = raw.lastIndexOf("}");
-  let parsed;
-  try {
-    if (start < 0 || end <= start) throw new Error("no_json");
-    parsed = JSON.parse(raw.slice(start, end + 1));
-  } catch {
-    throw new Error(t("admin.pasteInvalid"));
-  }
-  const data = parsed?.response && typeof parsed.response === "object" ? parsed.response : parsed;
-  if (!Array.isArray(data?.assets) || !Array.isArray(data?.descriptions)) {
-    throw new Error(t(parsed?.success === false || parsed === null ? "admin.pastePrivate" : "admin.pasteInvalid"));
-  }
-  const descriptions = new Map(data.descriptions.map((description) => [`${description.classid}_${description.instanceid}`, description]));
-  const items = [];
-  for (const asset of data.assets) {
-    const description = descriptions.get(`${asset.classid}_${asset.instanceid}`);
-    if (!description || Number(description.tradable) !== 1) continue;
-    items.push({
-      assetId: String(asset.assetid),
-      name: String(description.name || description.market_hash_name || "CS2"),
-      marketHashName: String(description.market_hash_name || description.name || ""),
-      type: String(description.type || ""),
-      iconUrl: typeof description.icon_url === "string" && description.icon_url
-        ? STEAM_ICON_BASE + description.icon_url.split("/").map(encodeURIComponent).join("/")
-        : ""
-    });
-  }
-  return items;
-}
-
 function setInventoryStatus(message, kind = "") {
   $("#trade-inv-status").textContent = message;
   $("#trade-inv-status").dataset.kind = kind;
 }
 
+const updateTradeBookmarklet = window.eloInventoryImport.bindBookmarklet({
+  link: $("#trade-bookmarklet"),
+  copyButton: $("#trade-bookmarklet-copy"),
+  status: $("#trade-bookmarklet-status"),
+  text: t
+});
+
+function saveOwnInventory(items, savedAt = Date.now()) {
+  ownInventory.items = items;
+  ownInventory.savedAt = savedAt;
+  try {
+    localStorage.setItem(inventoryStorageKey(), JSON.stringify({ steamId: ownInventory.steamId, items, savedAt }));
+  } catch {
+    // 存不進本機也沒關係，這次照常使用
+  }
+}
+
+let inventoryNotice = null;
+
 function restoreOwnInventory() {
   const steamId = tradeUrlSteamId();
+  if (steamId !== ownInventory.steamId) inventoryNotice = null;
   ownInventory.steamId = steamId;
   ownInventory.items = [];
   ownInventory.savedAt = 0;
@@ -1065,6 +1053,16 @@ function restoreOwnInventory() {
       }
     } catch {
       // 讀不到本機紀錄就當作沒有
+    }
+  }
+  const pending = window.eloInventoryImport.pending("trade");
+  if (pending && key && steamId) {
+    window.eloInventoryImport.clearPending("trade");
+    if (pending.steamId === steamId) {
+      saveOwnInventory(pending.items);
+      inventoryNotice = { message: t("inventory.imported", { count: pending.items.length }), kind: "success" };
+    } else {
+      inventoryNotice = { message: t("inventory.wrongAccount"), kind: "error" };
     }
   }
   renderOwnInventory();
@@ -1084,12 +1082,15 @@ function renderOwnInventory() {
   paste.hidden = !signedIn || !steamId;
   if (steamId) link.href = `https://steamcommunity.com/inventory/${steamId}/730/2?l=tchinese&count=2000`;
   else link.removeAttribute("href");
+  updateTradeBookmarklet(steamId, "trade");
   const hasItems = ownInventory.items.length > 0;
   if (hasItems && window.eloPrices && !window.eloPrices.loaded()) window.eloPrices.load();
   $("#trade-inv-search").hidden = !hasItems;
   $("#trade-own-count").textContent = hasItems ? t("trade.inventoryCount", { count: ownInventory.items.length }) : "";
   paste.querySelector("summary").textContent = hasItems ? t("trade.inventoryReload") : t("trade.inventoryLoad");
-  if (!signedIn) setInventoryStatus(t("trade.inventoryNeedLogin"));
+  if (inventoryNotice && signedIn) {
+    setInventoryStatus(inventoryNotice.message, inventoryNotice.kind);
+  } else if (!signedIn) setInventoryStatus(t("trade.inventoryNeedLogin"));
   else if (!steamId) setInventoryStatus(t("trade.inventoryNeedTradeUrl"));
   else if (hasItems) {
     setInventoryStatus(t("trade.inventoryLoaded", {
@@ -1114,17 +1115,12 @@ function renderOwnInventory() {
 
 $("#trade-inv-load").addEventListener("click", () => {
   try {
-    const items = parseSteamInventory($("#trade-inv-input").value);
-    if (!items.length) throw new Error(t("admin.pasteNoTradable"));
-    ownInventory.items = items;
-    ownInventory.savedAt = Date.now();
-    try {
-      localStorage.setItem(inventoryStorageKey(), JSON.stringify({ steamId: ownInventory.steamId, items, savedAt: ownInventory.savedAt }));
-    } catch {
-      // 存不進本機也沒關係，這次照常使用
-    }
+    const { items, truncated } = window.eloInventoryImport.parse($("#trade-inv-input").value, t);
+    if (!items.length) throw new Error(truncated ? t("inventory.truncated", { count: 0 }) : t("admin.pasteNoTradable"));
+    saveOwnInventory(items);
     $("#trade-inv-input").value = "";
-    $("#trade-inv-paste").open = false;
+    inventoryNotice = truncated ? { message: t("inventory.truncated", { count: items.length }), kind: "error" } : null;
+    if (!truncated) $("#trade-inv-paste").open = false;
     renderOwnInventory();
   } catch (error) {
     setInventoryStatus(error.message, "error");

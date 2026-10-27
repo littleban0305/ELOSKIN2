@@ -930,40 +930,6 @@
     }
   }
 
-  function parsePastedInventory(raw) {
-    let parsed;
-    const start = raw.indexOf("{");
-    const end = raw.lastIndexOf("}");
-    try {
-      if (start < 0 || end <= start) throw new Error("no_json");
-      parsed = JSON.parse(raw.slice(start, end + 1));
-    } catch {
-      throw new Error(text("admin.pasteInvalid"));
-    }
-    const data = parsed?.response && typeof parsed.response === "object" ? parsed.response : parsed;
-    if (!Array.isArray(data?.assets) || !Array.isArray(data?.descriptions)) {
-      throw new Error(text(parsed?.success === false || parsed === null ? "admin.pastePrivate" : "admin.pasteInvalid"));
-    }
-    const descriptions = new Map(data.descriptions.map((description) => [`${description.classid}_${description.instanceid}`, description]));
-    const items = [];
-    for (const asset of data.assets) {
-      const description = descriptions.get(`${asset.classid}_${asset.instanceid}`);
-      if (!description || Number(description.tradable) !== 1) continue;
-      const icon = typeof description.icon_url === "string" && description.icon_url
-        ? STEAM_ICON_BASE + description.icon_url.split("/").map(encodeURIComponent).join("/")
-        : "";
-      items.push({
-        assetId: String(asset.assetid),
-        amount: Math.max(1, Number.parseInt(asset.amount, 10) || 1),
-        name: String(description.name || description.market_hash_name || "CS2"),
-        marketHashName: String(description.market_hash_name || description.name || ""),
-        type: String(description.type || ""),
-        iconUrl: icon
-      });
-    }
-    return { items, truncated: Number(data.more_items) === 1 || data.more_items === true };
-  }
-
   const steamPaste = $("#admin-steam-paste");
   const steamPasteInput = $("#admin-steam-paste-input");
   const steamPasteStatus = $("#admin-steam-paste-status");
@@ -974,16 +940,36 @@
   } else {
     steamOpenLink.removeAttribute("href");
   }
+  window.eloInventoryImport.bindBookmarklet({
+    link: $("#admin-bookmarklet"),
+    copyButton: $("#admin-bookmarklet-copy"),
+    status: $("#admin-bookmarklet-status"),
+    text
+  })(inventorySteamId, "admin");
+
+  function takePendingImport() {
+    const pending = window.eloInventoryImport.pending("admin");
+    if (!pending || !canEdit()) return;
+    window.eloInventoryImport.clearPending("admin");
+    applySteamItems(pending.items);
+    showTab("create");
+    setCreateMode("steam");
+    steamPaste.open = false;
+    steamPasteStatus.dataset.kind = "success";
+    steamPasteStatus.textContent = text("inventory.imported", { count: pending.items.length });
+  }
 
   $("#admin-steam-paste-load").addEventListener("click", () => {
     try {
-      const { items, truncated } = parsePastedInventory(steamPasteInput.value);
-      if (!items.length) throw new Error(text("admin.pasteNoTradable"));
+      const { items, truncated } = window.eloInventoryImport.parse(steamPasteInput.value, text);
+      if (!items.length) throw new Error(truncated ? text("inventory.truncated", { count: 0 }) : text("admin.pasteNoTradable"));
       applySteamItems(items);
       steamPasteInput.value = "";
-      steamPasteStatus.dataset.kind = "success";
-      steamPasteStatus.textContent = text(truncated ? "admin.pasteLoadedTruncated" : "admin.pasteLoaded", { count: items.length });
-      steamPaste.open = false;
+      steamPasteStatus.dataset.kind = truncated ? "error" : "success";
+      steamPasteStatus.textContent = truncated
+        ? text("inventory.truncated", { count: items.length })
+        : text("admin.pasteLoaded", { count: items.length });
+      if (!truncated) steamPaste.open = false;
     } catch (error) {
       steamPasteStatus.dataset.kind = "error";
       steamPasteStatus.textContent = error.message;
@@ -1230,6 +1216,7 @@
     createSubmit.disabled = !canEdit();
     updateCreatePreview();
     updateSaveIndicator();
+    takePendingImport();
   }
 
   window.addEventListener("eloauthchange", (event) => {
