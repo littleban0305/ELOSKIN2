@@ -15,14 +15,14 @@
     <link rel="stylesheet" href="profile.css?v=2">
     <link rel="stylesheet" href="orders.css?v=2">
     <link rel="stylesheet" href="wallet.css?v=1">
-    <script src="content.js?v=34" defer></script>
+    <script src="content.js?v=35" defer></script>
     <script src="firebase-config.js?v=1" defer></script>
     <script src="steam-config.js?v=4" defer></script>
     <script src="app.js?v=33" defer></script>
     <script src="auth.js?v=25" defer></script>
     <script src="admin.js?v=7" defer></script>
     <script src="orders.js?v=2" defer></script>
-    <script src="wallet.js?v=1" defer></script>
+    <script src="wallet.js?v=2" defer></script>
   </head>
   <body>
     <header class="site-header">
@@ -266,8 +266,8 @@
             <form class="topup-form" id="topup-form" novalidate>
               <label class="admin-field"><span class="admin-field-label" data-copy="wallet.messageLabel"></span><textarea id="topup-message" rows="3" maxlength="1000" data-copy-placeholder="wallet.messagePlaceholder"></textarea></label>
               <div class="topup-amounts">
-                <label class="admin-field"><span class="admin-field-label" data-copy="wallet.twdLabel"></span><input id="topup-twd" type="number" min="0" step="any" inputmode="decimal" data-copy-placeholder="admin.twdPlaceholder"></label>
-                <label class="admin-field"><span class="admin-field-label" data-copy="wallet.ecLabel"></span><input id="topup-ec" type="number" min="0" step="1" inputmode="numeric"></label>
+                <label class="admin-field"><span class="admin-field-label" data-copy="wallet.twdLabel"></span><input id="topup-twd" type="text" inputmode="decimal" autocomplete="off" data-copy-placeholder="admin.twdPlaceholder"></label>
+                <label class="admin-field"><span class="admin-field-label" data-copy="wallet.ecLabel"></span><input id="topup-ec" type="text" inputmode="numeric" autocomplete="off"></label>
               </div>
               <div class="admin-field">
                 <span class="admin-field-label" data-copy="wallet.attachments"></span>

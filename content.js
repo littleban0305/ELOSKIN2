@@ -548,7 +548,7 @@ window.ELOSKIN2_TEXT = {
     attachmentError: "圖片處理失敗：{message}",
     imageTooLarge: "圖片太大了，請換一張小一點的",
     messageRequired: "請寫一下說明",
-    amountInvalid: "EC 需為 0 以上的整數",
+    amountInvalid: "看不懂「{value}」，請只填數字，例如 100",
     amountUnspecified: "未填寫",
     submit: "送出申請",
     submitting: "送出中…",

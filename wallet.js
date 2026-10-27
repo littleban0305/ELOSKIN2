@@ -131,13 +131,24 @@
     topupStatus.dataset.kind = kind || "";
   }
 
+  // 全形數字、逗號、單位文字都先整理掉；空白回傳 null，看不懂回傳 NaN
+  function parseAmount(raw) {
+    const cleaned = String(raw || "")
+      .replace(/[０-９．，]/g, (character) => String.fromCharCode(character.charCodeAt(0) - 0xFEE0))
+      .replace(/[,\s]|NT\$|元|EC/gi, "")
+      .trim();
+    if (cleaned === "") return null;
+    const value = Number(cleaned);
+    return Number.isFinite(value) && value >= 0 ? value : NaN;
+  }
+
   topupTwd.addEventListener("input", () => {
-    const value = topupTwd.value.trim();
-    topupEc.value = value === "" || !Number.isFinite(Number(value)) || Number(value) < 0 ? "" : String(Math.round(Number(value) / TWD_PER_EC));
+    const value = parseAmount(topupTwd.value);
+    topupEc.value = value === null || Number.isNaN(value) ? "" : String(Math.round(value / TWD_PER_EC));
   });
   topupEc.addEventListener("input", () => {
-    const value = topupEc.value.trim();
-    topupTwd.value = value === "" || !Number.isFinite(Number(value)) || Number(value) < 0 ? "" : String(Math.round(Number(value) * TWD_PER_EC * 100) / 100);
+    const value = parseAmount(topupEc.value);
+    topupTwd.value = value === null || Number.isNaN(value) ? "" : String(Math.round(value * TWD_PER_EC * 100) / 100);
   });
 
   document.querySelectorAll("[data-topup-method]").forEach((button) => {
@@ -239,10 +250,14 @@
       topupMessage.focus();
       return;
     }
-    const ecValue = topupEc.value.trim();
-    const requestedAmount = ecValue === "" ? 0 : Number(ecValue);
-    if (!Number.isInteger(requestedAmount) || requestedAmount < 0 || requestedAmount > 100000000) {
-      setTopupStatus("wallet.amountInvalid", "error");
+    let parsedEc = parseAmount(topupEc.value);
+    if (parsedEc === null) {
+      const parsedTwd = parseAmount(topupTwd.value);
+      parsedEc = parsedTwd === null ? 0 : Number.isNaN(parsedTwd) ? NaN : parsedTwd / TWD_PER_EC;
+    }
+    const requestedAmount = Math.round(parsedEc);
+    if (Number.isNaN(parsedEc) || requestedAmount > 100000000) {
+      setTopupStatus("wallet.amountInvalid", "error", { value: topupEc.value || topupTwd.value });
       topupEc.focus();
       return;
     }
