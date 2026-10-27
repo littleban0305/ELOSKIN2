@@ -8,6 +8,7 @@
   const TAG_LIMIT = 10;
   const TAG_MAX_LENGTH = 20;
   const DEFAULT_TAGS = ["熱門", "新品", "特價", "稀有", "限量"];
+  const TWD_PER_EC = 0.03;
   const CATEGORY_KEYS = ["rifle", "sniper", "pistol", "knife", "gloves", "weapon", "case", "item", "competitor", "rivals"];
 
   const productList = $("#admin-product-list");
@@ -144,6 +145,46 @@
     const number = Number(trimmed);
     if (!Number.isInteger(number) || number < 0 || number > 10000000) return { error: "admin.priceInvalid" };
     return { value: number };
+  }
+
+  function twdToEc(value) {
+    const trimmed = String(value).trim();
+    if (trimmed === "") return "";
+    const twd = Number(trimmed);
+    if (!Number.isFinite(twd) || twd < 0) return null;
+    return Math.round(twd / TWD_PER_EC);
+  }
+
+  function ecToTwd(value) {
+    const trimmed = String(value).trim();
+    if (trimmed === "") return "";
+    const ec = Number(trimmed);
+    if (!Number.isFinite(ec) || ec < 0) return "";
+    return String(Math.round(ec * TWD_PER_EC * 100) / 100);
+  }
+
+  function createTwdInput() {
+    const input = document.createElement("input");
+    input.type = "number";
+    input.min = "0";
+    input.step = "any";
+    input.inputMode = "decimal";
+    input.placeholder = text("admin.twdPlaceholder");
+    input.title = text("admin.twdRate");
+    input.dataset.field = "twd";
+    return input;
+  }
+
+  // 台幣與 EC 欄位互相連動；回傳 false 代表台幣格式錯誤
+  function syncPriceFields(source, twdInput, priceInput) {
+    if (source === twdInput) {
+      const ec = twdToEc(twdInput.value);
+      if (ec === null) return false;
+      priceInput.value = ec === "" ? "" : String(ec);
+    } else {
+      twdInput.value = ecToTwd(priceInput.value);
+    }
+    return true;
   }
 
   function parseStock(value) {
@@ -377,6 +418,7 @@
   function fillRowValues(row, listing) {
     row.querySelector("[data-field='name']").value = listing.name || "";
     row.querySelector("[data-field='price']").value = Number.isInteger(listing.price) ? listing.price : "";
+    row.querySelector("[data-field='twd']").value = Number.isInteger(listing.price) ? ecToTwd(listing.price) : "";
     row.querySelector("[data-field='stock']").value = Number.isInteger(listing.stock) ? listing.stock : 0;
     row.querySelector("[data-field='description']").value = listing.description || "";
     row.tagEditor?.setTags(listing.tags || []);
@@ -442,10 +484,13 @@
     const tagEditor = createTagEditor(listing.tags || [], () => scheduleProductSave(listing.id));
     row.tagEditor = tagEditor;
 
+    const twdInput = createTwdInput();
+
     const fields = document.createElement("div");
     fields.className = "admin-product-fields admin-listing-fields";
     fields.append(
       createField("admin.fieldName", nameInput, "admin-field-name"),
+      createField("admin.fieldTwd", twdInput),
       createField("admin.fieldPrice", priceInput),
       createField("admin.fieldStock", stockInput),
       createField("admin.fieldDescription", descriptionInput, "admin-field-wide"),
@@ -576,7 +621,16 @@
 
   productList.addEventListener("input", (event) => {
     const row = event.target.closest(".admin-listing-row");
-    if (row && event.target.dataset.field) scheduleProductSave(row.dataset.listingId);
+    const field = event.target.dataset.field;
+    if (!row || !field) return;
+    if (field === "twd" || field === "price") {
+      const ok = syncPriceFields(event.target, row.querySelector("[data-field='twd']"), row.querySelector("[data-field='price']"));
+      if (!ok) {
+        setRowStatus(row, "admin.twdInvalid", "error");
+        return;
+      }
+    }
+    scheduleProductSave(row.dataset.listingId);
   });
 
   productList.addEventListener("focusout", (event) => {
@@ -642,6 +696,7 @@
     game: $("#admin-create-game"),
     category: $("#admin-create-category"),
     price: $("#admin-create-price"),
+    twd: $("#admin-create-twd"),
     stock: $("#admin-create-stock"),
     imageUrl: $("#admin-create-image"),
     description: $("#admin-create-description"),
@@ -709,6 +764,12 @@
   });
 
   createFields.imageUrl.addEventListener("input", updateCreatePreview);
+  for (const input of [createFields.twd, createFields.price]) {
+    input.addEventListener("input", () => {
+      const ok = syncPriceFields(input, createFields.twd, createFields.price);
+      setCreateStatus(ok ? "" : "admin.twdInvalid", ok ? "" : "error");
+    });
+  }
   createFields.category.addEventListener("change", updateCreatePreview);
 
   createForm.addEventListener("submit", async (event) => {
@@ -984,7 +1045,7 @@
     createFields.stock.value = String(item.count);
     setCreateStatus("");
     updateCreatePreview();
-    createFields.price.focus();
+    createFields.twd.focus();
   });
 
   steamSearch.addEventListener("input", renderSteamGrid);

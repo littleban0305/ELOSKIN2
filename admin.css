@@ -469,7 +469,16 @@
 }
 
 .admin-listing-fields {
-  grid-template-columns: minmax(0, 1fr) 110px 90px;
+  grid-template-columns: minmax(0, 1fr) 100px 110px 80px;
+}
+
+.admin-rate-hint {
+  margin: -4px 0 10px;
+  font-size: 11px;
+}
+
+.admin-create-fields .admin-rate-hint {
+  margin: -6px 0 0;
 }
 
 .admin-field-wide {
@@ -678,7 +687,7 @@
 
 .admin-create-fields {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -777,7 +786,7 @@
 
 @media (max-width: 640px) {
   .admin-listing-fields {
-    grid-template-columns: minmax(0, 1fr) 90px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .admin-listing-fields .admin-field-name { grid-column: 1 / -1; }
