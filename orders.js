@@ -222,7 +222,11 @@
       buyerName: buyerName(),
       tradeUrl: window.eloUserProfile.tradeUrl,
       items: selection.receive.map((product) => orderItem(product, 1)),
-      offerItems: selection.offer.map((item) => ({ name: item.name, value: Number(item.value) || 0 })),
+      offerItems: selection.offer.map((item) => ({
+        name: item.name,
+        value: Number(item.value) || 0,
+        ...(item.assetId ? { assetId: item.assetId, marketHashName: item.marketHashName || "", imageUrl: item.iconUrl || "" } : {})
+      })),
       total: selection.receiveTotal,
       offerTotal: selection.offerTotal,
       note: $("#trade-note").value.trim().slice(0, 500),

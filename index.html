@@ -15,13 +15,14 @@
     <link rel="stylesheet" href="profile.css?v=2">
     <link rel="stylesheet" href="orders.css?v=2">
     <link rel="stylesheet" href="wallet.css?v=1">
-    <script src="content.js?v=36" defer></script>
+    <link rel="stylesheet" href="shop.css?v=1">
+    <script src="content.js?v=37" defer></script>
     <script src="firebase-config.js?v=1" defer></script>
     <script src="steam-config.js?v=4" defer></script>
-    <script src="app.js?v=33" defer></script>
-    <script src="auth.js?v=25" defer></script>
+    <script src="app.js?v=34" defer></script>
+    <script src="auth.js?v=26" defer></script>
     <script src="admin.js?v=7" defer></script>
-    <script src="orders.js?v=2" defer></script>
+    <script src="orders.js?v=3" defer></script>
     <script src="wallet.js?v=3" defer></script>
   </head>
   <body>
@@ -102,19 +103,7 @@
           <div><h1 data-copy="shop.title"></h1></div>
           <label class="search-box"><img src="assets/icon_new/search_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="" aria-hidden="true"><input id="search" type="search" data-copy-placeholder="shop.searchPlaceholder" data-copy-aria="shop.searchAria"><span class="search-shortcut">⌕</span></label>
         </div>
-        <div class="store-controls">
-          <div class="filter-list" id="category-filters" data-copy-aria="shop.categoriesAria"></div>
-          <div class="game-filters" id="game-filters" data-copy-aria="shop.gamesAria"></div>
-          <label class="sort-control" for="sort-products"><span data-copy="shop.sortLabel"></span>
-            <select id="sort-products" data-copy-aria="shop.sortAria">
-              <option value="featured" data-copy="shop.sortRecommended"></option>
-              <option value="price-ascending" data-copy="shop.sortPriceLow"></option>
-              <option value="price-descending" data-copy="shop.sortPriceHigh"></option>
-              <option value="stock-descending" data-copy="shop.sortStock"></option>
-              <option value="name-ascending" data-copy="shop.sortName"></option>
-            </select>
-          </label>
-        </div>
+        <div class="store-controls shop-filters" id="shop-filters"></div>
         <div class="product-grid" id="product-grid" aria-live="polite"></div>
         <div class="empty-state" id="empty-state" hidden data-copy="shop.empty"></div>
         <div class="catalog-foot"><span><span data-copy="shop.countPrefix"></span> <strong id="product-total">0</strong> <span data-copy="shop.countSuffix"></span></span></div>
@@ -133,7 +122,26 @@
             <div class="trade-selected-list" id="trade-offer-items" aria-live="polite"></div>
             <section class="trade-inventory-section trade-offer-section" aria-labelledby="trade-own-inventory-title">
               <div class="trade-inventory-heading">
-                <h3 id="trade-own-inventory-title" data-copy="trade.offerTitle"></h3>
+                <h3 id="trade-own-inventory-title" data-copy="trade.myInventory"></h3>
+                <span id="trade-own-count"></span>
+              </div>
+              <p class="account-status trade-inv-status" id="trade-inv-status"></p>
+              <details class="admin-steam-paste trade-inv-paste" id="trade-inv-paste">
+                <summary data-copy="trade.inventoryLoad"></summary>
+                <ol class="admin-paste-steps">
+                  <li><a id="trade-inv-open" target="_blank" rel="noopener noreferrer" data-copy="trade.inventoryStepOpen"></a></li>
+                  <li data-copy="admin.pasteStepCopy"></li>
+                  <li data-copy="admin.pasteStepPaste"></li>
+                </ol>
+                <textarea id="trade-inv-input" rows="3" spellcheck="false" data-copy-placeholder="admin.pastePlaceholder" data-copy-aria="admin.pastePlaceholder"></textarea>
+                <div class="admin-paste-actions">
+                  <button class="admin-primary-button" id="trade-inv-load" type="button" data-copy="admin.pasteLoad"></button>
+                </div>
+              </details>
+              <input class="trade-inv-search" id="trade-inv-search" type="search" data-copy-placeholder="trade.inventorySearch" data-copy-aria="trade.inventorySearch" hidden>
+              <div class="trade-own-grid" id="trade-own-grid"></div>
+              <div class="trade-inventory-heading trade-manual-heading">
+                <h3 data-copy="trade.offerTitle"></h3>
               </div>
               <form class="trade-offer-form" id="trade-offer-form" novalidate>
                 <label class="admin-field"><span class="admin-field-label" data-copy="trade.offerName"></span><input id="trade-offer-name" type="text" maxlength="100" data-copy-placeholder="trade.offerNamePlaceholder"></label>

@@ -1,0 +1,158 @@
+/* ELOSKIN2 商店下拉篩選、交易頁自己的庫存 */
+
+/* ---------- 商店篩選 ---------- */
+
+.store-controls.shop-filters {
+  position: relative;
+  z-index: 6;
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.shop-filters .trade-filter {
+  position: relative;
+  flex: 0 1 220px;
+}
+
+.shop-filters .trade-filter-panel {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 6px);
+  left: 0;
+  width: max(100%, 220px);
+  background: #121b21;
+  border-radius: 12px;
+}
+
+.shop-filters .trade-filter.is-open .trade-filter-panel {
+  box-shadow: 0 18px 38px rgba(0, 0, 0, .45), inset 0 0 0 1px rgba(80, 219, 197, .18);
+}
+
+.shop-filters .trade-filter-options {
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.shop-filters .trade-filter-note {
+  margin: 8px;
+  color: #829098;
+}
+
+.shop-filters .shop-reset-filters {
+  width: auto;
+  min-height: 43px;
+  margin: 0;
+  padding: 0 16px;
+}
+
+@media (max-width: 720px) {
+  .shop-filters .trade-filter {
+    flex: 1 1 calc(50% - 4px);
+  }
+
+  .shop-filters .trade-filter:nth-child(even) .trade-filter-panel {
+    right: 0;
+    left: auto;
+  }
+
+  .shop-filters .shop-reset-filters {
+    flex: 1 1 100%;
+  }
+}
+
+/* ---------- 交易頁：我的 Steam 庫存 ---------- */
+
+.trade-inv-status:empty { display: none; }
+
+.trade-inv-paste[hidden],
+.trade-inv-search[hidden] {
+  display: none !important;
+}
+
+.trade-inv-search {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 12px;
+  color: #eef3f4;
+  font: inherit;
+  background: #182229;
+  border: 0;
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 1px rgba(164, 186, 191, .12);
+}
+
+.trade-inv-search:focus {
+  outline: 0;
+  box-shadow: inset 0 0 0 1px rgba(80, 219, 197, .72);
+}
+
+.trade-own-grid {
+  max-height: 360px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 6px;
+  overflow-y: auto;
+}
+
+.trade-own-grid:empty { display: none; }
+
+.trade-own-item {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+  color: #dce5e8;
+  text-align: left;
+  background: #151f25;
+  border: 0;
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 1px transparent;
+  cursor: pointer;
+  transition: background .2s ease, box-shadow .2s ease;
+}
+
+.trade-own-item:hover { background: #1a262d; box-shadow: inset 0 0 0 1px rgba(80, 219, 197, .5); }
+.trade-own-item:focus-visible { outline: 2px solid #50dbc5; outline-offset: 2px; }
+.trade-own-item.is-selected { opacity: .45; cursor: default; }
+
+.trade-own-art {
+  height: 56px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #0d1418;
+  border-radius: 8px;
+}
+
+.trade-own-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.trade-own-item strong {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.trade-own-item small {
+  overflow: hidden;
+  color: #829098;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.trade-manual-heading { margin-top: 6px; }
+
+.trade-selected-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}

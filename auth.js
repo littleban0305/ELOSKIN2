@@ -136,6 +136,7 @@ async function ensureUserProfile(user) {
     }
     const data = profile.data();
     window.eloUserProfile = data;
+    window.dispatchEvent(new Event("eloprofilechange"));
     fillProfileForm(user, true);
     if (data.displayName && data.displayName !== user.displayName) {
       await user.updateProfile({ displayName: data.displayName });
@@ -188,6 +189,7 @@ profileSetupForm.addEventListener("submit", async (event) => {
     await user.updateProfile({ displayName });
     await firebaseDb.collection("userProfiles").doc(user.uid).set({ displayName, tradeUrl });
     window.eloUserProfile = { displayName, tradeUrl };
+    window.dispatchEvent(new Event("eloprofilechange"));
     fillProfileForm(user, true);
     profileSetupModal.hidden = true;
     profileSetupStatus.textContent = authText("profile.setupSaved");
@@ -247,6 +249,7 @@ profileEditForm.addEventListener("submit", async (event) => {
     await firebaseDb.collection("userProfiles").doc(user.uid).set({ displayName, tradeUrl });
     await user.updateProfile({ displayName });
     window.eloUserProfile = { displayName, tradeUrl };
+    window.dispatchEvent(new Event("eloprofilechange"));
     updateAccount(user);
     setProfileEditStatus(authText("profile.profileSaved"), "success");
   } catch (error) {
@@ -365,6 +368,7 @@ function updateAccount(user) {
     profileSetupModal.hidden = true;
     profileSetupUser = null;
     window.eloUserProfile = null;
+    window.dispatchEvent(new Event("eloprofilechange"));
     checkedProfileUids.clear();
   }
   const isAdmin = Boolean(user) && user.email?.toLowerCase() === ADMIN_EMAIL;

@@ -65,7 +65,7 @@ const games = [
   { id: "CS2", label: copy.games.cs2 },
   { id: "ROBLOX RIVALS", label: copy.games.rivals }
 ];
-const state = { category: copy.categories.allItems, game: "all", search: "", sort: "featured", cart: new Map(), favorites: new Set() };
+const state = { categories: [], tags: [], game: "all", search: "", sort: "featured", openFilter: "", cart: new Map(), favorites: new Set() };
 const tradeState = {
   category: [],
   game: "CS2",
@@ -89,18 +89,63 @@ let homeMarketMode = "popular";
 const steamConfig = window.ELOSKIN2_STEAM_CONFIG || {};
 const $ = (selector) => document.querySelector(selector);
 const productGrid = $("#product-grid");
-const categoryFilters = $("#category-filters");
-const gameFilters = $("#game-filters");
+const shopFilters = $("#shop-filters");
 const cartModal = $("#cart-modal");
 let toastTimer;
 
-function renderFilters(categoryContainer = categoryFilters, gameContainer = gameFilters, filterState = state) {
-  categoryContainer.innerHTML = categories.map((category) =>
-    `<button class="filter-button${filterState.category === category ? " active" : ""}" type="button" data-category="${escapeHtml(category)}" aria-pressed="${filterState.category === category}">${escapeHtml(category)}</button>`
-  ).join("");
-  gameContainer.innerHTML = games.map((game) =>
-    `<button class="game-button${filterState.game === game.id ? " active" : ""}" type="button" data-game="${escapeHtml(game.id)}" aria-pressed="${filterState.game === game.id}">${escapeHtml(game.label)}</button>`
-  ).join("");
+function dropdownFilterMarkup({ id, label, selected, options, multiple = true, emptyLabel, openFilter, note = "" }) {
+  const selectedLabels = options.filter(({ value }) => selected.includes(value)).map((option) => option.label);
+  const summary = selectedLabels.length
+    ? `${selectedLabels.slice(0, 2).join("、")}${selectedLabels.length > 2 ? ` +${selectedLabels.length - 2}` : ""}`
+    : emptyLabel;
+  const expanded = openFilter === id;
+  const optionsMarkup = options.map(({ value, label: optionLabel }) => `
+    <label class="trade-filter-option">
+      <input type="${multiple ? "checkbox" : "radio"}" ${multiple ? "" : `name="${id}"`} value="${escapeHtml(value)}" data-filter-value="${escapeHtml(value)}"${selected.includes(value) ? " checked" : ""}>
+      <span class="trade-filter-check" aria-hidden="true"></span>
+      <span>${escapeHtml(optionLabel)}</span>
+    </label>`).join("");
+  return `
+    <div class="trade-filter${expanded ? " is-open" : ""}" data-shop-filter="${id}">
+      <button class="trade-filter-toggle" type="button" data-shop-filter-toggle="${id}" aria-expanded="${expanded}" aria-controls="${id}-options">
+        <span class="trade-filter-label">${escapeHtml(label)}</span>
+        <span class="trade-filter-summary">${escapeHtml(summary)}</span>
+        <span class="trade-filter-chevron" aria-hidden="true"></span>
+      </button>
+      <div class="trade-filter-panel" id="${id}-options" aria-hidden="${!expanded}"${expanded ? "" : " inert"}>
+        <div class="trade-filter-panel-inner">
+          <div class="trade-filter-options" role="${multiple ? "group" : "radiogroup"}" aria-label="${escapeHtml(label)}">
+            ${optionsMarkup || `<p class="trade-filter-note">${escapeHtml(note)}</p>`}
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function availableTags() {
+  return [...new Set(products.flatMap((product) => product.tags || []))].sort((a, b) => a.localeCompare(b, "zh-Hant"));
+}
+
+function renderFilters() {
+  const sortOptions = [
+    { value: "featured", label: copy.shop.sortRecommended },
+    { value: "price-ascending", label: copy.shop.sortPriceLow },
+    { value: "price-descending", label: copy.shop.sortPriceHigh },
+    { value: "stock-descending", label: copy.shop.sortStock },
+    { value: "name-ascending", label: copy.shop.sortName }
+  ];
+  state.tags = state.tags.filter((tag) => availableTags().includes(tag));
+  shopFilters.innerHTML = [
+    dropdownFilterMarkup({ id: "shop-game-filter", label: copy.shop.filterGame, selected: [state.game], multiple: false,
+      options: games.map((game) => ({ value: game.id, label: game.label })), emptyLabel: copy.games.all, openFilter: state.openFilter }),
+    dropdownFilterMarkup({ id: "shop-type-filter", label: copy.shop.filterType, selected: state.categories,
+      options: categoryKeys.map((key) => ({ value: copy.categories[key], label: copy.categories[key] })), emptyLabel: copy.trade.allTypes, openFilter: state.openFilter }),
+    dropdownFilterMarkup({ id: "shop-tag-filter", label: copy.shop.filterTags, selected: state.tags,
+      options: availableTags().map((tag) => ({ value: tag, label: tag })), emptyLabel: copy.shop.anyTag, openFilter: state.openFilter, note: copy.shop.noTags }),
+    dropdownFilterMarkup({ id: "shop-sort-filter", label: copy.shop.sortLabel, selected: [state.sort], multiple: false,
+      options: sortOptions, emptyLabel: copy.shop.sortRecommended, openFilter: state.openFilter }),
+    `<button class="trade-reset-filters shop-reset-filters" type="button" data-shop-reset>${escapeHtml(copy.trade.resetFilters)}</button>`
+  ].join("");
 }
 
 function tradeFilterMarkup(id, labelKey, selectedValues, options, { multiple = true, emptyLabel } = {}) {
@@ -249,11 +294,11 @@ function visibleProducts(filterState = state) {
     if (!isProductPublished(product)) return false;
     const matchesCategory = filterState === tradeState
       ? !filterState.category.length || filterState.category.some((category) => product.category === category || product.kind === category)
-      : filterState.category === copy.categories.allItems || product.category === filterState.category || product.kind === filterState.category;
+      : !filterState.categories.length || filterState.categories.some((category) => product.category === category || product.kind === category);
     const matchesGame = filterState.game === "all" || product.game === filterState.game;
     const matchesSearch = !term || [product.name, product.game, product.category, product.description, product.wear, ...(product.tags || [])].some((value) => value.toLocaleLowerCase("zh-Hant").includes(term));
     if (!matchesCategory || !matchesGame || !matchesSearch) return false;
-    if (filterState !== tradeState) return true;
+    if (filterState !== tradeState) return !filterState.tags.length || filterState.tags.some((tag) => (product.tags || []).includes(tag));
     if (!Number.isFinite(product.price) || product.price < tradeState.minPrice
       || (tradeState.maxPrice < 50000 && product.price > tradeState.maxPrice)) return false;
     if (tradeState.game === "ROBLOX RIVALS" && tradeState.miniGame.length
@@ -489,7 +534,10 @@ function renderOfferSide() {
   const container = $("#trade-offer-items");
   const selectedMarkup = tradeState.offer.map((item) => {
     const removeLabel = t("trade.removeOffer", { name: item.name });
-    return `<div class="trade-selected-item"><div class="trade-selected-art"><span class="product-art-placeholder" aria-hidden="true">${escapeHtml(copy.games.cs2)}</span></div><div class="trade-selected-info"><strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong><small>${item.value ? `${Number(item.value).toLocaleString()} EC` : escapeHtml(t("trade.offerNoValue"))}</small></div><button type="button" data-trade-remove="${escapeHtml(item.id)}" data-trade-side="offer" aria-label="${escapeHtml(removeLabel)}">×</button></div>`;
+    const art = /^https:\/\//.test(item.iconUrl || "")
+      ? `<img src="${escapeHtml(item.iconUrl)}" alt="" loading="lazy">`
+      : `<span class="product-art-placeholder" aria-hidden="true">${escapeHtml(copy.games.cs2)}</span>`;
+    return `<div class="trade-selected-item"><div class="trade-selected-art">${art}</div><div class="trade-selected-info"><strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong><small>${item.value ? `${Number(item.value).toLocaleString()} EC` : escapeHtml(t("trade.offerNoValue"))}</small></div><button type="button" data-trade-remove="${escapeHtml(item.id)}" data-trade-side="offer" aria-label="${escapeHtml(removeLabel)}">×</button></div>`;
   }).join("");
   const placeholders = Array.from({ length: Math.max(0, 4 - tradeState.offer.length) }, () =>
     `<div class="trade-slot"><span aria-hidden="true">+</span><small>${escapeHtml(t("trade.emptyOffer"))}</small></div>`
@@ -518,6 +566,7 @@ function renderTradeSide(side, container, emptyKey, totalElement) {
 
 function renderTrade() {
   renderOfferSide();
+  if (typeof renderOwnInventory === "function" && $("#trade-own-grid")) renderOwnInventory();
   renderTradeSide("receive", $("#trade-receive-items"), "trade.emptyReceive", $("#trade-receive-total"));
   const difference = tradeTotal("receive") - tradeTotal("offer");
   $("#trade-after-balance-value").textContent = Math.max(0, difference).toLocaleString();
@@ -562,6 +611,7 @@ function renderCart() {
 function setCatalog(nextProducts) {
   products.splice(0, products.length, ...nextProducts);
   catalogLoaded = true;
+  renderFilters();
   tradeState.receive = tradeState.receive.filter((id) => products.some((product) => product.id === id));
   renderAllProductViews();
   window.dispatchEvent(new Event("catalogproductschange"));
@@ -712,20 +762,57 @@ window.addEventListener("resize", () => {
   updateMarketIndicator();
 });
 
-categoryFilters.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-category]");
-  if (!button) return;
-  state.category = button.dataset.category;
+function setShopFilterOpen(filterId) {
+  state.openFilter = filterId;
+  shopFilters.querySelectorAll("[data-shop-filter]").forEach((filter) => {
+    const open = filter.dataset.shopFilter === filterId;
+    filter.classList.toggle("is-open", open);
+    filter.querySelector("[data-shop-filter-toggle]").setAttribute("aria-expanded", String(open));
+    const panel = filter.querySelector(".trade-filter-panel");
+    panel.setAttribute("aria-hidden", String(!open));
+    panel.inert = !open;
+  });
+}
+
+shopFilters.addEventListener("click", (event) => {
+  if (event.target.closest("[data-shop-reset]")) {
+    Object.assign(state, { categories: [], tags: [], game: "all", sort: "featured", openFilter: "" });
+    renderFilters();
+    renderProducts();
+    return;
+  }
+  const toggle = event.target.closest("[data-shop-filter-toggle]");
+  if (!toggle) return;
+  const filterId = toggle.dataset.shopFilterToggle;
+  setShopFilterOpen(state.openFilter === filterId ? "" : filterId);
+});
+
+shopFilters.addEventListener("change", (event) => {
+  const input = event.target.closest("[data-filter-value]");
+  if (!input) return;
+  const filterId = input.closest("[data-shop-filter]").dataset.shopFilter;
+  const value = input.value;
+  if (filterId === "shop-game-filter") state.game = value;
+  else if (filterId === "shop-sort-filter") state.sort = value;
+  else {
+    const key = filterId === "shop-type-filter" ? "categories" : "tags";
+    state[key] = input.checked ? [...new Set([...state[key], value])] : state[key].filter((item) => item !== value);
+  }
   renderFilters();
+  setShopFilterOpen(input.type === "radio" ? "" : filterId);
+  if (input.type !== "radio") {
+    [...shopFilters.querySelectorAll(`#${filterId}-options input`)].find((item) => item.value === value)?.focus({ preventScroll: true });
+  }
   renderProducts();
 });
 
-gameFilters.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-game]");
-  if (!button) return;
-  state.game = button.dataset.game;
-  renderFilters();
-  renderProducts();
+document.addEventListener("click", (event) => {
+  if (!state.openFilter || event.target.closest("#shop-filters")) return;
+  setShopFilterOpen("");
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && state.openFilter) setShopFilterOpen("");
 });
 
 $("#trade-specific-filters").addEventListener("click", (event) => {
@@ -852,9 +939,10 @@ $("#home-search-form").addEventListener("submit", (event) => {
 $("#home-categories").addEventListener("click", (event) => {
   const button = event.target.closest("[data-home-category]");
   if (!button) return;
-  state.category = button.dataset.homeCategory;
-  if (state.category === copy.categories.item) state.game = "all";
-  else if ([copy.categories.rivals, copy.categories.competitor].includes(state.category)) state.game = "ROBLOX RIVALS";
+  const category = button.dataset.homeCategory;
+  state.categories = [category];
+  if (category === copy.categories.item) state.game = "all";
+  else if ([copy.categories.rivals, copy.categories.competitor].includes(category)) state.game = "ROBLOX RIVALS";
   else state.game = "CS2";
   renderFilters();
   history.pushState(null, "", "#shop");
@@ -862,10 +950,6 @@ $("#home-categories").addEventListener("click", (event) => {
   renderProducts();
 });
 
-$("#sort-products").addEventListener("change", (event) => {
-  state.sort = event.target.value;
-  renderProducts();
-});
 
 document.querySelectorAll("[data-market-mode]").forEach((button) => {
   button.addEventListener("click", () => {
@@ -910,6 +994,152 @@ for (const side of ["offer", "receive"]) {
     renderTradeItems();
   });
 }
+
+// ---------- 交易頁：讀取自己的 Steam 庫存 ----------
+
+const STEAM_ICON_BASE = "https://community.cloudflare.steamstatic.com/economy/image/";
+const ownInventory = { steamId: "", items: [], savedAt: 0 };
+
+function tradeUrlSteamId() {
+  try {
+    const partner = new URL(window.eloUserProfile?.tradeUrl || "").searchParams.get("partner") || "";
+    return /^\d{1,10}$/.test(partner) ? (76561197960265728n + BigInt(partner)).toString() : "";
+  } catch {
+    return "";
+  }
+}
+
+function inventoryStorageKey() {
+  return window.eloAuthUser ? `eloskin2.inventory.${window.eloAuthUser.uid}` : "";
+}
+
+function parseSteamInventory(raw) {
+  const start = raw.indexOf("{");
+  const end = raw.lastIndexOf("}");
+  let parsed;
+  try {
+    if (start < 0 || end <= start) throw new Error("no_json");
+    parsed = JSON.parse(raw.slice(start, end + 1));
+  } catch {
+    throw new Error(t("admin.pasteInvalid"));
+  }
+  const data = parsed?.response && typeof parsed.response === "object" ? parsed.response : parsed;
+  if (!Array.isArray(data?.assets) || !Array.isArray(data?.descriptions)) {
+    throw new Error(t(parsed?.success === false || parsed === null ? "admin.pastePrivate" : "admin.pasteInvalid"));
+  }
+  const descriptions = new Map(data.descriptions.map((description) => [`${description.classid}_${description.instanceid}`, description]));
+  const items = [];
+  for (const asset of data.assets) {
+    const description = descriptions.get(`${asset.classid}_${asset.instanceid}`);
+    if (!description || Number(description.tradable) !== 1) continue;
+    items.push({
+      assetId: String(asset.assetid),
+      name: String(description.name || description.market_hash_name || "CS2"),
+      marketHashName: String(description.market_hash_name || description.name || ""),
+      type: String(description.type || ""),
+      iconUrl: typeof description.icon_url === "string" && description.icon_url
+        ? STEAM_ICON_BASE + description.icon_url.split("/").map(encodeURIComponent).join("/")
+        : ""
+    });
+  }
+  return items;
+}
+
+function setInventoryStatus(message, kind = "") {
+  $("#trade-inv-status").textContent = message;
+  $("#trade-inv-status").dataset.kind = kind;
+}
+
+function restoreOwnInventory() {
+  const steamId = tradeUrlSteamId();
+  ownInventory.steamId = steamId;
+  ownInventory.items = [];
+  ownInventory.savedAt = 0;
+  const key = inventoryStorageKey();
+  if (key && steamId) {
+    try {
+      const saved = JSON.parse(localStorage.getItem(key) || "null");
+      if (saved?.steamId === steamId && Array.isArray(saved.items)) {
+        ownInventory.items = saved.items;
+        ownInventory.savedAt = Number(saved.savedAt) || 0;
+      }
+    } catch {
+      // 讀不到本機紀錄就當作沒有
+    }
+  }
+  renderOwnInventory();
+}
+
+function renderOwnInventory() {
+  const signedIn = Boolean(window.eloAuthUser);
+  const steamId = ownInventory.steamId;
+  const link = $("#trade-inv-open");
+  const paste = $("#trade-inv-paste");
+  paste.hidden = !signedIn || !steamId;
+  if (steamId) link.href = `https://steamcommunity.com/inventory/${steamId}/730/2?l=tchinese&count=2000`;
+  else link.removeAttribute("href");
+  const hasItems = ownInventory.items.length > 0;
+  $("#trade-inv-search").hidden = !hasItems;
+  $("#trade-own-count").textContent = hasItems ? t("trade.inventoryCount", { count: ownInventory.items.length }) : "";
+  paste.querySelector("summary").textContent = hasItems ? t("trade.inventoryReload") : t("trade.inventoryLoad");
+  if (!signedIn) setInventoryStatus(t("trade.inventoryNeedLogin"));
+  else if (!steamId) setInventoryStatus(t("trade.inventoryNeedTradeUrl"));
+  else if (hasItems) {
+    setInventoryStatus(t("trade.inventoryLoaded", {
+      count: ownInventory.items.length,
+      time: new Date(ownInventory.savedAt).toLocaleString("zh-TW", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })
+    }), "success");
+  } else setInventoryStatus("");
+
+  const term = $("#trade-inv-search").value.trim().toLocaleLowerCase("zh-Hant");
+  const selected = new Set(tradeState.offer.map((item) => item.assetId).filter(Boolean));
+  const visible = ownInventory.items.filter((item) => !term || `${item.name} ${item.type}`.toLocaleLowerCase("zh-Hant").includes(term));
+  $("#trade-own-grid").innerHTML = hasItems && !visible.length
+    ? `<p class="trade-filter-note">${escapeHtml(t("trade.inventoryEmpty"))}</p>`
+    : visible.map((item) => `
+      <button class="trade-own-item${selected.has(item.assetId) ? " is-selected" : ""}" type="button" data-own-asset="${escapeHtml(item.assetId)}" aria-label="${escapeHtml(t("trade.inventoryAdd", { name: item.name }))}"${selected.has(item.assetId) ? " disabled" : ""}>
+        <span class="trade-own-art">${item.iconUrl ? `<img src="${escapeHtml(item.iconUrl)}" alt="" loading="lazy">` : ""}</span>
+        <strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong>
+        <small>${escapeHtml(item.type)}</small>
+      </button>`).join("");
+}
+
+$("#trade-inv-load").addEventListener("click", () => {
+  try {
+    const items = parseSteamInventory($("#trade-inv-input").value);
+    if (!items.length) throw new Error(t("admin.pasteNoTradable"));
+    ownInventory.items = items;
+    ownInventory.savedAt = Date.now();
+    try {
+      localStorage.setItem(inventoryStorageKey(), JSON.stringify({ steamId: ownInventory.steamId, items, savedAt: ownInventory.savedAt }));
+    } catch {
+      // 存不進本機也沒關係，這次照常使用
+    }
+    $("#trade-inv-input").value = "";
+    $("#trade-inv-paste").open = false;
+    renderOwnInventory();
+  } catch (error) {
+    setInventoryStatus(error.message, "error");
+  }
+});
+
+$("#trade-inv-search").addEventListener("input", renderOwnInventory);
+
+$("#trade-own-grid").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-own-asset]");
+  if (!button) return;
+  const item = ownInventory.items.find((entry) => entry.assetId === button.dataset.ownAsset);
+  if (!item || tradeState.offer.some((entry) => entry.assetId === item.assetId)) return;
+  if (tradeState.offer.length >= 20) {
+    showToast(t("trade.offerLimit"));
+    return;
+  }
+  tradeState.offer.push({ id: `asset-${item.assetId}`, name: item.name, value: 0, assetId: item.assetId, marketHashName: item.marketHashName, iconUrl: item.iconUrl });
+  renderTrade();
+});
+
+window.addEventListener("eloauthchange", restoreOwnInventory);
+window.addEventListener("eloprofilechange", restoreOwnInventory);
 
 $("#trade-offer-form").addEventListener("submit", (event) => {
   event.preventDefault();
