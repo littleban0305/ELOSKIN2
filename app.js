@@ -1152,32 +1152,6 @@ window.addEventListener("elopricesloaded", () => {
   renderTrade();
 });
 
-$("#trade-offer-form").addEventListener("submit", (event) => {
-  event.preventDefault();
-  const name = $("#trade-offer-name").value.trim();
-  const valueText = $("#trade-offer-value").value.trim();
-  const value = valueText === "" ? 0 : Number(valueText);
-  if (!name) {
-    showToast(t("trade.offerNameRequired"));
-    $("#trade-offer-name").focus();
-    return;
-  }
-  if (!Number.isInteger(value) || value < 0 || value > 10000000) {
-    showToast(t("trade.offerValueInvalid"));
-    $("#trade-offer-value").focus();
-    return;
-  }
-  if (tradeState.offer.length >= 20) {
-    showToast(t("trade.offerLimit"));
-    return;
-  }
-  tradeState.offer.push({ id: `offer-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, name: name.slice(0, 100), value });
-  $("#trade-offer-name").value = "";
-  $("#trade-offer-value").value = "";
-  $("#trade-offer-name").focus();
-  renderTrade();
-});
-
 $("#trade-submit").addEventListener("click", () => {
   if (!tradeState.offer.length || !tradeState.receive.length) {
     showToast(t("trade.itemsRequired"));
