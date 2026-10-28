@@ -1,0 +1,288 @@
+/* ---------- 手機版：漢堡選單、頂部工具列、各頁重新排版（最後載入，覆蓋舊樣式） ---------- */
+
+.nav-toggle,
+.nav-backdrop,
+.nav-link-mobile {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  /* ----- 頂部列：左邊漢堡 + 標誌，右邊餘額與按鈕 ----- */
+  .site-header {
+    position: sticky !important;
+    top: 0;
+    z-index: 30 !important;
+    height: 60px !important;
+    min-height: 60px !important;
+    flex-wrap: nowrap !important;
+    align-items: center;
+    gap: 8px !important;
+    padding: 0 12px !important;
+    background: rgba(10, 16, 21, .96) !important;
+    border-bottom: 1px solid #1d2a31;
+  }
+
+  .nav-toggle {
+    flex: 0 0 auto;
+    display: grid;
+    place-content: center;
+    gap: 5px;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    color: #dce5e8;
+    background: #151f25;
+    border: 1px solid #263540;
+    border-radius: 12px;
+    cursor: pointer;
+  }
+
+  .nav-toggle span {
+    display: block;
+    width: 18px;
+    height: 2px;
+    background: currentColor;
+    border-radius: 2px;
+    transition: transform .2s, opacity .2s;
+  }
+
+  body.nav-open .nav-toggle span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  body.nav-open .nav-toggle span:nth-child(2) { opacity: 0; }
+  body.nav-open .nav-toggle span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+  .brand {
+    flex: 0 1 auto;
+    min-width: 0;
+    gap: 6px !important;
+  }
+
+  .brand-logo {
+    width: 28px !important;
+    height: 28px !important;
+  }
+
+  .header-actions.header-utility-card {
+    flex: 0 0 auto;
+    margin-left: auto !important;
+    gap: 6px !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    background: none !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .header-utility-card .cart-button,
+  .header-utility-card .account-button.signed-in {
+    width: 36px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+  }
+
+  .header-utility-card .account-button:not(.signed-in) {
+    min-height: 36px !important;
+    padding-inline: 12px !important;
+    white-space: nowrap;
+  }
+
+  .wallet-chip {
+    height: 36px;
+    padding-inline: 10px !important;
+  }
+
+  .wallet-chip-plus { display: none !important; }
+
+  /* ----- 抽屜選單 ----- */
+  .main-nav {
+    position: fixed !important;
+    z-index: 50 !important;
+    top: 60px !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: auto !important;
+    order: 0 !important;
+    width: min(280px, 82vw) !important;
+    height: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    gap: 4px !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    margin: 0 !important;
+    padding: 14px 14px 24px !important;
+    background: #0f171c !important;
+    border: 0 !important;
+    border-right: 1px solid #22313a !important;
+    border-radius: 0 !important;
+    box-shadow: 12px 0 40px rgba(0, 0, 0, .5) !important;
+    transform: translateX(-105%);
+    visibility: hidden;
+    transition: transform .25s ease, visibility 0s linear .25s;
+  }
+
+  body.nav-open .main-nav {
+    transform: translateX(0);
+    visibility: visible;
+    transition: transform .25s ease, visibility 0s;
+  }
+
+  .main-nav .nav-link {
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    height: 48px !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: flex-start !important;
+    padding: 0 14px !important;
+    color: #b7c4c9;
+    border-radius: 12px;
+  }
+
+  .main-nav .nav-link[hidden] { display: none !important; }
+  .main-nav .nav-link::after { display: none !important; }
+
+  .main-nav .nav-link.active {
+    color: #0b1a17 !important;
+    background: #50dbc5;
+  }
+
+  .main-nav .nav-link-mobile { display: flex !important; }
+  body:not(.is-signed-in) .main-nav .nav-link-member { display: none !important; }
+
+  #admin-nav-link + .nav-link-mobile {
+    margin-top: 10px;
+    border-top: 1px solid #22313a;
+    border-radius: 0 0 12px 12px;
+  }
+
+  #admin-nav-link + .nav-link-mobile.active { border-radius: 12px; }
+
+  .nav-active-indicator { display: none !important; }
+
+  .nav-backdrop {
+    position: fixed;
+    inset: 60px 0 0;
+    z-index: 40;
+    display: block;
+    background: rgba(0, 0, 0, .55);
+  }
+
+  .nav-backdrop[hidden] { display: none; }
+
+  body.nav-open { overflow: hidden; }
+
+  /* 漢堡按鈕要在抽屜上面 */
+  body.nav-open .site-header { z-index: 60 !important; }
+  body.nav-open .header-actions { visibility: hidden; }
+
+  /* ----- 取消舊的底部導覽列留白 ----- */
+  body { padding-bottom: 0 !important; }
+  .toast { bottom: 20px !important; max-width: calc(100vw - 32px); }
+
+  /* ----- 系統通知詢問：底部小卡片 ----- */
+  .notify-prompt {
+    left: 12px !important;
+    right: 12px !important;
+    bottom: 12px !important;
+    width: auto !important;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px !important;
+    padding: 12px 14px !important;
+    border-radius: 14px !important;
+  }
+
+  .notify-prompt p { line-height: 1.5 !important; }
+  .notify-prompt-actions { flex-wrap: wrap; justify-content: flex-end; }
+  .notify-prompt-actions button { min-height: 34px; padding-inline: 12px; }
+
+  /* ----- 頁面標題與間距 ----- */
+  .shop-page,
+  .trade-page,
+  .profile-page,
+  .wallet-page,
+  .notifications-page,
+  .admin-page {
+    padding-top: 20px !important;
+  }
+
+  .page-heading {
+    margin-bottom: 16px !important;
+    padding-bottom: 12px !important;
+    gap: 12px !important;
+  }
+
+  .notifications-heading {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+  }
+
+  .hero { overflow: hidden; }
+
+  /* ----- 商品卡片底部：價格、庫存、加入購物車不要擠在一起 ----- */
+  .product-bottom {
+    flex-wrap: wrap;
+    row-gap: 6px !important;
+  }
+
+  .product-price { flex: 1 0 100%; }
+  .product-bottom .product-stock { flex: 1; text-align: left; }
+
+  /* ----- 管理頁分頁可左右滑動 ----- */
+  .admin-tabs {
+    max-width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap !important;
+    scrollbar-width: none;
+  }
+
+  .admin-tabs::-webkit-scrollbar { display: none; }
+  .admin-tabs > * { flex: 0 0 auto; white-space: nowrap; }
+
+  /* ----- 交易頁：先放你的物品、篩選、再放庫存；確認按鈕固定在底部 ----- */
+  .trade-workspace {
+    grid-template-areas: "offer" "controls" "receive" !important;
+  }
+
+  .trade-page { padding-bottom: 96px !important; }
+
+  .trade-controls .trade-submit,
+  .trade-controls .trade-after-balance {
+    position: fixed !important;
+    z-index: 20;
+    bottom: 12px;
+    height: 52px;
+    min-height: 52px !important;
+    margin: 0 !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .5);
+  }
+
+  .trade-controls .trade-after-balance {
+    left: 12px;
+    right: calc(50% + 4px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px !important;
+    background: #151f25 !important;
+    border: 1px solid #263540;
+    border-radius: 14px !important;
+  }
+
+  .trade-controls .trade-submit {
+    left: calc(50% - 4px + 8px);
+    right: 12px;
+    width: auto !important;
+    border-radius: 14px !important;
+  }
+
+  body:has(#page-trade:not([hidden])) .toast { bottom: 76px !important; }
+  body:has(#page-trade:not([hidden])) .notify-prompt { bottom: 76px !important; }
+}
+
+@media (max-width: 360px) {
+  .brand > span { display: none; }
+}

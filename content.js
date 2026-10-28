@@ -19,6 +19,11 @@ window.ELOSKIN2_TEXT = {
     profileAria: "個人主頁",
     admin: "管理",
     notificationsAria: "通知",
+    menuOpen: "開啟選單",
+    menuClose: "關閉選單",
+    wallet: "儲值",
+    notifications: "通知",
+    profile: "個人頁面",
     mainNavAria: "主要選單"
   },
   home: {

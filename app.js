@@ -827,8 +827,30 @@ window.addEventListener("hashchange", () => {
   if (["guide", "safety", "marketplace"].includes(destination)) showHomeAnchor(destination);
   else navigateTo(destination);
 });
+// ---------- 手機版漢堡選單 ----------
+
+function setNavOpen(open) {
+  document.body.classList.toggle("nav-open", open);
+  $("#nav-toggle").setAttribute("aria-expanded", String(open));
+  $("#nav-toggle").setAttribute("aria-label", t(open ? "nav.menuClose" : "nav.menuOpen"));
+  $("#nav-backdrop").hidden = !open;
+}
+
+$("#nav-toggle").addEventListener("click", () => setNavOpen(!document.body.classList.contains("nav-open")));
+$("#nav-backdrop").addEventListener("click", () => setNavOpen(false));
+$("#main-nav").addEventListener("click", (event) => {
+  if (event.target.closest("a")) setNavOpen(false);
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && document.body.classList.contains("nav-open")) setNavOpen(false);
+});
+window.matchMedia("(min-width: 721px)").addEventListener("change", (event) => {
+  if (event.matches) setNavOpen(false);
+});
+
 window.addEventListener("eloauthchange", (event) => {
   renderProfileFavorites();
+  document.body.classList.toggle("is-signed-in", Boolean(event.detail?.user));
   const isAdmin = Boolean(event.detail?.isAdmin);
   $("#admin-nav-link").hidden = !isAdmin;
   const onAdminPage = !$("#page-admin").hidden;

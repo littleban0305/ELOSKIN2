@@ -16,12 +16,13 @@
     <link rel="stylesheet" href="orders.css?v=2">
     <link rel="stylesheet" href="wallet.css?v=1">
     <link rel="stylesheet" href="shop.css?v=3">
-    <script src="content.js?v=39" defer></script>
+    <link rel="stylesheet" href="mobile.css?v=1">
+    <script src="content.js?v=40" defer></script>
     <script src="inventory-import.js?v=1" defer></script>
     <script src="prices.js?v=1" defer></script>
     <script src="firebase-config.js?v=1" defer></script>
     <script src="steam-config.js?v=4" defer></script>
-    <script src="app.js?v=38" defer></script>
+    <script src="app.js?v=39" defer></script>
     <script src="auth.js?v=26" defer></script>
     <script src="admin.js?v=9" defer></script>
     <script src="orders.js?v=4" defer></script>
@@ -29,15 +30,21 @@
   </head>
   <body>
     <header class="site-header">
+      <button class="nav-toggle" id="nav-toggle" type="button" aria-expanded="false" aria-controls="main-nav" data-copy-aria="nav.menuOpen">
+        <span></span><span></span><span></span>
+      </button>
       <a class="brand" href="#home" data-copy-aria="brand.homeAria">
         <img class="brand-logo" src="assets/logo/logo.png" alt="">
         <span><span data-copy="brand.namePrefix"></span><span class="brand-number" data-copy="brand.nameNumber"></span></span>
       </a>
-      <nav class="main-nav" data-copy-aria="nav.mainNavAria">
+      <nav class="main-nav" id="main-nav" data-copy-aria="nav.mainNavAria">
         <a class="nav-link active" href="#home" data-page-link="home" data-copy="nav.home"></a>
         <a class="nav-link" href="#shop" data-page-link="shop" data-copy="nav.shop"></a>
         <a class="nav-link" href="#trade" data-page-link="trade" data-copy="nav.trade"></a>
         <a class="nav-link" id="admin-nav-link" href="#admin" data-page-link="admin" data-copy="nav.admin" hidden></a>
+        <a class="nav-link nav-link-mobile nav-link-member" href="#wallet" data-page-link="wallet" data-copy="nav.wallet"></a>
+        <a class="nav-link nav-link-mobile nav-link-member" href="#notifications" data-page-link="notifications" data-copy="nav.notifications"></a>
+        <a class="nav-link nav-link-mobile nav-link-member" href="#profile" data-page-link="profile" data-copy="nav.profile"></a>
         <span class="nav-active-indicator" aria-hidden="true"></span>
       </nav>
       <div class="header-actions header-utility-card">
@@ -55,6 +62,7 @@
         <button class="account-button" id="profile-shortcut" type="button" data-copy-aria="nav.accountAria" data-copy="nav.account"></button>
       </div>
     </header>
+    <div class="nav-backdrop" id="nav-backdrop" hidden></div>
 
     <main>
       <section class="page-view active" id="page-home" data-page-view="home">
