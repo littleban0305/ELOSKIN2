@@ -199,3 +199,35 @@
     align-items: stretch;
   }
 }
+
+/* ---------- SteamAnalyst 金鑰 ---------- */
+
+.price-key-steps {
+  margin: 0 0 14px;
+  padding-left: 20px;
+  display: grid;
+  gap: 6px;
+  color: #b7c4c9;
+  line-height: 1.6;
+}
+
+.price-key-steps a,
+.trade-price-hint a {
+  color: #50dbc5;
+  word-break: break-all;
+}
+
+.price-key-usage {
+  margin: 12px 0 0;
+  color: #8fa0a6;
+  line-height: 1.7;
+  white-space: pre-line;
+}
+
+.price-key-usage:empty { display: none; }
+
+.trade-price-hint {
+  margin: 4px 0 10px;
+}
+
+.trade-price-hint[hidden] { display: none; }

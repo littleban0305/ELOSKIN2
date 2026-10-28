@@ -168,6 +168,38 @@ service cloud.firestore {
       }
     }
 
+    // 每位使用者自己的 SteamAnalyst 金鑰，只有本人讀寫
+    match /userSecrets/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create, update: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly(["steamAnalystKey", "updatedAt"])
+        && request.resource.data.steamAnalystKey is string
+        && request.resource.data.steamAnalystKey.size() <= 200
+        && (request.resource.data.steamAnalystKey == "" || request.resource.data.steamAnalystKey.matches("^sa_[A-Za-z0-9_-]{8,190}$"))
+        && request.resource.data.updatedAt is int;
+      allow delete: if false;
+    }
+
+    // SteamAnalyst 查到的價格，大家共用；usd 為 0 代表查無此物品
+    match /marketPrices/{priceId} {
+      allow read: if true;
+      allow create, update: if request.auth != null
+        && request.auth.token.firebase.sign_in_provider != "anonymous"
+        && request.resource.data.keys().hasOnly(["name", "usd", "source", "updatedAt", "updatedBy"])
+        && request.resource.data.keys().hasAll(["name", "usd", "source", "updatedAt", "updatedBy"])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 300
+        && request.resource.data.usd is number
+        && request.resource.data.usd >= 0
+        && request.resource.data.usd <= 1000000
+        && request.resource.data.source == "steamanalyst"
+        && request.resource.data.updatedAt is int
+        && request.resource.data.updatedBy == request.auth.uid;
+      allow delete: if isAdmin();
+    }
+
     match /userProfiles/{userId} {
       allow read: if request.auth != null && request.auth.uid == userId;
       allow create, update: if request.auth != null

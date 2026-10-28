@@ -12,19 +12,19 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css?v=60">
     <link rel="stylesheet" href="admin.css?v=6">
-    <link rel="stylesheet" href="profile.css?v=2">
+    <link rel="stylesheet" href="profile.css?v=3">
     <link rel="stylesheet" href="orders.css?v=2">
     <link rel="stylesheet" href="wallet.css?v=1">
     <link rel="stylesheet" href="shop.css?v=3">
     <link rel="stylesheet" href="mobile.css?v=1">
-    <script src="content.js?v=40" defer></script>
+    <script src="content.js?v=41" defer></script>
     <script src="inventory-import.js?v=1" defer></script>
-    <script src="prices.js?v=1" defer></script>
+    <script src="prices.js?v=2" defer></script>
     <script src="firebase-config.js?v=1" defer></script>
     <script src="steam-config.js?v=4" defer></script>
-    <script src="app.js?v=39" defer></script>
+    <script src="app.js?v=40" defer></script>
     <script src="auth.js?v=26" defer></script>
-    <script src="admin.js?v=9" defer></script>
+    <script src="admin.js?v=10" defer></script>
     <script src="orders.js?v=4" defer></script>
     <script src="wallet.js?v=3" defer></script>
   </head>
@@ -136,6 +136,7 @@
                 <span id="trade-own-count"></span>
               </div>
               <p class="account-status trade-inv-status" id="trade-inv-status"></p>
+              <p class="trade-price-hint" id="trade-price-hint" hidden><a href="#profile" data-copy="priceKey.tradeHint"></a></p>
               <details class="admin-steam-paste trade-inv-paste" id="trade-inv-paste">
                 <summary data-copy="trade.inventoryLoad"></summary>
                 <div class="bookmarklet-box">
@@ -242,6 +243,22 @@
                 <button class="admin-primary-button" id="profile-edit-submit" type="submit" data-copy="profile.saveChanges"></button>
               </div>
             </form>
+          </section>
+          <section class="account-card account-price-key" id="price-key-card" hidden>
+            <h2 data-copy="priceKey.title"></h2>
+            <ol class="price-key-steps">
+              <li><span data-copy="priceKey.step1"></span> <a href="https://www.steamanalyst.com/developers" target="_blank" rel="noopener" data-copy="priceKey.step1Link"></a></li>
+              <li data-copy="priceKey.step2"></li>
+            </ol>
+            <form class="account-form" id="price-key-form" novalidate>
+              <label class="admin-field"><span class="admin-field-label" data-copy="priceKey.label"></span><input id="price-key-input" type="password" autocomplete="off" spellcheck="false" data-copy-placeholder="priceKey.placeholder"></label>
+              <div class="account-form-footer">
+                <p class="account-status" id="price-key-status" role="status" aria-live="polite"></p>
+                <button class="admin-ghost-button" id="price-key-clear" type="button" data-copy="priceKey.clear" hidden></button>
+                <button class="admin-primary-button" id="price-key-submit" type="submit" data-copy="profile.saveChanges"></button>
+              </div>
+            </form>
+            <p class="price-key-usage" id="price-key-usage"></p>
           </section>
           <section class="account-favorites account-orders">
             <div class="account-section-heading"><h2 data-copy="orders.myOrders"></h2><span id="profile-orders-count">0</span></div>

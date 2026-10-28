@@ -361,7 +361,8 @@
       const next = [];
       snapshot.forEach((document) => next.push({ id: document.id, ...document.data() }));
       listings = next.sort((a, b) => (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0));
-      if (listings.some((listing) => listing.steam?.marketHashName)) window.eloPrices?.load();
+      const listingNames = listings.map((listing) => listing.steam?.marketHashName).filter(Boolean);
+      if (listingNames.length) window.eloPrices?.request(listingNames);
       listingsLoaded = true;
       listingsError = "";
       refreshTagSuggestions();
@@ -987,6 +988,7 @@
     const listed = listedMarketNames();
     const visible = steamItems.filter((item) => !term
       || `${item.name} ${item.marketHashName} ${item.type}`.toLocaleLowerCase("zh-Hant").includes(term));
+    window.eloPrices?.request(visible.map((item) => item.marketHashName));
     steamStatus.textContent = [
       text("admin.steamLoaded", { count: visible.length }),
       window.eloPrices?.loaded() ? text("admin.marketPriceUpdated", { time: window.eloPrices.updatedLabel() }) : ""

@@ -1173,9 +1173,13 @@ function restoreOwnInventory() {
 }
 
 function ownItemPriceLabel(item) {
-  if (!window.eloPrices?.loaded()) return t("trade.priceLoading");
-  const ec = window.eloPrices.ec(item.marketHashName);
-  return ec === null ? t("trade.priceUnknown") : t("trade.priceEstimate", { ec: ec.toLocaleString() });
+  const prices = window.eloPrices;
+  if (!prices) return t("trade.priceUnknown");
+  const ec = prices.ec(item.marketHashName);
+  if (ec !== null && prices.source(item.marketHashName) === "steamanalyst") return t("trade.priceEstimate", { ec: ec.toLocaleString() });
+  if (prices.pending(item.marketHashName)) return t("trade.priceQueued");
+  if (ec !== null) return t("trade.priceEstimateFallback", { ec: ec.toLocaleString() });
+  return prices.loaded() ? t("trade.priceUnknown") : t("trade.priceLoading");
 }
 
 function renderOwnInventory() {
@@ -1188,7 +1192,9 @@ function renderOwnInventory() {
   else link.removeAttribute("href");
   updateTradeBookmarklet(steamId, "trade");
   const hasItems = ownInventory.items.length > 0;
-  if (hasItems && window.eloPrices && !window.eloPrices.loaded()) window.eloPrices.load();
+  if (hasItems && window.eloPrices) {
+    window.eloPrices.request([...tradeState.offer.map((item) => item.marketHashName), ...ownInventory.items.map((item) => item.marketHashName)]);
+  }
   $("#trade-inv-search").hidden = !hasItems;
   $("#trade-own-count").textContent = hasItems ? t("trade.inventoryCount", { count: ownInventory.items.length }) : "";
   paste.querySelector("summary").textContent = hasItems ? t("trade.inventoryReload") : t("trade.inventoryLoad");
@@ -1202,6 +1208,7 @@ function renderOwnInventory() {
       time: new Date(ownInventory.savedAt).toLocaleString("zh-TW", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })
     }), "success");
   } else setInventoryStatus("");
+  $("#trade-price-hint").hidden = !signedIn || !hasItems || Boolean(window.eloPrices?.status().hasKey);
 
   const term = $("#trade-inv-search").value.trim().toLocaleLowerCase("zh-Hant");
   const selected = new Set(tradeState.offer.map((item) => item.assetId).filter(Boolean));
@@ -1251,10 +1258,78 @@ window.addEventListener("eloauthchange", restoreOwnInventory);
 window.addEventListener("eloprofilechange", restoreOwnInventory);
 window.addEventListener("elopricesloaded", () => {
   for (const item of tradeState.offer) {
-    if (item.autoValue && !item.value) item.value = window.eloPrices.ec(item.marketHashName) || 0;
+    if (item.autoValue) item.value = window.eloPrices.ec(item.marketHashName) || item.value || 0;
   }
   renderTrade();
+  renderPriceKeyCard();
 });
+
+// ---------- 個人頁：SteamAnalyst 金鑰 ----------
+
+function setPriceKeyStatus(message, kind = "") {
+  $("#price-key-status").textContent = message;
+  $("#price-key-status").dataset.kind = kind;
+}
+
+function renderPriceKeyCard() {
+  const card = $("#price-key-card");
+  const signedIn = Boolean(window.eloAuthUser);
+  card.hidden = !signedIn || !window.eloPrices;
+  if (card.hidden) return;
+  const status = window.eloPrices.status();
+  $("#price-key-clear").hidden = !status.hasKey;
+  const lines = [status.hasKey ? t("priceKey.current", { key: status.maskedKey }) : t("priceKey.none")];
+  if (status.hasKey) {
+    lines.push(t("priceKey.usage", {
+      used: status.usedToday,
+      limit: status.dailyLimit,
+      minute: status.usedThisMinute,
+      minuteLimit: status.minuteLimit,
+      queued: status.queued
+    }));
+    const resume = status.resumeAt ? new Date(status.resumeAt).toLocaleString("zh-TW", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : "";
+    if (status.blockedReason === "key") lines.push(t("priceKey.blockedKey", { code: status.lastError }));
+    else if (status.blockedReason === "network") lines.push(t("priceKey.blockedNetwork"));
+    else if (status.blockedReason === "minute") lines.push(t("priceKey.blockedMinute"));
+    else if (status.blockedReason === "daily" || status.usedToday >= status.dailyLimit) lines.push(t("priceKey.blockedDaily", { time: resume }));
+  }
+  $("#price-key-usage").textContent = lines.join("\n");
+}
+
+$("#price-key-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const value = $("#price-key-input").value.trim();
+  if (!value) {
+    setPriceKeyStatus(t("priceKey.formatError"), "error");
+    return;
+  }
+  setPriceKeyStatus(t("priceKey.saving"));
+  try {
+    await window.eloPrices.saveKey(value);
+    $("#price-key-input").value = "";
+    setPriceKeyStatus(t("priceKey.saved"), "success");
+    if (ownInventory.items.length) renderOwnInventory();
+  } catch (error) {
+    setPriceKeyStatus(error.message === "format" ? t("priceKey.formatError") : t("priceKey.saveError", { message: error.message }), "error");
+  }
+  renderPriceKeyCard();
+});
+
+$("#price-key-clear").addEventListener("click", async () => {
+  try {
+    await window.eloPrices.saveKey("");
+    setPriceKeyStatus(t("priceKey.cleared"), "success");
+  } catch (error) {
+    setPriceKeyStatus(t("priceKey.saveError", { message: error.message }), "error");
+  }
+  renderPriceKeyCard();
+});
+
+window.addEventListener("eloauthchange", renderPriceKeyCard);
+window.setInterval(() => {
+  if (!$("#page-profile").hidden) renderPriceKeyCard();
+}, 5000);
+renderPriceKeyCard();
 
 $("#trade-submit").addEventListener("click", () => {
   if (!tradeState.offer.length || !tradeState.receive.length) {
