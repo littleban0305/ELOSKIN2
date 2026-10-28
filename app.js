@@ -1172,14 +1172,8 @@ function restoreOwnInventory() {
   renderOwnInventory();
 }
 
-function ownItemPriceLabel(item) {
-  const prices = window.eloPrices;
-  if (!prices) return t("trade.priceUnknown");
-  const ec = prices.ec(item.marketHashName);
-  if (ec !== null && prices.source(item.marketHashName) === "steamanalyst") return t("trade.priceEstimate", { ec: ec.toLocaleString() });
-  if (prices.pending(item.marketHashName)) return t("trade.priceQueued");
-  if (ec !== null) return t("trade.priceEstimateFallback", { ec: ec.toLocaleString() });
-  return prices.loaded() ? t("trade.priceUnknown") : t("trade.priceLoading");
+function ownItemEc(item) {
+  return window.eloPrices?.ec(item.marketHashName) ?? null;
 }
 
 function renderOwnInventory() {
@@ -1208,19 +1202,38 @@ function renderOwnInventory() {
       time: new Date(ownInventory.savedAt).toLocaleString("zh-TW", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })
     }), "success");
   } else setInventoryStatus("");
-  $("#trade-price-hint").hidden = !signedIn || !hasItems || Boolean(window.eloPrices?.status().hasKey);
+
+  // 只顯示已經查到 SteamAnalyst 市價的物品
+  const prices = window.eloPrices;
+  const priceStatus = prices?.status();
+  const priced = ownInventory.items.filter((item) => ownItemEc(item) !== null);
+  const waiting = ownInventory.items.filter((item) => ownItemEc(item) === null && !prices?.missing(item.marketHashName)).length;
+  const missing = ownInventory.items.filter((item) => prices?.missing(item.marketHashName)).length;
+  const hint = $("#trade-price-hint");
+  if (!signedIn || !hasItems) {
+    hint.hidden = true;
+  } else if (!priceStatus?.hasKey && priceStatus?.keyReady) {
+    hint.hidden = false;
+    hint.innerHTML = `${escapeHtml(t("priceKey.tradeNeedKey"))} <button class="admin-ghost-button" type="button" data-open-price-key>${escapeHtml(t("priceKey.tradeSetKey"))}</button>`;
+  } else {
+    const lines = [];
+    if (waiting && priceStatus?.hasKey) lines.push(t("priceKey.tradeWaiting", { count: waiting }));
+    if (missing) lines.push(t("priceKey.tradeMissing", { count: missing }));
+    hint.hidden = !lines.length;
+    hint.textContent = lines.join(" · ");
+  }
 
   const term = $("#trade-inv-search").value.trim().toLocaleLowerCase("zh-Hant");
   const selected = new Set(tradeState.offer.map((item) => item.assetId).filter(Boolean));
-  const visible = ownInventory.items.filter((item) => !term || `${item.name} ${item.type}`.toLocaleLowerCase("zh-Hant").includes(term));
+  const visible = priced.filter((item) => !term || `${item.name} ${item.type}`.toLocaleLowerCase("zh-Hant").includes(term));
   $("#trade-own-grid").innerHTML = hasItems && !visible.length
-    ? `<p class="trade-filter-note">${escapeHtml(t("trade.inventoryEmpty"))}</p>`
+    ? (priced.length ? `<p class="trade-filter-note">${escapeHtml(t("trade.inventoryEmpty"))}</p>` : "")
     : visible.map((item) => `
       <button class="trade-own-item${selected.has(item.assetId) ? " is-selected" : ""}" type="button" data-own-asset="${escapeHtml(item.assetId)}" aria-label="${escapeHtml(t("trade.inventoryAdd", { name: item.name }))}"${selected.has(item.assetId) ? " disabled" : ""}>
         <span class="trade-own-art">${item.iconUrl ? `<img src="${escapeHtml(item.iconUrl)}" alt="" loading="lazy">` : ""}</span>
         <strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong>
         <small>${escapeHtml(item.type)}</small>
-        <em class="trade-own-price">${escapeHtml(ownItemPriceLabel(item))}</em>
+        <em class="trade-own-price">${escapeHtml(t("trade.priceEstimate", { ec: ownItemEc(item).toLocaleString() }))}</em>
       </button>`).join("");
 }
 
@@ -1244,7 +1257,7 @@ $("#trade-own-grid").addEventListener("click", (event) => {
   const button = event.target.closest("[data-own-asset]");
   if (!button) return;
   const item = ownInventory.items.find((entry) => entry.assetId === button.dataset.ownAsset);
-  if (!item || tradeState.offer.some((entry) => entry.assetId === item.assetId)) return;
+  if (!item || ownItemEc(item) === null || tradeState.offer.some((entry) => entry.assetId === item.assetId)) return;
   if (tradeState.offer.length >= 20) {
     showToast(t("trade.offerLimit"));
     return;
@@ -1271,15 +1284,21 @@ function setPriceKeyStatus(message, kind = "") {
   $("#price-key-status").dataset.kind = kind;
 }
 
+let priceKeyRevealed = false;
+
 function renderPriceKeyCard() {
   const card = $("#price-key-card");
   const signedIn = Boolean(window.eloAuthUser);
   card.hidden = !signedIn || !window.eloPrices;
   if (card.hidden) return;
   const status = window.eloPrices.status();
-  $("#price-key-clear").hidden = !status.hasKey;
-  const lines = [status.hasKey ? t("priceKey.current", { key: status.maskedKey }) : t("priceKey.none")];
+  const reveal = $("#price-key-reveal");
+  reveal.hidden = !status.hasKey;
+  reveal.textContent = t(priceKeyRevealed ? "priceKey.hide" : "priceKey.reveal");
+  const lines = [];
   if (status.hasKey) {
+    lines.push(t("priceKey.current", { key: priceKeyRevealed ? window.eloPrices.fullKey() : status.maskedKey }));
+    if (status.syncState) lines.push(t(status.syncState === "cloud" ? "priceKey.syncCloud" : "priceKey.syncLocal"));
     lines.push(t("priceKey.usage", {
       used: status.usedToday,
       limit: status.dailyLimit,
@@ -1292,43 +1311,89 @@ function renderPriceKeyCard() {
     else if (status.blockedReason === "network") lines.push(t("priceKey.blockedNetwork"));
     else if (status.blockedReason === "minute") lines.push(t("priceKey.blockedMinute"));
     else if (status.blockedReason === "daily" || status.usedToday >= status.dailyLimit) lines.push(t("priceKey.blockedDaily", { time: resume }));
-  }
+  } else lines.push(t("priceKey.none"));
   $("#price-key-usage").textContent = lines.join("\n");
+  updatePriceKeyModal();
 }
 
-$("#price-key-form").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const value = $("#price-key-input").value.trim();
-  if (!value) {
-    setPriceKeyStatus(t("priceKey.formatError"), "error");
-    return;
+async function savePriceKeyFrom(input, setStatus) {
+  const value = input.value.trim();
+  if (!/^sa_[A-Za-z0-9_-]{8,190}$/.test(value)) {
+    setStatus(t("priceKey.formatError"), "error");
+    return false;
   }
-  setPriceKeyStatus(t("priceKey.saving"));
+  setStatus(t("priceKey.saving"));
   try {
     const result = await window.eloPrices.saveKey(value);
-    $("#price-key-input").value = "";
-    setPriceKeyStatus(t(result?.synced === false ? "priceKey.savedLocal" : "priceKey.saved"), "success");
+    input.value = "";
+    setStatus(t(result?.synced === false ? "priceKey.savedLocal" : "priceKey.saved"), "success");
     if (ownInventory.items.length) renderOwnInventory();
+    return true;
   } catch (error) {
-    setPriceKeyStatus(error.message === "format" ? t("priceKey.formatError") : t("priceKey.saveError", { message: error.message }), "error");
+    setStatus(error.message === "format" ? t("priceKey.formatError") : t("priceKey.saveError", { message: error.message }), "error");
+    return false;
+  } finally {
+    renderPriceKeyCard();
   }
+}
+
+$("#price-key-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  savePriceKeyFrom($("#price-key-input"), setPriceKeyStatus);
+});
+
+$("#price-key-reveal").addEventListener("click", () => {
+  priceKeyRevealed = !priceKeyRevealed;
   renderPriceKeyCard();
 });
 
-$("#price-key-clear").addEventListener("click", async () => {
-  try {
-    await window.eloPrices.saveKey("");
-    setPriceKeyStatus(t("priceKey.cleared"), "success");
-  } catch (error) {
-    setPriceKeyStatus(t("priceKey.saveError", { message: error.message }), "error");
+// ---------- 沒有金鑰就要求設定 ----------
+
+let priceKeyPromptDismissed = false;
+
+function setPriceKeyModalStatus(message, kind = "") {
+  $("#price-key-modal-status").textContent = message;
+  $("#price-key-modal-status").dataset.kind = kind;
+}
+
+function updatePriceKeyModal(force = false) {
+  const status = window.eloPrices?.status();
+  const modal = $("#price-key-modal");
+  const otherModalOpen = !$("#profile-setup-modal").hidden || !$("#login-modal").hidden;
+  const needed = Boolean(window.eloAuthUser) && status?.keyReady && !status.hasKey;
+  if (!needed) {
+    modal.hidden = true;
+    return;
   }
-  renderPriceKeyCard();
+  if (force) priceKeyPromptDismissed = false;
+  modal.hidden = priceKeyPromptDismissed || otherModalOpen;
+}
+
+$("#price-key-modal-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const ok = await savePriceKeyFrom($("#price-key-modal-input"), setPriceKeyModalStatus);
+  if (ok) {
+    $("#price-key-modal").hidden = true;
+    showToast(t("priceKey.saved"));
+  }
+});
+
+$("#price-key-modal-later").addEventListener("click", () => {
+  priceKeyPromptDismissed = true;
+  $("#price-key-modal").hidden = true;
+});
+
+document.addEventListener("click", (event) => {
+  if (!event.target.closest("[data-open-price-key]")) return;
+  updatePriceKeyModal(true);
+  $("#price-key-modal-input").focus();
 });
 
 window.addEventListener("eloauthchange", renderPriceKeyCard);
 window.setInterval(() => {
   if (!$("#page-profile").hidden) renderPriceKeyCard();
-}, 5000);
+  else updatePriceKeyModal();
+}, 2000);
 renderPriceKeyCard();
 
 $("#trade-submit").addEventListener("click", () => {

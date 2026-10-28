@@ -986,12 +986,19 @@
     if (steamLoadState !== "loaded") return;
     const term = steamSearch.value.trim().toLocaleLowerCase("zh-Hant");
     const listed = listedMarketNames();
-    const visible = steamItems.filter((item) => !term
+    const matching = steamItems.filter((item) => !term
       || `${item.name} ${item.marketHashName} ${item.type}`.toLocaleLowerCase("zh-Hant").includes(term));
-    window.eloPrices?.request(visible.map((item) => item.marketHashName));
+    window.eloPrices?.request(matching.map((item) => item.marketHashName));
+    // 只顯示已經查到 SteamAnalyst 市價的物品
+    const visible = matching.filter((item) => window.eloPrices?.twd(item.marketHashName) != null);
+    const waiting = matching.filter((item) => window.eloPrices?.twd(item.marketHashName) == null && !window.eloPrices?.missing(item.marketHashName)).length;
+    const missing = matching.filter((item) => window.eloPrices?.missing(item.marketHashName)).length;
+    const priceStatus = window.eloPrices?.status();
     steamStatus.textContent = [
       text("admin.steamLoaded", { count: visible.length }),
-      window.eloPrices?.loaded() ? text("admin.marketPriceUpdated", { time: window.eloPrices.updatedLabel() }) : ""
+      priceStatus && !priceStatus.hasKey ? text("priceKey.tradeNeedKey") : "",
+      waiting && priceStatus?.hasKey ? text("priceKey.adminWaiting", { count: waiting }) : "",
+      missing ? text("priceKey.tradeMissing", { count: missing }) : ""
     ].filter(Boolean).join(" · ");
     const fragment = document.createDocumentFragment();
     for (const item of visible) {

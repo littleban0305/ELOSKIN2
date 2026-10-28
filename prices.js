@@ -1,6 +1,6 @@
-// 市價：優先用 SteamAnalyst（每位使用者自己申請的免費 API 金鑰），查不到時退回 prices.json（Skinport 參考價）。
-// SteamAnalyst 免費方案限制：每分鐘 30 次、24 小時內 100 次。查到的價格會存進 Firestore 的 marketPrices，大家共用，
-// 別人查過的物品你就不用再花次數。
+// 市價只用 SteamAnalyst（每位使用者自己申請的免費 API 金鑰），不再用其他備用價。
+// 免費方案限制：每分鐘 30 次、24 小時內 100 次。查到的價格存進 Firestore 的 marketPrices 大家共用，
+// 別人查過的物品你就不用再花次數。金鑰會自動存到雲端（userSecrets），申請後在 SteamAnalyst 看不到第二次，雲端那份就是備份。
 window.eloPrices = (() => {
   const TWD_PER_EC = 0.03;
   const API_URL = "https://api.steamanalyst.com/v1/prices?market_name=";
@@ -11,14 +11,19 @@ window.eloPrices = (() => {
   const LOCAL_CACHE = "eloskin2.saPrices";
   const KEY_PATTERN = /^sa_[A-Za-z0-9_-]{8,190}$/;
 
-  let fallback = null; // prices.json
-  let fallbackLoading = null;
+  const RATE_URL = "https://open.er-api.com/v6/latest/USD";
+  const RATE_CACHE = "eloskin2.usdTwd";
+  let usdTwd = Number(readJsonEarly(RATE_CACHE)?.rate) || 32;
+  let rateLoading = null;
   const analyst = new Map(); // name -> { usd, updatedAt }；usd 為 0 代表 SteamAnalyst 查無此物品
   const checkedRemote = new Set();
   const queue = [];
   const queued = new Set();
   let apiKey = "";
   let keyLoadedFor = "";
+  let keyReady = false;
+  let syncState = ""; // "cloud"：雲端有備份；"local"：只在這台裝置，會自動重試上傳
+  let syncTimer = null;
   let blockedUntil = 0;
   let blockReason = "";
   let lastError = "";
@@ -26,6 +31,14 @@ window.eloPrices = (() => {
   let notifyTimer = null;
 
   // ---------- 共用工具 ----------
+
+  function readJsonEarly(key) {
+    try {
+      return JSON.parse(window.localStorage.getItem(key) || "null");
+    } catch {
+      return null;
+    }
+  }
 
   function db() {
     return window.eloFirebaseDb || null;
@@ -118,50 +131,82 @@ window.eloPrices = (() => {
   async function loadKey() {
     const current = user();
     const uid = current?.uid || "";
-    if (keyLoadedFor === uid) return;
+    if (keyLoadedFor === uid && keyReady) return;
     keyLoadedFor = uid;
+    keyReady = false;
     apiKey = "";
+    syncState = "";
     blockedUntil = 0;
     blockReason = "";
     lastError = "";
-    if (uid) apiKey = String(readJson(localKeyName(uid), "") || "");
+    const localKey = uid ? String(readJson(localKeyName(uid), "") || "") : "";
+    apiKey = localKey;
     if (uid && db()) {
       try {
         const snapshot = await db().collection("userSecrets").doc(uid).get();
         if (keyLoadedFor !== uid) return;
         const remoteKey = String(snapshot.data()?.steamAnalystKey || "");
-        if (snapshot.exists) {
+        if (remoteKey) {
           apiKey = remoteKey;
+          syncState = "cloud";
           writeJson(localKeyName(uid), remoteKey);
+        } else if (localKey) {
+          // 雲端還沒有（之前規則沒發布時存的），自動補上傳
+          syncState = "local";
+          syncToCloud();
         }
       } catch (error) {
-        // 規則還沒發布或離線時，就用這台裝置記住的金鑰
         console.warn("Price key unavailable:", error);
+        if (localKey) {
+          syncState = "local";
+          retrySyncLater();
+        }
       }
-    }
+    } else if (localKey) syncState = "local";
+    if (keyLoadedFor !== uid) return;
+    keyReady = Boolean(uid);
     notifyChange();
     schedule();
+  }
+
+  async function syncToCloud() {
+    const current = user();
+    if (!current || !db() || !apiKey) return false;
+    try {
+      await db().collection("userSecrets").doc(current.uid).set({ steamAnalystKey: apiKey, updatedAt: Date.now() });
+      syncState = "cloud";
+      notifyChange();
+      return true;
+    } catch (error) {
+      console.warn("Price key sync failed:", error);
+      syncState = "local";
+      retrySyncLater();
+      notifyChange();
+      return false;
+    }
+  }
+
+  function retrySyncLater() {
+    if (syncTimer) return;
+    syncTimer = window.setTimeout(() => {
+      syncTimer = null;
+      if (syncState === "local") syncToCloud();
+    }, 60000);
   }
 
   async function saveKey(rawKey) {
     const current = user();
     if (!current || !db()) throw new Error("login");
     const key = String(rawKey || "").trim();
-    if (key && !KEY_PATTERN.test(key)) throw new Error("format");
-    // 先記在這台裝置，雲端同步失敗也能用；同步成功的話換裝置登入也有
+    if (!KEY_PATTERN.test(key)) throw new Error("format");
     writeJson(localKeyName(current.uid), key);
-    let synced = true;
-    try {
-      await db().collection("userSecrets").doc(current.uid).set({ steamAnalystKey: key, updatedAt: Date.now() });
-    } catch (error) {
-      console.warn("Price key sync failed:", error);
-      synced = false;
-    }
     apiKey = key;
     keyLoadedFor = current.uid;
+    keyReady = true;
     blockedUntil = 0;
     blockReason = "";
     lastError = "";
+    const synced = await syncToCloud();
     notifyChange();
     schedule();
     return { synced };
@@ -300,40 +345,42 @@ window.eloPrices = (() => {
     });
   }
 
-  // ---------- prices.json 備用價 ----------
+  // ---------- 美元匯率（換算台幣用） ----------
 
   function load() {
-    if (!fallbackLoading) {
-      const hourKey = new Date().toISOString().slice(0, 13);
-      fallbackLoading = fetch(`prices.json?h=${hourKey}`)
-        .then((response) => (response.ok ? response.json() : null))
-        .then((json) => {
-          if (json && json.prices && Number(json.usdToTwd) > 0) {
-            fallback = json;
-            notifyChange();
-          }
-          return fallback;
-        })
-        .catch((error) => {
-          console.warn("Prices unavailable:", error);
-          fallbackLoading = null;
-          return null;
-        });
+    if (!rateLoading) {
+      const cached = readJson(RATE_CACHE, null);
+      if (cached && Date.now() - Number(cached.at) < 12 * 60 * 60 * 1000) {
+        rateLoading = Promise.resolve(usdTwd);
+      } else {
+        rateLoading = fetch(RATE_URL)
+          .then((response) => (response.ok ? response.json() : null))
+          .then((json) => {
+            const rate = Number(json?.rates?.TWD);
+            if (rate > 20 && rate < 50) {
+              usdTwd = rate;
+              writeJson(RATE_CACHE, { rate, at: Date.now() });
+              notifyChange();
+            }
+            return usdTwd;
+          })
+          .catch(() => {
+            rateLoading = null;
+            return usdTwd;
+          });
+      }
     }
-    return fallbackLoading;
+    return rateLoading;
   }
 
   function usdToTwd() {
-    return Number(fallback?.usdToTwd) > 0 ? Number(fallback.usdToTwd) : 32;
+    return usdTwd;
   }
 
   // 回傳 { usd, source: "steamanalyst" | "skinport" }，沒有價格回傳 null
   function quote(marketHashName) {
     const entry = analyst.get(marketHashName);
-    if (entry && entry.usd > 0) return { usd: entry.usd, source: "steamanalyst" };
-    const usd = Number(fallback?.prices?.[marketHashName]);
-    if (Number.isFinite(usd) && usd > 0) return { usd, source: "skinport" };
-    return null;
+    return entry && entry.usd > 0 ? { usd: entry.usd, source: "steamanalyst" } : null;
   }
 
   function twd(marketHashName) {
@@ -354,13 +401,22 @@ window.eloPrices = (() => {
     return queued.has(marketHashName);
   }
 
+  // 查過了但 SteamAnalyst 沒有這個物品
+  function missing(marketHashName) {
+    const entry = analyst.get(marketHashName);
+    return Boolean(entry) && entry.usd <= 0;
+  }
+
   function loaded() {
-    return Boolean(fallback) || analyst.size > 0;
+    return analyst.size > 0;
   }
 
   function updatedLabel() {
-    if (!fallback?.updatedAt) return "";
-    return new Date(fallback.updatedAt).toLocaleString("zh-TW", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
+    return "";
+  }
+
+  function fullKey() {
+    return apiKey;
   }
 
   function status() {
@@ -368,6 +424,8 @@ window.eloPrices = (() => {
     const now = Date.now();
     return {
       hasKey: Boolean(apiKey),
+      keyReady,
+      syncState,
       maskedKey: apiKey ? `${apiKey.slice(0, 8)}…${apiKey.slice(-4)}` : "",
       usedToday: log.length,
       dailyLimit: PER_DAY,
@@ -386,5 +444,7 @@ window.eloPrices = (() => {
     loadKey();
   });
 
-  return { load, request, twd, ec, source, pending, loaded, updatedLabel, status, saveKey };
+  load();
+
+  return { load, request, twd, ec, source, pending, missing, loaded, updatedLabel, status, saveKey, fullKey };
 })();

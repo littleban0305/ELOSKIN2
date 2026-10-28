@@ -12,19 +12,19 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css?v=60">
     <link rel="stylesheet" href="admin.css?v=6">
-    <link rel="stylesheet" href="profile.css?v=3">
+    <link rel="stylesheet" href="profile.css?v=4">
     <link rel="stylesheet" href="orders.css?v=2">
     <link rel="stylesheet" href="wallet.css?v=1">
     <link rel="stylesheet" href="shop.css?v=3">
     <link rel="stylesheet" href="mobile.css?v=1">
-    <script src="content.js?v=42" defer></script>
+    <script src="content.js?v=43" defer></script>
     <script src="inventory-import.js?v=1" defer></script>
-    <script src="prices.js?v=3" defer></script>
+    <script src="prices.js?v=4" defer></script>
     <script src="firebase-config.js?v=1" defer></script>
     <script src="steam-config.js?v=4" defer></script>
-    <script src="app.js?v=41" defer></script>
+    <script src="app.js?v=42" defer></script>
     <script src="auth.js?v=26" defer></script>
-    <script src="admin.js?v=10" defer></script>
+    <script src="admin.js?v=11" defer></script>
     <script src="orders.js?v=4" defer></script>
     <script src="wallet.js?v=3" defer></script>
   </head>
@@ -136,7 +136,7 @@
                 <span id="trade-own-count"></span>
               </div>
               <p class="account-status trade-inv-status" id="trade-inv-status"></p>
-              <p class="trade-price-hint" id="trade-price-hint" hidden><a href="#profile" data-copy="priceKey.tradeHint"></a></p>
+              <p class="trade-price-hint" id="trade-price-hint" hidden></p>
               <details class="admin-steam-paste trade-inv-paste" id="trade-inv-paste">
                 <summary data-copy="trade.inventoryLoad"></summary>
                 <div class="bookmarklet-box">
@@ -251,10 +251,10 @@
               <li data-copy="priceKey.step2"></li>
             </ol>
             <form class="account-form" id="price-key-form" novalidate>
-              <label class="admin-field"><span class="admin-field-label" data-copy="priceKey.label"></span><input id="price-key-input" type="password" autocomplete="off" spellcheck="false" data-copy-placeholder="priceKey.placeholder"></label>
+              <label class="admin-field"><span class="admin-field-label" data-copy="priceKey.label"></span><input id="price-key-input" type="text" autocomplete="off" spellcheck="false" autocapitalize="off" data-copy-placeholder="priceKey.placeholder"></label>
               <div class="account-form-footer">
                 <p class="account-status" id="price-key-status" role="status" aria-live="polite"></p>
-                <button class="admin-ghost-button" id="price-key-clear" type="button" data-copy="priceKey.clear" hidden></button>
+                <button class="admin-ghost-button" id="price-key-reveal" type="button" data-copy="priceKey.reveal" hidden></button>
                 <button class="admin-primary-button" id="price-key-submit" type="submit" data-copy="profile.saveChanges"></button>
               </div>
             </form>
@@ -549,6 +549,21 @@
           <label class="auth-field"><span data-copy="profile.tradeUrl"></span><input id="setup-trade-url" type="url" autocomplete="url" required data-copy-placeholder="profile.tradeUrlPlaceholder"></label>
           <p class="profile-setup-status" id="profile-setup-status" role="status" aria-live="polite"></p>
           <button class="auth-submit" id="profile-setup-submit" type="submit" data-copy="profile.saveProfile"></button>
+        </form>
+      </section>
+    </div>
+    <div class="modal-backdrop login-modal-backdrop" id="price-key-modal" hidden>
+      <section class="login-modal profile-setup-modal" role="dialog" aria-modal="true" aria-labelledby="price-key-modal-title">
+        <header class="login-modal-header"><h2 id="price-key-modal-title" data-copy="priceKey.modalTitle"></h2></header>
+        <ol class="price-key-steps">
+          <li><span data-copy="priceKey.step1"></span> <a href="https://www.steamanalyst.com/developers" target="_blank" rel="noopener" data-copy="priceKey.step1Link"></a></li>
+          <li data-copy="priceKey.step2"></li>
+        </ol>
+        <form id="price-key-modal-form" novalidate>
+          <label class="auth-field"><span data-copy="priceKey.label"></span><input id="price-key-modal-input" type="text" autocomplete="off" spellcheck="false" autocapitalize="off" data-copy-placeholder="priceKey.placeholder"></label>
+          <p class="profile-setup-status" id="price-key-modal-status" role="status" aria-live="polite"></p>
+          <button class="auth-submit" id="price-key-modal-submit" type="submit" data-copy="profile.saveChanges"></button>
+          <button class="admin-ghost-button price-key-later" id="price-key-modal-later" type="button" data-copy="priceKey.later"></button>
         </form>
       </section>
     </div>

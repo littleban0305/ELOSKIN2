@@ -231,3 +231,18 @@
 }
 
 .trade-price-hint[hidden] { display: none; }
+
+.trade-price-hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: #8fa0a6;
+  line-height: 1.6;
+}
+
+.trade-price-hint .admin-ghost-button { min-height: 32px; padding-inline: 12px; }
+
+#price-key-modal .price-key-steps { margin-top: 4px; }
+#price-key-modal form { display: grid; gap: 12px; }
+.price-key-later { width: 100%; min-height: 40px; }
