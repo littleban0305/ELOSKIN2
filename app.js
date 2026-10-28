@@ -1249,7 +1249,85 @@ async function restoreOwnInventory() {
   } catch (error) {
     console.warn("Inventory cloud read failed:", error);
   }
+  maybeAutoRequest();
 }
+
+// ---------- 自動讀取：交給家裡手機上的中繼站（relay/relay.mjs） ----------
+
+const RELAY_ONLINE_MS = 3 * 60 * 1000;
+const AUTO_REFRESH_MS = 6 * 60 * 60 * 1000;
+const relayState = { lastSeen: 0, request: null, watchingUid: "", stopRequest: null, stopRelay: null, autoAskedFor: "" };
+
+function relayOnline() {
+  return Date.now() - relayState.lastSeen < RELAY_ONLINE_MS;
+}
+
+function watchRelay() {
+  const db = window.eloFirebaseDb;
+  if (!db) return;
+  if (!relayState.stopRelay) {
+    relayState.stopRelay = db.collection("relayStatus").doc("inventory").onSnapshot((snapshot) => {
+      relayState.lastSeen = Number(snapshot.data()?.lastSeen) || 0;
+      renderInventoryCard();
+      maybeAutoRequest();
+    }, () => {});
+  }
+  const uid = window.eloAuthUser?.uid || "";
+  if (uid === relayState.watchingUid) return;
+  relayState.stopRequest?.();
+  relayState.stopRequest = null;
+  relayState.watchingUid = uid;
+  relayState.request = null;
+  if (!uid) return;
+  let previousStatus = "";
+  relayState.stopRequest = db.collection("inventoryRequests").doc(uid).onSnapshot((snapshot) => {
+    relayState.request = snapshot.exists ? snapshot.data() : null;
+    const status = relayState.request?.status || "";
+    if (status === "done" && previousStatus && previousStatus !== "done") {
+      const notice = { message: t("inventory.autoDone", { count: Number(relayState.request.count) || 0 }), kind: "success" };
+      inventoryLoadedFor = "";
+      restoreOwnInventory().then(() => {
+        inventoryNotice = notice;
+        renderOwnInventory();
+      });
+    } else if (status === "error" && previousStatus && previousStatus !== "error") {
+      inventoryNotice = { message: t("inventory.autoError", { message: relayState.request.message || "" }), kind: "error" };
+    }
+    previousStatus = status || "none";
+    renderInventoryCard();
+  }, () => {});
+}
+
+async function requestAutoInventory() {
+  const db = window.eloFirebaseDb;
+  const uid = window.eloAuthUser?.uid;
+  if (!db || !uid || !ownInventory.steamId) return;
+  try {
+    await db.collection("inventoryRequests").doc(uid).set({
+      steamId: ownInventory.steamId,
+      status: "pending",
+      message: "",
+      requestedAt: Date.now()
+    }, { merge: true });
+    inventoryNotice = null;
+  } catch (error) {
+    inventoryNotice = { message: t("inventory.autoFailed", { message: error.message }), kind: "error" };
+  }
+  renderInventoryCard();
+}
+
+// 中繼站在線、庫存超過 6 小時沒更新，就自動請它重讀（每次打開網站最多一次）
+function maybeAutoRequest() {
+  const uid = window.eloAuthUser?.uid || "";
+  const key = `${uid}:${ownInventory.steamId}`;
+  if (!uid || !ownInventory.steamId || ownInventory.steamId !== tradeUrlSteamId() || !relayOnline() || relayState.autoAskedFor === key) return;
+  const busy = ["pending", "working"].includes(relayState.request?.status);
+  if (busy || Date.now() - ownInventory.savedAt < AUTO_REFRESH_MS) return;
+  relayState.autoAskedFor = key;
+  requestAutoInventory();
+}
+
+$("#inventory-auto-run").addEventListener("click", requestAutoInventory);
 
 function renderInventoryCard() {
   const signedIn = Boolean(window.eloAuthUser);
@@ -1259,6 +1337,25 @@ function renderInventoryCard() {
   const steamId = ownInventory.steamId;
   const hasItems = ownInventory.items.length > 0;
   $("#inventory-methods").hidden = !steamId;
+  const online = relayOnline();
+  const requestStatus = relayState.request?.status || "";
+  const busy = requestStatus === "pending" || requestStatus === "working";
+  $("#inventory-auto").hidden = !steamId;
+  const badge = $("#relay-badge");
+  badge.textContent = t(online ? "inventory.relayOnline" : "inventory.relayOffline");
+  badge.dataset.online = String(online);
+  $("#inventory-auto-text").textContent = !online
+    ? t("inventory.autoOffline")
+    : requestStatus === "working" ? t("inventory.autoWorking")
+    : requestStatus === "pending" ? t("inventory.autoPending")
+    : t("inventory.autoReady");
+  const runButton = $("#inventory-auto-run");
+  runButton.disabled = !online || busy;
+  runButton.textContent = t(busy ? "inventory.autoRunning" : "inventory.autoRun");
+  // 中繼站離線時，把其他讀法直接展開
+  const other = $("#inventory-other");
+  if (!online && !other.dataset.touched) other.open = true;
+  if (online && !other.dataset.touched) other.open = false;
   $("#inventory-count").textContent = hasItems ? t("inventory.countLabel", { count: ownInventory.items.length }) : "";
   const link = $("#inv-open");
   if (steamId) link.href = `https://steamcommunity.com/inventory/${steamId}/730/2?l=tchinese&count=2000`;
@@ -1412,6 +1509,11 @@ $("#trade-own-grid").addEventListener("click", (event) => {
 
 window.addEventListener("eloauthchange", restoreOwnInventory);
 window.addEventListener("elofirebaseready", restoreOwnInventory);
+window.addEventListener("eloauthchange", watchRelay);
+window.addEventListener("elofirebaseready", watchRelay);
+$("#inventory-other").addEventListener("click", (event) => {
+  if (event.target.closest("summary")) $("#inventory-other").dataset.touched = "1";
+});
 window.addEventListener("eloprofilechange", restoreOwnInventory);
 window.addEventListener("elopricesloaded", () => {
   for (const item of tradeState.offer) {

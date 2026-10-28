@@ -1,0 +1,12 @@
+{
+  "name": "eloskin2-inventory-relay",
+  "private": true,
+  "type": "module",
+  "description": "在家用網路的舊手機上跑，幫 ELOSKIN2 讀取 Steam 庫存",
+  "scripts": {
+    "start": "node relay.mjs"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.7.0"
+  }
+}

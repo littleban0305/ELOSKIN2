@@ -337,3 +337,58 @@
 @media (max-width: 900px) {
   .inventory-methods { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* ---------- 自動讀取（中繼站） ---------- */
+
+.inventory-auto {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  background: #151f25;
+  border-radius: 14px;
+  box-shadow: inset 0 0 0 1px rgba(80, 219, 197, .25);
+}
+
+.inventory-auto[hidden] { display: none; }
+
+.inventory-auto-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.inventory-auto-head strong { color: #50dbc5; }
+
+.relay-badge {
+  padding: 3px 10px;
+  color: #ff8f8f;
+  background: rgba(255, 143, 143, .12);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.relay-badge[data-online="true"] {
+  color: #50dbc5;
+  background: rgba(80, 219, 197, .12);
+}
+
+.inventory-auto-text {
+  margin: 0;
+  color: #9fb0b6;
+  line-height: 1.6;
+}
+
+.inventory-auto .admin-primary-button {
+  justify-self: start;
+  min-height: 40px;
+  padding-inline: 18px;
+}
+
+.inventory-auto .admin-primary-button:disabled { opacity: .5; cursor: default; }
+
+.inventory-other > summary {
+  color: #8fa0a6;
+  cursor: pointer;
+  margin-bottom: 10px;
+}

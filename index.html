@@ -12,17 +12,17 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css?v=60">
     <link rel="stylesheet" href="admin.css?v=6">
-    <link rel="stylesheet" href="profile.css?v=5">
+    <link rel="stylesheet" href="profile.css?v=6">
     <link rel="stylesheet" href="orders.css?v=2">
     <link rel="stylesheet" href="wallet.css?v=1">
     <link rel="stylesheet" href="shop.css?v=3">
     <link rel="stylesheet" href="mobile.css?v=1">
-    <script src="content.js?v=44" defer></script>
+    <script src="content.js?v=45" defer></script>
     <script src="inventory-import.js?v=2" defer></script>
     <script src="prices.js?v=4" defer></script>
     <script src="firebase-config.js?v=1" defer></script>
     <script src="steam-config.js?v=4" defer></script>
-    <script src="app.js?v=43" defer></script>
+    <script src="app.js?v=44" defer></script>
     <script src="auth.js?v=26" defer></script>
     <script src="admin.js?v=11" defer></script>
     <script src="orders.js?v=4" defer></script>
@@ -241,6 +241,16 @@
           <section class="account-card account-inventory" id="inventory-card" hidden>
             <div class="account-section-heading"><h2 data-copy="inventory.cardTitle"></h2><span id="inventory-count"></span></div>
             <p class="account-status inventory-status" id="inventory-status" role="status" aria-live="polite"></p>
+            <div class="inventory-auto" id="inventory-auto" hidden>
+              <div class="inventory-auto-head">
+                <strong data-copy="inventory.autoTitle"></strong>
+                <span class="relay-badge" id="relay-badge"></span>
+              </div>
+              <p class="inventory-auto-text" id="inventory-auto-text"></p>
+              <button class="admin-primary-button" id="inventory-auto-run" type="button" data-copy="inventory.autoRun"></button>
+            </div>
+            <details class="inventory-other" id="inventory-other">
+              <summary data-copy="inventory.otherMethods"></summary>
             <div class="inventory-methods" id="inventory-methods">
               <div class="inventory-method">
                 <strong data-copy="inventory.quickTitle"></strong>
@@ -270,6 +280,7 @@
                 </details>
               </div>
             </div>
+            </details>
           </section>
           </div>
           <section class="account-favorites account-orders">

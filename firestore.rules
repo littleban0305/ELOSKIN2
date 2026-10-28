@@ -195,6 +195,25 @@ service cloud.firestore {
       allow delete: if request.auth != null && request.auth.uid == userId;
     }
 
+    // 「我要讀庫存」的請求，由家裡手機上的中繼站（relay/relay.mjs，用管理員金鑰）處理後回寫
+    match /inventoryRequests/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create, update: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly(["steamId", "status", "message", "requestedAt", "startedAt", "finishedAt", "count", "total"])
+        && request.resource.data.steamId is string
+        && request.resource.data.steamId.matches("^[0-9]{17}$")
+        && request.resource.data.status == "pending"
+        && request.resource.data.requestedAt is int;
+      allow delete: if false;
+    }
+
+    // 中繼站在線狀態，只有中繼站（管理員金鑰）能寫
+    match /relayStatus/{relayId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // SteamAnalyst 查到的價格，大家共用；usd 為 0 代表查無此物品
     match /marketPrices/{priceId} {
       allow read: if true;

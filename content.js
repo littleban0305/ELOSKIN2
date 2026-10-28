@@ -614,7 +614,20 @@ window.ELOSKIN2_TEXT = {
     clipAuto: "偵測到剪貼簿裡有庫存資料，已自動讀取",
     clipEmpty: "剪貼簿裡沒有庫存資料，請先複製整頁文字",
     clipDenied: "瀏覽器不讓網站讀剪貼簿，請展開下面的「手動貼上」貼進去",
-    tradeEmpty: "還沒讀取庫存"
+    tradeEmpty: "還沒讀取庫存",
+    autoTitle: "自動讀取",
+    autoRun: "立即讀取",
+    autoRunning: "讀取中…",
+    relayOnline: "中繼站在線",
+    relayOffline: "中繼站離線",
+    autoReady: "按一下就會由中繼站幫你讀取，超過 6 小時沒更新也會自動重讀",
+    autoOffline: "中繼站手機目前沒開，可以先用下面的其他方式讀取",
+    autoPending: "已送出，等中繼站讀取中…",
+    autoWorking: "中繼站正在跟 Steam 讀取你的庫存…",
+    autoDone: "自動讀取完成：{count} 件可交易物品",
+    autoError: "自動讀取失敗：{message}",
+    autoFailed: "送出失敗：{message}",
+    otherMethods: "其他讀取方式（中繼站離線時用）"
   },
   wallet: {
     title: "儲值",
