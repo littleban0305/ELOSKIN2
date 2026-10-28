@@ -476,6 +476,8 @@ window.ELOSKIN2_TEXT = {
     steamRateLimitedNoKey: "Steam 拒絕了 Worker 的請求（429）。請在 Cloudflare Worker 設定 STEAM_API_KEY 並重新部署。",
     steamRateLimited: "Steam API 暫時限制請求次數，請過幾分鐘再按「重新整理」。",
     steamWorkerEmpty: "讀不到 Steam 庫存，請用「貼上匯入」。",
+    relayLoaded: "中繼站讀到 {count} 件（{time}）",
+    relayOfflineUsePaste: "中繼站離線，請先用下面的書籤或貼上匯入",
     pasteSummary: "貼上匯入",
     pasteStepOpen: "① 開啟 Steam 庫存資料（新分頁）",
     pasteStepCopy: "② 在開啟的頁面按 Ctrl+A 全選，再按 Ctrl+C 複製",

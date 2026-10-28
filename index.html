@@ -11,20 +11,20 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css?v=60">
-    <link rel="stylesheet" href="admin.css?v=6">
+    <link rel="stylesheet" href="admin.css?v=7">
     <link rel="stylesheet" href="profile.css?v=6">
     <link rel="stylesheet" href="orders.css?v=2">
     <link rel="stylesheet" href="wallet.css?v=1">
     <link rel="stylesheet" href="shop.css?v=3">
     <link rel="stylesheet" href="mobile.css?v=1">
-    <script src="content.js?v=45" defer></script>
+    <script src="content.js?v=46" defer></script>
     <script src="inventory-import.js?v=2" defer></script>
     <script src="prices.js?v=4" defer></script>
     <script src="firebase-config.js?v=1" defer></script>
     <script src="steam-config.js?v=4" defer></script>
     <script src="app.js?v=44" defer></script>
     <script src="auth.js?v=26" defer></script>
-    <script src="admin.js?v=11" defer></script>
+    <script src="admin.js?v=12" defer></script>
     <script src="orders.js?v=4" defer></script>
     <script src="wallet.js?v=3" defer></script>
   </head>
@@ -416,6 +416,7 @@
                 <input id="admin-steam-search" type="search" data-copy-placeholder="admin.steamSearchPlaceholder" data-copy-aria="admin.steamSearchPlaceholder">
               </label>
               <button class="admin-ghost-button" id="admin-steam-reload" type="button" data-copy="admin.steamReload"></button>
+              <span class="relay-badge" id="admin-relay-status"></span>
               <span class="admin-count" id="admin-steam-status" role="status" aria-live="polite"></span>
             </div>
             <details class="admin-steam-paste" id="admin-steam-paste">

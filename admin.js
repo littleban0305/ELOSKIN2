@@ -896,37 +896,142 @@
     if (open) steamPaste.open = true;
   }
 
-  async function loadSteamInventory() {
-    const endpoint = window.ELOSKIN2_STEAM_CONFIG?.inventoryEndpoint;
-    if (!endpoint) {
+  // ---------- 用家裡手機的中繼站讀 Steam 庫存（relay/relay.mjs） ----------
+
+  const RELAY_ONLINE_MS = 3 * 60 * 1000;
+  const adminRelay = { lastSeen: 0, status: "", stopStatus: null, stopRequest: null, savedAt: 0 };
+
+  function relayOnline() {
+    return Date.now() - adminRelay.lastSeen < RELAY_ONLINE_MS;
+  }
+
+  function relayTime(time) {
+    return new Date(time).toLocaleString("zh-TW", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
+  }
+
+  function expandRelayItems(rows) {
+    return (Array.isArray(rows) ? rows : []).map((row) => ({
+      assetId: String(row.a || ""),
+      amount: 1,
+      name: String(row.n || ""),
+      marketHashName: String(row.m || ""),
+      type: String(row.y || ""),
+      iconUrl: row.i ? STEAM_ICON_BASE + row.i : ""
+    })).filter((item) => item.assetId && item.marketHashName);
+  }
+
+  async function applyRelayInventory() {
+    const snapshot = await db().collection("adminInventory").doc("main").get();
+    const data = snapshot.exists ? snapshot.data() : null;
+    if (!data || !Array.isArray(data.items)) return false;
+    adminRelay.savedAt = Number(data.savedAt) || 0;
+    applySteamItems(expandRelayItems(data.items));
+    steamPasteStatus.dataset.kind = "success";
+    steamPasteStatus.textContent = text("admin.relayLoaded", { count: data.items.length, time: relayTime(adminRelay.savedAt) });
+    return true;
+  }
+
+  function relayStatusText() {
+    if (adminRelay.status === "pending") return text("inventory.autoPending");
+    if (adminRelay.status === "working") return text("inventory.autoWorking");
+    return relayOnline() ? text("inventory.relayOnline") : text("inventory.relayOffline");
+  }
+
+  function showRelayStatus() {
+    $("#admin-relay-status").textContent = relayStatusText();
+    $("#admin-relay-status").dataset.online = String(relayOnline());
+  }
+
+  function watchAdminRelay() {
+    if (!db() || !canEdit()) return;
+    if (!adminRelay.stopStatus) {
+      adminRelay.stopStatus = db().collection("relayStatus").doc("inventory").onSnapshot((snapshot) => {
+        adminRelay.lastSeen = Number(snapshot.data()?.lastSeen) || 0;
+        showRelayStatus();
+      }, () => {});
+    }
+    if (!adminRelay.stopRequest) {
+      let previous = "";
+      adminRelay.stopRequest = db().collection("inventoryRequests").doc("admin").onSnapshot(async (snapshot) => {
+        const request = snapshot.exists ? snapshot.data() : null;
+        adminRelay.status = request?.status || "";
+        showRelayStatus();
+        if (adminRelay.status === "done" && previous && previous !== "done") {
+          try {
+            await applyRelayInventory();
+          } catch (error) {
+            steamStatus.textContent = error.message;
+          }
+        } else if (adminRelay.status === "error" && previous && previous !== "error") {
+          steamLoadState = steamItems.length ? "loaded" : "error";
+          steamStatus.textContent = text("inventory.autoError", { message: request.message || "" });
+          if (!steamItems.length) showPastePanel(true);
+        }
+        previous = adminRelay.status || "none";
+      }, () => {});
+    }
+  }
+
+  function stopAdminRelay() {
+    adminRelay.stopStatus?.();
+    adminRelay.stopRequest?.();
+    adminRelay.stopStatus = null;
+    adminRelay.stopRequest = null;
+  }
+
+  async function requestRelayInventory() {
+    await db().collection("inventoryRequests").doc("admin").set({
+      steamId: inventorySteamId,
+      status: "pending",
+      message: "",
+      requestedAt: Date.now()
+    }, { merge: true });
+  }
+
+  // 先顯示中繼站上次讀到的庫存，再請中繼站重讀；中繼站離線就改用書籤或貼上
+  async function loadSteamInventory({ force = false } = {}) {
+    if (!inventorySteamId) {
       steamLoadState = "error";
       steamStatus.textContent = text("admin.steamNotConfigured");
       showPastePanel(true);
       return;
     }
+    if (!db()) return;
+    watchAdminRelay();
     steamLoadState = "loading";
     steamStatus.textContent = text("admin.steamLoading");
-    steamGrid.replaceChildren();
+    let hasCache = false;
     try {
-      const response = await fetch(endpoint);
-      let data;
-      try {
-        data = await response.json();
-      } catch {
-        throw new Error(text("shop.invalidWorkerResponse"));
-      }
-      if (!response.ok) throw new Error(steamErrorMessage(data, response.status));
-      if (!Array.isArray(data.items)) throw new Error(text("shop.missingItems"));
-      if (!data.items.length) {
-        steamLoadState = "error";
-        steamStatus.textContent = text("admin.steamWorkerEmpty");
-        showPastePanel(true);
-        return;
-      }
-      applySteamItems(data.items);
+      hasCache = await applyRelayInventory();
     } catch (error) {
+      console.warn("Admin inventory cache unavailable:", error);
+    }
+    // relayStatus 監聽可能還沒回來，等一下再判斷在不在線
+    if (!adminRelay.lastSeen) {
+      try {
+        const snapshot = await db().collection("relayStatus").doc("inventory").get();
+        adminRelay.lastSeen = Number(snapshot.data()?.lastSeen) || 0;
+      } catch {
+        adminRelay.lastSeen = 0;
+      }
+    }
+    showRelayStatus();
+    const stale = Date.now() - adminRelay.savedAt > 10 * 60 * 1000;
+    if (relayOnline() && (force || !hasCache || stale)) {
+      try {
+        await requestRelayInventory();
+        if (!hasCache) {
+          steamLoadState = "loading";
+          steamStatus.textContent = text("inventory.autoPending");
+        }
+      } catch (error) {
+        steamStatus.textContent = text("inventory.autoFailed", { message: error.message });
+      }
+      return;
+    }
+    if (!hasCache) {
       steamLoadState = "error";
-      steamStatus.textContent = error instanceof TypeError ? text("shop.workerUnavailable") : error.message;
+      steamStatus.textContent = text("admin.relayOfflineUsePaste");
       showPastePanel(true);
     }
   }
@@ -1061,7 +1166,7 @@
   });
 
   steamSearch.addEventListener("input", renderSteamGrid);
-  $("#admin-steam-reload").addEventListener("click", loadSteamInventory);
+  $("#admin-steam-reload").addEventListener("click", () => loadSteamInventory({ force: true }));
 
   // ---------- FAQ ----------
 
@@ -1237,6 +1342,7 @@
     if (changedUser) {
       failedSaves = 0;
       stopListingsListener();
+      stopAdminRelay();
     }
     if (!isAdmin) return;
     refreshAll();

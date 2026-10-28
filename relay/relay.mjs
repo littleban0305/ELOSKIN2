@@ -107,8 +107,11 @@ export function createRelay({ db, fetchImpl = fetch, now = () => Date.now(), wai
       return;
     }
 
+    // 文件 id 是 "admin" 的請求來自管理頁（上架用），結果寫到 adminInventory/main；其他是使用者自己的庫存
+    const inventoryRef = uid === "admin"
+      ? db.collection("adminInventory").doc("main")
+      : db.collection("userInventories").doc(uid);
     // 剛讀過就不用再跟 Steam 要
-    const inventoryRef = db.collection("userInventories").doc(uid);
     const current = await inventoryRef.get();
     const saved = current.exists ? current.data() : null;
     if (saved?.steamId === steamId && now() - Number(saved.savedAt || 0) < MIN_REFETCH_MS) {
