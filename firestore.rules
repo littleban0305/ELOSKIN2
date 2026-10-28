@@ -181,6 +181,20 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // 每位使用者讀到的 Steam 庫存，同步到不同裝置用，只有本人讀寫
+    match /userInventories/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create, update: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly(["steamId", "items", "savedAt"])
+        && request.resource.data.steamId is string
+        && request.resource.data.steamId.matches("^[0-9]{17}$")
+        && request.resource.data.items is list
+        && request.resource.data.items.size() <= 1000
+        && request.resource.data.savedAt is int;
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+
     // SteamAnalyst 查到的價格，大家共用；usd 為 0 代表查無此物品
     match /marketPrices/{priceId} {
       allow read: if true;

@@ -2,7 +2,9 @@
 window.eloInventoryImport = (() => {
   const ICON_BASE = "https://community.cloudflare.steamstatic.com/economy/image/";
   const SITE_URL = "https://littleban0305.github.io/ELOSKIN2/";
-  const HASH_KEYS = { "trade-import": "trade", "admin-import": "admin" };
+  // 舊書籤帶回 trade-import，新書籤帶回 profile-import，兩個都交給個人頁處理
+  const HASH_KEYS = { "trade-import": "profile", "profile-import": "profile", "admin-import": "admin" };
+  const HASH_PAGES = { "trade-import": "trade", "profile-import": "profile", "admin-import": "admin" };
 
   function iconUrl(icon) {
     return typeof icon === "string" && icon ? ICON_BASE + icon.split("/").map(encodeURIComponent).join("/") : "";
@@ -106,10 +108,10 @@ window.eloInventoryImport = (() => {
 
   // 網站載入時檢查網址是不是書籤帶回來的資料；有的話取出並把網址改回正常頁面
   function takeHashImport() {
-    const match = /^#(trade-import|admin-import)=(.+)$/.exec(window.location.hash);
+    const match = /^#(trade-import|profile-import|admin-import)=(.+)$/.exec(window.location.hash);
     if (!match) return null;
     const page = HASH_KEYS[match[1]];
-    window.history.replaceState(window.history.state, "", `#${page}`);
+    window.history.replaceState(window.history.state, "", `#${HASH_PAGES[match[1]]}`);
     try {
       const payload = JSON.parse(decodeURIComponent(match[2]));
       if (!Array.isArray(payload?.i)) return null;

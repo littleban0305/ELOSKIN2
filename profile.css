@@ -246,3 +246,94 @@
 #price-key-modal .price-key-steps { margin-top: 4px; }
 #price-key-modal form { display: grid; gap: 12px; }
 .price-key-later { width: 100%; min-height: 40px; }
+
+/* ---------- 設定欄：帳號設定、金鑰、庫存都放右邊同一欄 ---------- */
+
+.account-settings-stack {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.account-settings-stack > .account-card[hidden] { display: none; }
+
+.account-price-key,
+.account-inventory {
+  display: grid;
+  gap: 12px;
+}
+
+.account-price-key .price-key-steps { margin-bottom: 0; }
+.account-inventory .account-section-heading { margin-bottom: 0; }
+.account-inventory .account-section-heading span:empty { display: none; }
+.inventory-status:empty { display: none; }
+
+.inventory-methods {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.inventory-methods[hidden] { display: none; }
+
+.inventory-method {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 16px;
+  background: #151f25;
+  border-radius: 14px;
+}
+
+.inventory-method > strong { color: #50dbc5; }
+
+.inventory-method p {
+  margin: 0;
+  color: #9fb0b6;
+  line-height: 1.6;
+}
+
+.inventory-method .admin-paste-steps {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+  color: #b7c4c9;
+}
+
+.inventory-method .admin-paste-steps a { color: #50dbc5; }
+.inventory-method .account-status:empty { display: none; }
+.inventory-method .bookmarklet-actions .admin-primary-button { min-height: 38px; padding-inline: 14px; }
+
+.inventory-manual summary {
+  color: #8fa0a6;
+  cursor: pointer;
+}
+
+.inventory-manual textarea {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.inventory-mobile-only { display: none; }
+
+@media (hover: none) and (pointer: coarse) {
+  .inventory-desktop-only { display: none !important; }
+  .inventory-mobile-only { display: block; }
+}
+
+.trade-inv-goto {
+  justify-self: start;
+  margin: 4px 0 10px;
+  min-height: 36px;
+  padding-inline: 14px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.trade-inv-goto[hidden] { display: none !important; }
+
+@media (max-width: 900px) {
+  .inventory-methods { grid-template-columns: minmax(0, 1fr); }
+}

@@ -12,17 +12,17 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css?v=60">
     <link rel="stylesheet" href="admin.css?v=6">
-    <link rel="stylesheet" href="profile.css?v=4">
+    <link rel="stylesheet" href="profile.css?v=5">
     <link rel="stylesheet" href="orders.css?v=2">
     <link rel="stylesheet" href="wallet.css?v=1">
     <link rel="stylesheet" href="shop.css?v=3">
     <link rel="stylesheet" href="mobile.css?v=1">
-    <script src="content.js?v=43" defer></script>
-    <script src="inventory-import.js?v=1" defer></script>
+    <script src="content.js?v=44" defer></script>
+    <script src="inventory-import.js?v=2" defer></script>
     <script src="prices.js?v=4" defer></script>
     <script src="firebase-config.js?v=1" defer></script>
     <script src="steam-config.js?v=4" defer></script>
-    <script src="app.js?v=42" defer></script>
+    <script src="app.js?v=43" defer></script>
     <script src="auth.js?v=26" defer></script>
     <script src="admin.js?v=11" defer></script>
     <script src="orders.js?v=4" defer></script>
@@ -136,31 +136,8 @@
                 <span id="trade-own-count"></span>
               </div>
               <p class="account-status trade-inv-status" id="trade-inv-status"></p>
+              <a class="admin-ghost-button trade-inv-goto" id="trade-inv-goto" href="#profile" data-copy="inventory.gotoProfile" hidden></a>
               <p class="trade-price-hint" id="trade-price-hint" hidden></p>
-              <details class="admin-steam-paste trade-inv-paste" id="trade-inv-paste">
-                <summary data-copy="trade.inventoryLoad"></summary>
-                <div class="bookmarklet-box">
-                  <strong data-copy="inventory.quickTitle"></strong>
-                  <p data-copy="inventory.quickDesktop"></p>
-                  <p data-copy="inventory.quickMobile"></p>
-                  <div class="bookmarklet-actions">
-                    <a class="bookmarklet-link" id="trade-bookmarklet" draggable="true" data-copy="inventory.bookmarkName"></a>
-                    <button class="admin-ghost-button" id="trade-bookmarklet-copy" type="button" data-copy="inventory.copyCode"></button>
-                    <a class="admin-ghost-button bookmarklet-steam" href="https://steamcommunity.com/" target="_blank" rel="noopener noreferrer" data-copy="inventory.openSteam"></a>
-                  </div>
-                  <p class="account-status" id="trade-bookmarklet-status" role="status" aria-live="polite"></p>
-                </div>
-                <p class="paste-divider" data-copy="inventory.manualTitle"></p>
-                <ol class="admin-paste-steps">
-                  <li><a id="trade-inv-open" target="_blank" rel="noopener noreferrer" data-copy="trade.inventoryStepOpen"></a></li>
-                  <li data-copy="admin.pasteStepCopy"></li>
-                  <li data-copy="admin.pasteStepPaste"></li>
-                </ol>
-                <textarea id="trade-inv-input" rows="3" spellcheck="false" data-copy-placeholder="admin.pastePlaceholder" data-copy-aria="admin.pastePlaceholder"></textarea>
-                <div class="admin-paste-actions">
-                  <button class="admin-primary-button" id="trade-inv-load" type="button" data-copy="admin.pasteLoad"></button>
-                </div>
-              </details>
               <input class="trade-inv-search" id="trade-inv-search" type="search" data-copy-placeholder="trade.inventorySearch" data-copy-aria="trade.inventorySearch" hidden>
               <div class="trade-own-grid" id="trade-own-grid"></div>
             </section>
@@ -233,6 +210,7 @@
             </div>
             <p class="account-status" id="avatar-status" role="status" aria-live="polite" hidden></p>
           </section>
+          <div class="account-settings-stack">
           <section class="account-card account-settings">
             <h2 data-copy="profile.settingsTitle"></h2>
             <form class="account-form" id="profile-edit-form" novalidate>
@@ -260,6 +238,40 @@
             </form>
             <p class="price-key-usage" id="price-key-usage"></p>
           </section>
+          <section class="account-card account-inventory" id="inventory-card" hidden>
+            <div class="account-section-heading"><h2 data-copy="inventory.cardTitle"></h2><span id="inventory-count"></span></div>
+            <p class="account-status inventory-status" id="inventory-status" role="status" aria-live="polite"></p>
+            <div class="inventory-methods" id="inventory-methods">
+              <div class="inventory-method">
+                <strong data-copy="inventory.quickTitle"></strong>
+                <p class="inventory-desktop-only" data-copy="inventory.quickDesktop"></p>
+                <p class="inventory-mobile-only" data-copy="inventory.quickMobile"></p>
+                <div class="bookmarklet-actions">
+                  <a class="bookmarklet-link inventory-desktop-only" id="inv-bookmarklet" draggable="true" data-copy="inventory.bookmarkName"></a>
+                  <button class="admin-ghost-button" id="inv-bookmarklet-copy" type="button" data-copy="inventory.copyCode"></button>
+                  <a class="admin-primary-button bookmarklet-steam" href="https://steamcommunity.com/my/inventory/" target="_blank" rel="noopener noreferrer" data-copy="inventory.openSteam"></a>
+                </div>
+                <p class="account-status" id="inv-bookmarklet-status" role="status" aria-live="polite"></p>
+              </div>
+              <div class="inventory-method">
+                <strong data-copy="inventory.clipTitle"></strong>
+                <ol class="admin-paste-steps">
+                  <li><a id="inv-open" target="_blank" rel="noopener noreferrer" data-copy="inventory.clipStepOpen"></a></li>
+                  <li data-copy="inventory.clipStepCopy"></li>
+                  <li data-copy="inventory.clipStepBack"></li>
+                </ol>
+                <div class="bookmarklet-actions">
+                  <button class="admin-primary-button" id="inv-clipboard" type="button" data-copy="inventory.clipButton"></button>
+                </div>
+                <details class="inventory-manual">
+                  <summary data-copy="inventory.manualTitle"></summary>
+                  <textarea id="inv-input" rows="3" spellcheck="false" data-copy-placeholder="admin.pastePlaceholder" data-copy-aria="admin.pastePlaceholder"></textarea>
+                  <div class="admin-paste-actions"><button class="admin-ghost-button" id="inv-load" type="button" data-copy="admin.pasteLoad"></button></div>
+                </details>
+              </div>
+            </div>
+          </section>
+          </div>
           <section class="account-favorites account-orders">
             <div class="account-section-heading"><h2 data-copy="orders.myOrders"></h2><span id="profile-orders-count">0</span></div>
             <div class="order-list" id="profile-orders-list"></div>

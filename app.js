@@ -1099,10 +1099,14 @@ for (const side of ["offer", "receive"]) {
   });
 }
 
-// ---------- 交易頁：讀取自己的 Steam 庫存 ----------
+// ---------- Steam 庫存（在個人頁讀取，交易頁使用；會同步到帳號） ----------
 
 const STEAM_ICON_BASE = "https://community.cloudflare.steamstatic.com/economy/image/";
-const ownInventory = { steamId: "", items: [], savedAt: 0 };
+const ownInventory = { steamId: "", items: [], savedAt: 0, synced: false };
+const INVENTORY_STALE_MS = 24 * 60 * 60 * 1000;
+let inventoryNotice = null;
+let inventoryLoadedFor = "";
+let inventoryOpenedAt = 0;
 
 function tradeUrlSteamId() {
   try {
@@ -1118,35 +1122,95 @@ function inventoryStorageKey() {
 }
 
 function setInventoryStatus(message, kind = "") {
-  $("#trade-inv-status").textContent = message;
-  $("#trade-inv-status").dataset.kind = kind;
+  $("#inventory-status").textContent = message;
+  $("#inventory-status").dataset.kind = kind;
 }
 
-const updateTradeBookmarklet = window.eloInventoryImport.bindBookmarklet({
-  link: $("#trade-bookmarklet"),
-  copyButton: $("#trade-bookmarklet-copy"),
-  status: $("#trade-bookmarklet-status"),
+const updateInventoryBookmarklet = window.eloInventoryImport.bindBookmarklet({
+  link: $("#inv-bookmarklet"),
+  copyButton: $("#inv-bookmarklet-copy"),
+  status: $("#inv-bookmarklet-status"),
   text: t
 });
 
-function saveOwnInventory(items, savedAt = Date.now()) {
+function inventoryTime(time) {
+  return new Date(time).toLocaleString("zh-TW", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
+}
+
+// Firestore 一份文件上限 1 MB，圖示只存檔名部分、最多 1000 件
+function compactInventory(items) {
+  return items.slice(0, 1000).map((item) => ({
+    a: String(item.assetId),
+    n: String(item.name).slice(0, 120),
+    m: String(item.marketHashName).slice(0, 200),
+    y: String(item.type).slice(0, 80),
+    i: String(item.iconUrl || "").startsWith(STEAM_ICON_BASE) ? item.iconUrl.slice(STEAM_ICON_BASE.length).slice(0, 400) : ""
+  }));
+}
+
+function expandInventory(rows) {
+  return (Array.isArray(rows) ? rows : []).map((row) => ({
+    assetId: String(row.a || ""),
+    amount: 1,
+    name: String(row.n || ""),
+    marketHashName: String(row.m || ""),
+    type: String(row.y || ""),
+    iconUrl: row.i ? STEAM_ICON_BASE + row.i : ""
+  })).filter((item) => item.assetId && item.marketHashName);
+}
+
+async function syncInventoryToCloud() {
+  const user = window.eloAuthUser;
+  const db = window.eloFirebaseDb;
+  if (!user || !db || !ownInventory.steamId) return;
+  try {
+    await db.collection("userInventories").doc(user.uid).set({
+      steamId: ownInventory.steamId,
+      items: compactInventory(ownInventory.items),
+      savedAt: ownInventory.savedAt
+    });
+    ownInventory.synced = true;
+  } catch (error) {
+    console.warn("Inventory sync failed:", error);
+    ownInventory.synced = false;
+  }
+  renderInventoryCard();
+}
+
+function saveOwnInventory(items, savedAt = Date.now(), { sync = true } = {}) {
   ownInventory.items = items;
   ownInventory.savedAt = savedAt;
+  ownInventory.synced = !sync;
   try {
     localStorage.setItem(inventoryStorageKey(), JSON.stringify({ steamId: ownInventory.steamId, items, savedAt }));
   } catch {
     // 存不進本機也沒關係，這次照常使用
   }
+  if (sync) syncInventoryToCloud();
 }
 
-let inventoryNotice = null;
+function importInventoryItems(items, steamId, noticeKey = "inventory.imported") {
+  if (steamId && steamId !== ownInventory.steamId) {
+    inventoryNotice = { message: t("inventory.wrongAccount"), kind: "error" };
+    renderOwnInventory();
+    return false;
+  }
+  saveOwnInventory(items);
+  inventoryNotice = { message: t(noticeKey, { count: items.length }), kind: "success" };
+  renderOwnInventory();
+  return true;
+}
 
-function restoreOwnInventory() {
+async function restoreOwnInventory() {
   const steamId = tradeUrlSteamId();
-  if (steamId !== ownInventory.steamId) inventoryNotice = null;
+  const uid = window.eloAuthUser?.uid || "";
+  const loadKey = `${uid}:${steamId}`;
+  if (loadKey !== inventoryLoadedFor) inventoryNotice = null;
+  inventoryLoadedFor = loadKey;
   ownInventory.steamId = steamId;
   ownInventory.items = [];
   ownInventory.savedAt = 0;
+  ownInventory.synced = false;
   const key = inventoryStorageKey();
   if (key && steamId) {
     try {
@@ -1159,49 +1223,142 @@ function restoreOwnInventory() {
       // 讀不到本機紀錄就當作沒有
     }
   }
-  const pending = window.eloInventoryImport.pending("trade");
+  const pending = window.eloInventoryImport.pending("profile");
   if (pending && key && steamId) {
-    window.eloInventoryImport.clearPending("trade");
-    if (pending.steamId === steamId) {
-      saveOwnInventory(pending.items);
-      inventoryNotice = { message: t("inventory.imported", { count: pending.items.length }), kind: "success" };
-    } else {
-      inventoryNotice = { message: t("inventory.wrongAccount"), kind: "error" };
-    }
+    window.eloInventoryImport.clearPending("profile");
+    importInventoryItems(pending.items, pending.steamId);
+    return;
   }
   renderOwnInventory();
+  // 別台裝置讀過的庫存
+  const db = window.eloFirebaseDb;
+  if (!uid || !steamId || !db) return;
+  try {
+    const snapshot = await db.collection("userInventories").doc(uid).get();
+    if (inventoryLoadedFor !== loadKey) return;
+    const data = snapshot.exists ? snapshot.data() : null;
+    if (data?.steamId === steamId && Number(data.savedAt) > ownInventory.savedAt) {
+      saveOwnInventory(expandInventory(data.items), Number(data.savedAt), { sync: false });
+      renderOwnInventory();
+    } else if (data?.steamId === steamId && Number(data.savedAt) === ownInventory.savedAt) {
+      ownInventory.synced = true;
+      renderInventoryCard();
+    } else if (ownInventory.items.length) {
+      syncInventoryToCloud();
+    }
+  } catch (error) {
+    console.warn("Inventory cloud read failed:", error);
+  }
 }
+
+function renderInventoryCard() {
+  const signedIn = Boolean(window.eloAuthUser);
+  const card = $("#inventory-card");
+  card.hidden = !signedIn;
+  if (!signedIn) return;
+  const steamId = ownInventory.steamId;
+  const hasItems = ownInventory.items.length > 0;
+  $("#inventory-methods").hidden = !steamId;
+  $("#inventory-count").textContent = hasItems ? t("inventory.countLabel", { count: ownInventory.items.length }) : "";
+  const link = $("#inv-open");
+  if (steamId) link.href = `https://steamcommunity.com/inventory/${steamId}/730/2?l=tchinese&count=2000`;
+  else link.removeAttribute("href");
+  updateInventoryBookmarklet(steamId, "profile");
+  if (inventoryNotice) setInventoryStatus(inventoryNotice.message, inventoryNotice.kind);
+  else if (!steamId) setInventoryStatus(t("inventory.needTradeUrl"));
+  else if (!hasItems) setInventoryStatus(t("inventory.none"));
+  else {
+    const old = Date.now() - ownInventory.savedAt > INVENTORY_STALE_MS;
+    const parts = [
+      old ? t("inventory.stale", { time: inventoryTime(ownInventory.savedAt) }) : t("inventory.loaded", { count: ownInventory.items.length, time: inventoryTime(ownInventory.savedAt) }),
+      t(ownInventory.synced ? "inventory.synced" : "inventory.syncFailed")
+    ];
+    setInventoryStatus(parts.join(" · "), old ? "" : "success");
+  }
+}
+
+function parseInventoryText(raw) {
+  const { items, truncated } = window.eloInventoryImport.parse(raw, t);
+  if (!items.length) throw new Error(truncated ? t("inventory.truncated", { count: 0 }) : t("admin.pasteNoTradable"));
+  return { items, truncated };
+}
+
+function importFromText(raw, noticeKey) {
+  try {
+    const { items, truncated } = parseInventoryText(raw);
+    importInventoryItems(items, "", truncated ? "inventory.truncated" : noticeKey);
+    if (truncated) inventoryNotice.kind = "error";
+    renderOwnInventory();
+    return true;
+  } catch (error) {
+    inventoryNotice = { message: error.message, kind: "error" };
+    renderOwnInventory();
+    return false;
+  }
+}
+
+async function importFromClipboard({ silent = false } = {}) {
+  let text = "";
+  try {
+    text = await navigator.clipboard.readText();
+  } catch {
+    if (!silent) {
+      inventoryNotice = { message: t("inventory.clipDenied"), kind: "error" };
+      document.querySelector(".inventory-manual").open = true;
+      renderOwnInventory();
+    }
+    return;
+  }
+  if (!/"assets"\s*:/.test(text) || !/"descriptions"\s*:/.test(text)) {
+    if (!silent) {
+      inventoryNotice = { message: t("inventory.clipEmpty"), kind: "error" };
+      renderOwnInventory();
+    }
+    return;
+  }
+  importFromText(text, silent ? "inventory.clipAuto" : "inventory.imported");
+}
+
+$("#inv-open").addEventListener("click", () => {
+  inventoryOpenedAt = Date.now();
+});
+
+// 從 Steam 庫存分頁回來時，自動試著讀剪貼簿（瀏覽器允許的話）
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible" || !inventoryOpenedAt) return;
+  if (Date.now() - inventoryOpenedAt > 10 * 60 * 1000) return;
+  inventoryOpenedAt = 0;
+  importFromClipboard({ silent: true });
+});
+
+$("#inv-clipboard").addEventListener("click", () => importFromClipboard());
+
+$("#inv-load").addEventListener("click", () => {
+  if (importFromText($("#inv-input").value, "inventory.imported")) {
+    $("#inv-input").value = "";
+    document.querySelector(".inventory-manual").open = false;
+  }
+});
 
 function ownItemEc(item) {
   return window.eloPrices?.ec(item.marketHashName) ?? null;
 }
 
 function renderOwnInventory() {
+  renderInventoryCard();
   const signedIn = Boolean(window.eloAuthUser);
-  const steamId = ownInventory.steamId;
-  const link = $("#trade-inv-open");
-  const paste = $("#trade-inv-paste");
-  paste.hidden = !signedIn || !steamId;
-  if (steamId) link.href = `https://steamcommunity.com/inventory/${steamId}/730/2?l=tchinese&count=2000`;
-  else link.removeAttribute("href");
-  updateTradeBookmarklet(steamId, "trade");
   const hasItems = ownInventory.items.length > 0;
   if (hasItems && window.eloPrices) {
     window.eloPrices.request([...tradeState.offer.map((item) => item.marketHashName), ...ownInventory.items.map((item) => item.marketHashName)]);
   }
   $("#trade-inv-search").hidden = !hasItems;
   $("#trade-own-count").textContent = hasItems ? t("trade.inventoryCount", { count: ownInventory.items.length }) : "";
-  paste.querySelector("summary").textContent = hasItems ? t("trade.inventoryReload") : t("trade.inventoryLoad");
-  if (inventoryNotice && signedIn) {
-    setInventoryStatus(inventoryNotice.message, inventoryNotice.kind);
-  } else if (!signedIn) setInventoryStatus(t("trade.inventoryNeedLogin"));
-  else if (!steamId) setInventoryStatus(t("trade.inventoryNeedTradeUrl"));
-  else if (hasItems) {
-    setInventoryStatus(t("trade.inventoryLoaded", {
-      count: ownInventory.items.length,
-      time: new Date(ownInventory.savedAt).toLocaleString("zh-TW", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })
-    }), "success");
-  } else setInventoryStatus("");
+  const tradeStatus = $("#trade-inv-status");
+  tradeStatus.dataset.kind = "";
+  if (!signedIn) tradeStatus.textContent = t("trade.inventoryNeedLogin");
+  else if (!hasItems) tradeStatus.textContent = t("inventory.tradeEmpty");
+  else tradeStatus.textContent = t("trade.inventoryLoaded", { count: ownInventory.items.length, time: inventoryTime(ownInventory.savedAt) });
+  $("#trade-inv-goto").hidden = !signedIn || hasItems;
 
   // 只顯示已經查到 SteamAnalyst 市價的物品
   const prices = window.eloPrices;
@@ -1237,20 +1394,6 @@ function renderOwnInventory() {
       </button>`).join("");
 }
 
-$("#trade-inv-load").addEventListener("click", () => {
-  try {
-    const { items, truncated } = window.eloInventoryImport.parse($("#trade-inv-input").value, t);
-    if (!items.length) throw new Error(truncated ? t("inventory.truncated", { count: 0 }) : t("admin.pasteNoTradable"));
-    saveOwnInventory(items);
-    $("#trade-inv-input").value = "";
-    inventoryNotice = truncated ? { message: t("inventory.truncated", { count: items.length }), kind: "error" } : null;
-    if (!truncated) $("#trade-inv-paste").open = false;
-    renderOwnInventory();
-  } catch (error) {
-    setInventoryStatus(error.message, "error");
-  }
-});
-
 $("#trade-inv-search").addEventListener("input", renderOwnInventory);
 
 $("#trade-own-grid").addEventListener("click", (event) => {
@@ -1268,6 +1411,7 @@ $("#trade-own-grid").addEventListener("click", (event) => {
 });
 
 window.addEventListener("eloauthchange", restoreOwnInventory);
+window.addEventListener("elofirebaseready", restoreOwnInventory);
 window.addEventListener("eloprofilechange", restoreOwnInventory);
 window.addEventListener("elopricesloaded", () => {
   for (const item of tradeState.offer) {
