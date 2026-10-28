@@ -124,12 +124,18 @@ window.eloPrices = (() => {
     blockedUntil = 0;
     blockReason = "";
     lastError = "";
+    if (uid) apiKey = String(readJson(localKeyName(uid), "") || "");
     if (uid && db()) {
       try {
         const snapshot = await db().collection("userSecrets").doc(uid).get();
         if (keyLoadedFor !== uid) return;
-        apiKey = String(snapshot.data()?.steamAnalystKey || "");
+        const remoteKey = String(snapshot.data()?.steamAnalystKey || "");
+        if (snapshot.exists) {
+          apiKey = remoteKey;
+          writeJson(localKeyName(uid), remoteKey);
+        }
       } catch (error) {
+        // 規則還沒發布或離線時，就用這台裝置記住的金鑰
         console.warn("Price key unavailable:", error);
       }
     }
@@ -142,7 +148,15 @@ window.eloPrices = (() => {
     if (!current || !db()) throw new Error("login");
     const key = String(rawKey || "").trim();
     if (key && !KEY_PATTERN.test(key)) throw new Error("format");
-    await db().collection("userSecrets").doc(current.uid).set({ steamAnalystKey: key, updatedAt: Date.now() });
+    // 先記在這台裝置，雲端同步失敗也能用；同步成功的話換裝置登入也有
+    writeJson(localKeyName(current.uid), key);
+    let synced = true;
+    try {
+      await db().collection("userSecrets").doc(current.uid).set({ steamAnalystKey: key, updatedAt: Date.now() });
+    } catch (error) {
+      console.warn("Price key sync failed:", error);
+      synced = false;
+    }
     apiKey = key;
     keyLoadedFor = current.uid;
     blockedUntil = 0;
@@ -150,6 +164,11 @@ window.eloPrices = (() => {
     lastError = "";
     notifyChange();
     schedule();
+    return { synced };
+  }
+
+  function localKeyName(uid) {
+    return `eloskin2.saKey.${uid}`;
   }
 
   // ---------- 共用的 Firestore 價格快取 ----------

@@ -256,6 +256,7 @@ window.ELOSKIN2_TEXT = {
     label: "SteamAnalyst API 金鑰",
     placeholder: "sa_live_…",
     saved: "已儲存，開始讀取價格",
+    savedLocal: "已存在這台裝置，開始讀取價格（雲端同步失敗，換裝置要再貼一次）",
     cleared: "已移除金鑰",
     saving: "儲存中…",
     formatError: "格式不對，金鑰應該是 sa_live_ 開頭",

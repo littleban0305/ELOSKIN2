@@ -1305,9 +1305,9 @@ $("#price-key-form").addEventListener("submit", async (event) => {
   }
   setPriceKeyStatus(t("priceKey.saving"));
   try {
-    await window.eloPrices.saveKey(value);
+    const result = await window.eloPrices.saveKey(value);
     $("#price-key-input").value = "";
-    setPriceKeyStatus(t("priceKey.saved"), "success");
+    setPriceKeyStatus(t(result?.synced === false ? "priceKey.savedLocal" : "priceKey.saved"), "success");
     if (ownInventory.items.length) renderOwnInventory();
   } catch (error) {
     setPriceKeyStatus(error.message === "format" ? t("priceKey.formatError") : t("priceKey.saveError", { message: error.message }), "error");
