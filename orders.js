@@ -180,7 +180,7 @@
       offerItems: [],
       total: items.reduce((sum, item) => sum + item.price * item.quantity, 0),
       offerTotal: 0,
-      note: $("#cart-note").value.trim().slice(0, 500),
+      note: "",
       adminNote: "",
       status: "pending",
       createdAt: now,
@@ -194,7 +194,6 @@
     try {
       await createOrder(order);
       app().clearCart();
-      $("#cart-note").value = "";
       status.textContent = "";
       app().closeCart();
       toast(text("orders.submitted"));
@@ -229,7 +228,7 @@
       })),
       total: selection.receiveTotal,
       offerTotal: selection.offerTotal,
-      note: $("#trade-note").value.trim().slice(0, 500),
+      note: "",
       adminNote: "",
       status: "pending",
       createdAt: now,
@@ -241,7 +240,6 @@
     try {
       await createOrder(order);
       app().clearTrade();
-      $("#trade-note").value = "";
       toast(text("orders.submitted"));
     } catch (error) {
       toast(text("orders.submitError", { message: error.message }));

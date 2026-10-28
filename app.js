@@ -23,6 +23,31 @@ function isProductPublished(product) {
 const LISTING_CATEGORY_ART = { rifle: "rifle", sniper: "sniper", pistol: "pistol", knife: "knife", gloves: "gloves", case: "case", competitor: "competitor", rivals: "rivals" };
 const WEAPON_CATEGORY_KEYS = ["weapon", "rifle", "sniper", "pistol", "knife"];
 
+const WEAR_BY_SUFFIX = {
+  "factory new": "factory-new",
+  "minimal wear": "minimal-wear",
+  "field-tested": "field-tested",
+  "well-worn": "well-worn",
+  "battle-scarred": "battle-scarred"
+};
+
+function detectWear(marketHashName) {
+  const match = /\(([^()]+)\)\s*$/.exec(marketHashName || "");
+  return match ? WEAR_BY_SUFFIX[match[1].toLowerCase()] || "unknown" : "unknown";
+}
+
+function detectRarity(type) {
+  const value = String(type || "");
+  if (/消費|Consumer/i.test(value)) return "consumer";
+  if (/工業|Industrial/i.test(value)) return "industrial";
+  if (/軍規|Mil-Spec/i.test(value)) return "mil-spec";
+  if (/受限|Restricted/i.test(value)) return "restricted";
+  if (/機密|保密|Classified/i.test(value)) return "classified";
+  if (/隱密|隱秘|Covert/i.test(value)) return "covert";
+  if (/非凡|Extraordinary/i.test(value)) return "extraordinary";
+  return "unknown";
+}
+
 function listingProduct(listing) {
   const key = typeof copy.categories[listing.category] === "string" ? listing.category : "item";
   const category = copy.categories[key];
@@ -45,9 +70,10 @@ function listingProduct(listing) {
     stock: Number.isInteger(listing.stock) && listing.stock >= 0 ? listing.stock : 0,
     tags: Array.isArray(listing.tags) ? listing.tags.filter((tag) => typeof tag === "string") : [],
     wear: copy.product.notApplicable,
-    wearCondition: "unknown",
-    rarityColor: "unknown",
-    stattrak: /stattrak/i.test(name),
+    wearCondition: detectWear(listing.steam?.marketHashName),
+    rarityColor: detectRarity(listing.steam?.type || listing.description),
+    stattrak: /stattrak/i.test(`${name} ${listing.steam?.marketHashName || ""}`),
+    miniGame: listing.game === "ROBLOX RIVALS" ? "rivals" : "",
     hasStickers: false,
     hasCharm: false,
     label: category.toUpperCase(),
@@ -65,7 +91,18 @@ const games = [
   { id: "CS2", label: copy.games.cs2 },
   { id: "ROBLOX RIVALS", label: copy.games.rivals }
 ];
-const state = { categories: [], tags: [], game: "all", search: "", sort: "featured", openFilter: "", cart: new Map(), favorites: new Set() };
+const SHOP_GAME_FILTERS = { categories: [], wear: [], rarity: [], stattrak: [], stickers: [], charms: [], miniGame: [] };
+const SHOP_FILTER_KEYS = {
+  "shop-type-filter": "categories",
+  "shop-tag-filter": "tags",
+  "shop-wear-filter": "wear",
+  "shop-rarity-filter": "rarity",
+  "shop-stattrak-filter": "stattrak",
+  "shop-stickers-filter": "stickers",
+  "shop-charms-filter": "charms",
+  "shop-minigame-filter": "miniGame"
+};
+const state = { ...structuredClone(SHOP_GAME_FILTERS), tags: [], game: "all", search: "", sort: "featured", openFilter: "", cart: new Map(), favorites: new Set() };
 const tradeState = {
   category: [],
   game: "CS2",
@@ -134,18 +171,53 @@ function renderFilters() {
     { value: "stock-descending", label: copy.shop.sortStock },
     { value: "name-ascending", label: copy.shop.sortName }
   ];
+  const yesNo = [{ value: "yes", label: copy.trade.has }, { value: "no", label: copy.trade.hasNot }];
+  const filter = (id, label, key, options, extra = {}) => dropdownFilterMarkup({
+    id, label, selected: state[key], options, emptyLabel: copy.trade.any, openFilter: state.openFilter, ...extra
+  });
+  const typeKeys = state.game === "CS2" ? ["weapon", "rifle", "sniper", "pistol", "knife", "gloves", "case", "item"] : categoryKeys;
   state.tags = state.tags.filter((tag) => availableTags().includes(tag));
-  shopFilters.innerHTML = [
+  const parts = [
     dropdownFilterMarkup({ id: "shop-game-filter", label: copy.shop.filterGame, selected: [state.game], multiple: false,
-      options: games.map((game) => ({ value: game.id, label: game.label })), emptyLabel: copy.games.all, openFilter: state.openFilter }),
-    dropdownFilterMarkup({ id: "shop-type-filter", label: copy.shop.filterType, selected: state.categories,
-      options: categoryKeys.map((key) => ({ value: copy.categories[key], label: copy.categories[key] })), emptyLabel: copy.trade.allTypes, openFilter: state.openFilter }),
+      options: games.map((game) => ({ value: game.id, label: game.label })), emptyLabel: copy.games.all, openFilter: state.openFilter })
+  ];
+  if (state.game === "ROBLOX RIVALS") {
+    parts.push(filter("shop-minigame-filter", copy.trade.miniGame, "miniGame", [{ value: "rivals", label: copy.trade.rivals }]));
+  } else {
+    parts.push(filter("shop-type-filter", copy.shop.filterType, "categories",
+      typeKeys.map((key) => ({ value: copy.categories[key], label: copy.categories[key] })), { emptyLabel: copy.trade.allTypes }));
+  }
+  if (state.game === "CS2") {
+    parts.push(
+      filter("shop-wear-filter", copy.trade.wear, "wear", [
+        { value: "factory-new", label: copy.trade.wearFactoryNew },
+        { value: "minimal-wear", label: copy.trade.wearMinimal },
+        { value: "field-tested", label: copy.trade.wearFieldTested },
+        { value: "well-worn", label: copy.trade.wearWellWorn },
+        { value: "battle-scarred", label: copy.trade.wearBattleScarred }
+      ], { emptyLabel: copy.trade.allWear }),
+      filter("shop-rarity-filter", copy.trade.rarity, "rarity", [
+        { value: "consumer", label: copy.trade.rarityConsumer },
+        { value: "industrial", label: copy.trade.rarityIndustrial },
+        { value: "mil-spec", label: copy.trade.rarityMilSpec },
+        { value: "restricted", label: copy.trade.rarityRestricted },
+        { value: "classified", label: copy.trade.rarityClassified },
+        { value: "covert", label: copy.trade.rarityCovert },
+        { value: "extraordinary", label: copy.trade.rarityExtraordinary }
+      ], { emptyLabel: copy.trade.allRarity }),
+      filter("shop-stattrak-filter", copy.trade.stattrak, "stattrak", yesNo),
+      filter("shop-stickers-filter", copy.trade.stickers, "stickers", yesNo),
+      filter("shop-charms-filter", copy.trade.charms, "charms", yesNo)
+    );
+  }
+  parts.push(
     dropdownFilterMarkup({ id: "shop-tag-filter", label: copy.shop.filterTags, selected: state.tags,
       options: availableTags().map((tag) => ({ value: tag, label: tag })), emptyLabel: copy.shop.anyTag, openFilter: state.openFilter, note: copy.shop.noTags }),
     dropdownFilterMarkup({ id: "shop-sort-filter", label: copy.shop.sortLabel, selected: [state.sort], multiple: false,
       options: sortOptions, emptyLabel: copy.shop.sortRecommended, openFilter: state.openFilter }),
     `<button class="trade-reset-filters shop-reset-filters" type="button" data-shop-reset>${escapeHtml(copy.trade.resetFilters)}</button>`
-  ].join("");
+  );
+  shopFilters.innerHTML = parts.join("");
 }
 
 function tradeFilterMarkup(id, labelKey, selectedValues, options, { multiple = true, emptyLabel } = {}) {
@@ -288,6 +360,19 @@ function resetTradeFilters() {
   updateTradePriceRange();
 }
 
+function matchesGameFilters(filterState, product) {
+  if (filterState.game === "ROBLOX RIVALS" && filterState.miniGame.length
+    && !filterState.miniGame.includes(product.miniGame)) return false;
+  if (filterState.game === "CS2") {
+    if (filterState.wear.length && !filterState.wear.includes(product.wearCondition)) return false;
+    if (filterState.rarity.length && !filterState.rarity.includes(product.rarityColor)) return false;
+    if (filterState.stattrak.length && !filterState.stattrak.includes(product.stattrak ? "yes" : "no")) return false;
+    if (filterState.stickers.length && !filterState.stickers.includes(product.hasStickers ? "yes" : "no")) return false;
+    if (filterState.charms.length && !filterState.charms.includes(product.hasCharm ? "yes" : "no")) return false;
+  }
+  return true;
+}
+
 function visibleProducts(filterState = state) {
   const term = filterState.search.trim().toLocaleLowerCase("zh-Hant");
   const visible = products.filter((product) => {
@@ -298,19 +383,13 @@ function visibleProducts(filterState = state) {
     const matchesGame = filterState.game === "all" || product.game === filterState.game;
     const matchesSearch = !term || [product.name, product.game, product.category, product.description, product.wear, ...(product.tags || [])].some((value) => value.toLocaleLowerCase("zh-Hant").includes(term));
     if (!matchesCategory || !matchesGame || !matchesSearch) return false;
-    if (filterState !== tradeState) return !filterState.tags.length || filterState.tags.some((tag) => (product.tags || []).includes(tag));
+    if (filterState !== tradeState) {
+      if (filterState.tags.length && !filterState.tags.some((tag) => (product.tags || []).includes(tag))) return false;
+      return matchesGameFilters(filterState, product);
+    }
     if (!Number.isFinite(product.price) || product.price < tradeState.minPrice
       || (tradeState.maxPrice < 50000 && product.price > tradeState.maxPrice)) return false;
-    if (tradeState.game === "ROBLOX RIVALS" && tradeState.miniGame.length
-      && !tradeState.miniGame.includes(product.miniGame)) return false;
-    if (tradeState.game === "CS2") {
-      if (tradeState.wear.length && !tradeState.wear.includes(product.wearCondition)) return false;
-      if (tradeState.rarity.length && !tradeState.rarity.includes(product.rarityColor)) return false;
-      if (tradeState.stattrak.length && !tradeState.stattrak.includes(product.stattrak ? "yes" : "no")) return false;
-      if (tradeState.stickers.length && !tradeState.stickers.includes(product.hasStickers ? "yes" : "no")) return false;
-      if (tradeState.charms.length && !tradeState.charms.includes(product.hasCharm ? "yes" : "no")) return false;
-    }
-    return true;
+    return matchesGameFilters(tradeState, product);
   });
   const sorters = {
     featured: (a, b) => products.indexOf(a) - products.indexOf(b),
@@ -776,7 +855,7 @@ function setShopFilterOpen(filterId) {
 
 shopFilters.addEventListener("click", (event) => {
   if (event.target.closest("[data-shop-reset]")) {
-    Object.assign(state, { categories: [], tags: [], game: "all", sort: "featured", openFilter: "" });
+    Object.assign(state, structuredClone(SHOP_GAME_FILTERS), { tags: [], game: "all", sort: "featured", openFilter: "" });
     renderFilters();
     renderProducts();
     return;
@@ -792,10 +871,13 @@ shopFilters.addEventListener("change", (event) => {
   if (!input) return;
   const filterId = input.closest("[data-shop-filter]").dataset.shopFilter;
   const value = input.value;
-  if (filterId === "shop-game-filter") state.game = value;
-  else if (filterId === "shop-sort-filter") state.sort = value;
+  if (filterId === "shop-game-filter") {
+    if (state.game !== value) Object.assign(state, structuredClone(SHOP_GAME_FILTERS));
+    state.game = value;
+  } else if (filterId === "shop-sort-filter") state.sort = value;
   else {
-    const key = filterId === "shop-type-filter" ? "categories" : "tags";
+    const key = SHOP_FILTER_KEYS[filterId];
+    if (!key) return;
     state[key] = input.checked ? [...new Set([...state[key], value])] : state[key].filter((item) => item !== value);
   }
   renderFilters();
