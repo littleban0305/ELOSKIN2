@@ -4,10 +4,11 @@
 //   s 貼紙名稱陣列、k 吊飾名稱陣列、t 命名牌
 (function (root) {
   const WEAR_FROM_NAME = {
+    // 跟 Steam 繁體中文用的名稱一樣
     "Factory New": "全新出廠",
-    "Minimal Wear": "略有磨損",
-    "Field-Tested": "久經沙場",
-    "Well-Worn": "破損不堪",
+    "Minimal Wear": "輕微磨損",
+    "Field-Tested": "戰場實測",
+    "Well-Worn": "重度磨損",
     "Battle-Scarred": "戰痕累累"
   };
 
@@ -108,14 +109,14 @@
     return map;
   }
 
-  // 給畫面用的文字，例如「久經沙場 · 0.1534 · 圖案 123」
+  // 給畫面用的文字，例如「戰場實測 · 0.165214 · 圖案 134」
   function summary(details) {
     if (!details) return "";
     const parts = [];
     if (details.q === "st") parts.push("StatTrak™");
     if (details.q === "sv") parts.push("紀念品");
     if (details.w) parts.push(details.w);
-    if (Number.isFinite(details.f)) parts.push(details.f.toFixed(4));
+    if (Number.isFinite(details.f)) parts.push(details.f.toFixed(6));
     if (Number.isFinite(details.p)) parts.push(`圖案 ${details.p}`);
     return parts.join(" · ");
   }
