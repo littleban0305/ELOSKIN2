@@ -629,7 +629,14 @@ window.ELOSKIN2_TEXT = {
     autoDone: "自動讀取完成：{count} 件可交易物品",
     autoError: "自動讀取失敗：{message}",
     autoFailed: "送出失敗：{message}",
-    otherMethods: "其他讀取方式（中繼站離線時用）"
+    otherMethods: "其他讀取方式（中繼站離線時用）",
+    modalTitle: "讀取你的 Steam 庫存",
+    modalOnline: "交易前要先讀取你的 Steam 庫存，這樣才能選要提供的物品。中繼站在線，按一下就會自動幫你讀取。",
+    modalWorking: "中繼站正在幫你讀取 Steam 庫存，好了會自動關掉這個視窗…",
+    modalOffline: "交易前要先讀取你的 Steam 庫存。中繼站現在離線，請到個人頁面用書籤或複製貼上讀取一次，之後換裝置也會自動同步。",
+    modalError: "自動讀取失敗：{message}。請到個人頁面用其他方式讀取。",
+    modalRun: "立即讀取",
+    modalGoto: "前往個人頁面"
   },
   wallet: {
     title: "儲值",

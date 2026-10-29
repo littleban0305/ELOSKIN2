@@ -848,21 +848,6 @@
 
   // ---------- Steam import ----------
 
-  function steamErrorMessage(data, status) {
-    const code = data?.error;
-    if (code === "steam_api_key_invalid") return text("admin.steamApiKeyInvalid");
-    if (code === "steam_rate_limited") {
-      return data?.source === "community" ? text("admin.steamRateLimitedNoKey") : text("admin.steamRateLimited");
-    }
-    if (code === "steam_forbidden") return text("admin.steamForbidden");
-    const keys = {
-      inventory_unavailable: "shop.inventoryUnavailable",
-      steam_unavailable: "shop.steamUnavailable",
-      invalid_steam_response: "shop.invalidSteamResponse",
-      origin_not_allowed: "shop.corsNotAllowed"
-    };
-    return keys[code] ? text(keys[code]) : text("shop.workerHttpError", { status });
-  }
 
   const STEAM_ICON_BASE = "https://community.cloudflare.steamstatic.com/economy/image/";
 

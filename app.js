@@ -1109,6 +1109,7 @@ const INVENTORY_STALE_MS = 24 * 60 * 60 * 1000;
 let inventoryNotice = null;
 let inventoryLoadedFor = "";
 let inventoryOpenedAt = 0;
+let inventoryReadyFor = ""; // 本機和雲端都檢查過之後才知道是不是真的沒有庫存
 
 function tradeUrlSteamId() {
   try {
@@ -1238,6 +1239,7 @@ async function restoreOwnInventory() {
   if (pending && key && steamId) {
     window.eloInventoryImport.clearPending("profile");
     importInventoryItems(pending.items, pending.steamId);
+    inventoryReadyFor = loadKey;
     return;
   }
   renderOwnInventory();
@@ -1260,8 +1262,58 @@ async function restoreOwnInventory() {
   } catch (error) {
     console.warn("Inventory cloud read failed:", error);
   }
+  if (inventoryLoadedFor === loadKey) inventoryReadyFor = loadKey;
   maybeAutoRequest();
+  updateInventoryModal();
 }
+
+// ---------- 沒有庫存就要求讀取 ----------
+
+let inventoryPromptDismissed = false;
+
+function updateInventoryModal() {
+  const modal = $("#inventory-modal");
+  const uid = window.eloAuthUser?.uid || "";
+  const steamId = ownInventory.steamId;
+  const blockingModal = !$("#profile-setup-modal").hidden || !$("#login-modal").hidden || !$("#price-key-modal").hidden;
+  const needed = Boolean(uid) && Boolean(steamId)
+    && inventoryReadyFor === `${uid}:${steamId}`
+    && !ownInventory.items.length
+    && Boolean(window.eloPrices?.status().hasKey);
+  if (!needed || inventoryPromptDismissed || blockingModal) {
+    modal.hidden = true;
+    return;
+  }
+  const online = relayOnline();
+  const status = relayState.request?.status || "";
+  const busy = status === "pending" || status === "working";
+  const runButton = $("#inventory-modal-run");
+  let message;
+  if (busy) message = t("inventory.modalWorking");
+  else if (status === "error") message = t("inventory.modalError", { message: relayState.request?.message || "" });
+  else message = t(online ? "inventory.modalOnline" : "inventory.modalOffline");
+  $("#inventory-modal-text").textContent = message;
+  runButton.textContent = t(online && status !== "error" ? "inventory.modalRun" : "inventory.modalGoto");
+  runButton.disabled = busy;
+  runButton.dataset.action = online && status !== "error" ? "run" : "goto";
+  modal.hidden = false;
+}
+
+$("#inventory-modal-run").addEventListener("click", () => {
+  if ($("#inventory-modal-run").dataset.action === "run") {
+    requestAutoInventory();
+    return;
+  }
+  inventoryPromptDismissed = true;
+  $("#inventory-modal").hidden = true;
+  navigateTo("profile");
+  window.setTimeout(() => $("#inventory-card").scrollIntoView({ behavior: "smooth", block: "start" }), 150);
+});
+
+$("#inventory-modal-later").addEventListener("click", () => {
+  inventoryPromptDismissed = true;
+  $("#inventory-modal").hidden = true;
+});
 
 // ---------- 自動讀取：交給家裡手機上的中繼站（relay/relay.mjs） ----------
 
@@ -1341,6 +1393,7 @@ function maybeAutoRequest() {
 $("#inventory-auto-run").addEventListener("click", requestAutoInventory);
 
 function renderInventoryCard() {
+  updateInventoryModal();
   const signedIn = Boolean(window.eloAuthUser);
   const card = $("#inventory-card");
   card.hidden = !signedIn;
@@ -1651,6 +1704,7 @@ window.addEventListener("eloauthchange", renderPriceKeyCard);
 window.setInterval(() => {
   if (!$("#page-profile").hidden) renderPriceKeyCard();
   else updatePriceKeyModal();
+  updateInventoryModal();
 }, 2000);
 renderPriceKeyCard();
 

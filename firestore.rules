@@ -221,10 +221,17 @@ service cloud.firestore {
     }
 
     // SteamAnalyst 查到的價格，大家共用；usd 為 0 代表查無此物品
+    // 防亂填：只有自己設定了 SteamAnalyst 金鑰的人能寫、時間要是現在、12 小時內別人查過的不能蓋掉（管理員可以）
+    function hasPriceKey() {
+      return exists(/databases/$(database)/documents/userSecrets/$(request.auth.uid))
+        && get(/databases/$(database)/documents/userSecrets/$(request.auth.uid)).data.steamAnalystKey.size() > 0;
+    }
+
     match /marketPrices/{priceId} {
       allow read: if true;
       allow create, update: if request.auth != null
         && request.auth.token.firebase.sign_in_provider != "anonymous"
+        && hasPriceKey()
         && request.resource.data.keys().hasOnly(["name", "usd", "source", "updatedAt", "updatedBy"])
         && request.resource.data.keys().hasAll(["name", "usd", "source", "updatedAt", "updatedBy"])
         && request.resource.data.name is string
@@ -235,7 +242,13 @@ service cloud.firestore {
         && request.resource.data.usd <= 1000000
         && request.resource.data.source == "steamanalyst"
         && request.resource.data.updatedAt is int
-        && request.resource.data.updatedBy == request.auth.uid;
+        && request.resource.data.updatedAt > request.time.toMillis() - 300000
+        && request.resource.data.updatedAt < request.time.toMillis() + 300000
+        && request.resource.data.updatedBy == request.auth.uid
+        && (resource == null
+          || isAdmin()
+          || resource.data.updatedBy == request.auth.uid
+          || resource.data.updatedAt < request.time.toMillis() - 43200000);
       allow delete: if isAdmin();
     }
 
