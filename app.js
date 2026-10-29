@@ -685,7 +685,7 @@ function renderCart() {
   $("#cart-items").innerHTML = entries.map(([id, quantity]) => {
     const product = products.find((item) => item.id === id);
     return `<div class="cart-row">
-      <div class="cart-row-visual">${escapeHtml(product.label)}</div>
+      <div class="cart-row-visual has-thumb">${product.iconUrl ? `<img src="${escapeHtml(product.iconUrl)}" alt="" loading="lazy">` : productArtwork(product)}</div>
       <div class="cart-row-info"><strong>${escapeHtml(product.name)}</strong><span>${escapeHtml(product.game === "CS2" ? copy.games.cs2 : copy.games.rivals)}${product.wear === copy.product.notApplicable ? "" : ` · ${escapeHtml(product.wear)}`}</span></div>
       <strong class="cart-row-price">${product.price.toLocaleString()} ${escapeHtml(t("product.currency"))}</strong>
       <div class="quantity-control">

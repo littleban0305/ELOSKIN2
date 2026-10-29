@@ -542,3 +542,25 @@ body.item-modal-open { overflow: hidden; }
 .trade-own-cell.is-selected { opacity: 1; }
 .trade-own-cell.is-selected .trade-own-item { opacity: .45; }
 .trade-own-add { display: none; }
+
+/* ---------- 購物車縮圖 ---------- */
+
+.cart-row-visual.has-thumb {
+  width: 64px !important;
+  height: 48px !important;
+  overflow: hidden;
+  padding: 4px;
+  background: #0d1418 !important;
+  border: 1px solid #22313a !important;
+  border-radius: 8px !important;
+}
+
+.cart-row-visual.has-thumb img,
+.cart-row-visual.has-thumb svg,
+.cart-row-visual.has-thumb .product-art {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: contain;
+}
