@@ -1131,59 +1131,50 @@
     ].filter(Boolean).join(" · ");
     const fragment = document.createDocumentFragment();
     for (const item of visible) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "admin-steam-item";
-      button.dataset.steamKey = item.key;
-      button.classList.toggle("is-selected", selectedSteamItem?.key === item.key);
+      // 卡片外面只放縮圖、名稱、市價；滑鼠移上去（手機點一下）出現「選擇上架」和「查看詳細資訊」
+      const card = document.createElement("div");
+      card.className = "admin-steam-item has-card-actions";
+      card.dataset.card = "";
+      card.dataset.steamCard = item.key;
+      card.classList.toggle("is-selected", selectedSteamItem?.key === item.key);
       const art = artElement(item.iconUrl, "CS2");
       const name = document.createElement("strong");
       name.textContent = item.name;
       name.title = item.name;
-      const meta = document.createElement("span");
+      card.append(art, name);
       const marketTwd = window.eloPrices?.twd(item.marketHashName);
-      meta.textContent = [item.type, text("admin.steamCount", { count: item.count })].filter(Boolean).join(" · ");
-      button.append(art, name, meta);
-      const detailText = window.eloItemDetails.summary(item.details);
-      const extraLines = window.eloItemDetails.extras(item.details);
-      if (detailText || extraLines.length) {
-        const detail = document.createElement("span");
-        detail.className = `item-detail${item.details?.q === "st" ? " is-stattrak" : ""}${item.details?.q === "sv" ? " is-souvenir" : ""}`;
-        for (const line of [detailText, ...extraLines].filter(Boolean)) {
-          const part = document.createElement("span");
-          part.textContent = line;
-          part.title = line;
-          if (line !== detailText) part.className = "item-detail-extra";
-          detail.append(part);
-        }
-        button.append(detail);
-      }
       if (marketTwd !== null && marketTwd !== undefined) {
         const price = document.createElement("span");
         price.className = "admin-steam-price";
         price.textContent = text("admin.marketPrice", { twd: marketTwd.toLocaleString() });
-        button.append(price);
+        card.append(price);
+      }
+      if (item.count > 1) {
+        const count = document.createElement("span");
+        count.textContent = text("admin.steamCount", { count: item.count });
+        card.append(count);
       }
       if (listed.has(item.marketHashName)) {
         const badge = document.createElement("span");
         badge.className = "admin-steam-badge";
         badge.textContent = text("admin.steamAlreadyListed");
-        button.append(badge);
+        card.append(badge);
       }
-      // 「在遊戲中檢視」不能放在按鈕裡，所以外面包一層
-      const cell = document.createElement("div");
-      cell.className = "admin-steam-cell";
-      cell.append(button);
-      const inspect = window.eloItemDetails.safeInspect(item.details);
-      if (inspect) {
-        const link = document.createElement("a");
-        link.className = "inspect-link";
-        link.href = inspect;
-        link.textContent = text("inspect.short");
-        link.setAttribute("aria-label", text("inspect.aria", { name: item.name }));
-        cell.append(link);
-      }
-      fragment.append(cell);
+      const actions = document.createElement("div");
+      actions.className = "card-actions";
+      const select = document.createElement("button");
+      select.type = "button";
+      select.className = "card-action is-primary";
+      select.dataset.steamKey = item.key;
+      select.textContent = text("cardActions.selectListing");
+      const detail = document.createElement("button");
+      detail.type = "button";
+      detail.className = "card-action";
+      detail.dataset.steamDetail = item.key;
+      detail.textContent = text("cardActions.details");
+      actions.append(select, detail);
+      card.append(actions);
+      fragment.append(card);
     }
     steamGrid.replaceChildren(fragment);
     if (!visible.length) {
@@ -1195,13 +1186,27 @@
   }
 
   steamGrid.addEventListener("click", (event) => {
+    const detailButton = event.target.closest("[data-steam-detail]");
+    if (detailButton) {
+      const entry = steamItems.find((candidate) => candidate.key === detailButton.dataset.steamDetail);
+      const twd = entry ? window.eloPrices?.twd(entry.marketHashName) : null;
+      if (entry) window.eloApp?.openItemModal({
+        name: entry.name,
+        type: [entry.type, entry.count > 1 ? text("admin.steamCount", { count: entry.count }) : ""].filter(Boolean).join(" · "),
+        iconUrl: entry.iconUrl,
+        details: entry.details,
+        marketHashName: entry.marketHashName,
+        priceText: twd !== null && twd !== undefined ? text("admin.marketPrice", { twd: twd.toLocaleString() }) : ""
+      });
+      return;
+    }
     const button = event.target.closest("[data-steam-key]");
     if (!button) return;
     const item = steamItems.find((entry) => entry.key === button.dataset.steamKey);
     if (!item) return;
     selectedSteamItem = item;
     steamGrid.querySelectorAll(".admin-steam-item").forEach((element) => {
-      element.classList.toggle("is-selected", element === button);
+      element.classList.toggle("is-selected", element.dataset.steamCard === item.key);
     });
     createFields.name.value = item.name;
     createFields.game.value = "CS2";

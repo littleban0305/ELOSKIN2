@@ -470,3 +470,70 @@ body.item-modal-open { overflow: hidden; }
   .item-modal-art img { max-height: 150px; }
   .item-modal-body { padding: 18px 16px 24px; }
 }
+
+/* ---------- 卡片動作：滑鼠移上去（手機點一下）從下面出現兩個按鈕 ---------- */
+
+.has-card-actions {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.card-actions {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  background: linear-gradient(to top, rgba(10, 16, 21, .97) 70%, rgba(10, 16, 21, 0));
+  opacity: 0;
+  transform: translateY(100%);
+  pointer-events: none;
+  transition: opacity .18s ease, transform .18s ease;
+}
+
+.has-card-actions.is-actions-open .card-actions,
+.has-card-actions:focus-within .card-actions {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .has-card-actions:hover .card-actions {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+}
+
+.card-action {
+  width: 100%;
+  min-height: 36px;
+  padding: 0 10px;
+  color: #dce5e8;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  background: #1c2930;
+  border: 1px solid #2b3c45;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.card-action:hover { background: #24343c; }
+.card-action.is-primary { color: #0b1a17; background: #50dbc5; border-color: #50dbc5; }
+.card-action.is-primary:hover { background: #6fe6d3; }
+.card-action:disabled { color: #829098; background: #1a242a; border-color: #263540; cursor: default; }
+.card-action:focus-visible { outline: 2px solid #50dbc5; outline-offset: 2px; }
+
+.trade-own-cell .trade-own-item { cursor: pointer; }
+.trade-own-cell .card-actions { padding: 6px; gap: 4px; }
+.trade-own-cell .card-action { min-height: 30px; font-size: 12px; }
+.trade-own-cell.is-selected { opacity: 1; }
+.trade-own-cell.is-selected .trade-own-item { opacity: .45; }
+.trade-own-add { display: none; }

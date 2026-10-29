@@ -511,11 +511,17 @@ function productCardMarkup(product, tradeMode = false, tradeSide = "receive") {
     : !priced ? t("product.unpriced", { name: product.name }) : t("product.outOfStock", { name: product.name });
   const tradeSelected = tradeMode && tradeState.receive.includes(product.id);
   const tradeActionLabel = tradeSelected ? t("trade.selectedItemLabel") : t(tradeSide === "offer" ? "trade.addToOffer" : "trade.addToReceive");
-  const actionButton = tradeMode
-    ? `<button class="add-button" type="button" data-trade-add="${escapeHtml(product.id)}" data-trade-side="${tradeSide}" aria-label="${escapeHtml(tradeActionLabel)}：${safeName}" ${tradeSelected || product.stock === 0 || !priced ? "disabled" : ""}><img src="assets/icon_new/add_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="" aria-hidden="true"></button>`
-    : `<button class="add-button" type="button" data-add="${escapeHtml(product.id)}" aria-label="${escapeHtml(addLabel)}" ${isDemo || product.stock === 0 || !priced ? "disabled" : ""}><img src="assets/icon_new/add_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="" aria-hidden="true"></button>`;
+  const canAct = !isDemo && priced && product.stock > 0 && !tradeSelected;
+  const primaryLabel = isDemo ? t("product.demoUnavailable")
+    : !priced ? t("cardActions.noPrice")
+    : product.stock === 0 ? t("cardActions.soldOut")
+    : tradeMode ? t(tradeSelected ? "cardActions.selected" : tradeSide === "offer" ? "cardActions.addOffer" : "cardActions.addReceive")
+    : t("cardActions.addCart");
+  const primaryData = tradeMode
+    ? `data-trade-add="${escapeHtml(product.id)}" data-trade-side="${tradeSide}" aria-label="${escapeHtml(tradeActionLabel)}：${safeName}"`
+    : `data-add="${escapeHtml(product.id)}" aria-label="${escapeHtml(addLabel)}"`;
   return `
-    <article class="product-card is-openable" data-product-open="${escapeHtml(product.id)}" data-open-side="${tradeMode ? tradeSide : ""}" tabindex="0" aria-label="${escapeHtml(t("itemModal.openAria", { name: product.name }))}">
+    <article class="product-card has-card-actions" data-card>
       <div class="product-visual art-${product.art}">
         <button class="favorite-button${favorite ? " is-favorite" : ""}" type="button" data-favorite="${escapeHtml(product.id)}" aria-label="${escapeHtml(favoriteLabel)}：${safeName}" aria-pressed="${favorite}">
           <img src="assets/icon_new/${favoriteIcon}" alt="" aria-hidden="true">
@@ -526,8 +532,11 @@ function productCardMarkup(product, tradeMode = false, tradeSide = "receive") {
         <h3 title="${safeName}">${safeName}</h3>
         <div class="product-bottom">
           <div class="product-price">${priced ? `<span class="currency-symbol">${escapeHtml(t("product.currency"))}</span>${product.price.toLocaleString()}` : `<span class="unpriced-label">${escapeHtml(t("product.noPrice"))}</span>`}</div>
-          ${actionButton}
         </div>
+      </div>
+      <div class="card-actions">
+        <button class="card-action is-primary" type="button" ${primaryData}${canAct ? "" : " disabled"}>${escapeHtml(primaryLabel)}</button>
+        <button class="card-action" type="button" data-product-detail="${escapeHtml(product.id)}" data-open-side="${tradeMode ? tradeSide : ""}" aria-label="${escapeHtml(t("itemModal.openAria", { name: product.name }))}">${escapeHtml(t("cardActions.details"))}</button>
       </div>
     </article>`;
 }
@@ -1563,13 +1572,16 @@ function renderOwnInventory() {
   $("#trade-own-grid").innerHTML = hasItems && !visible.length
     ? (priced.length ? `<p class="trade-filter-note">${escapeHtml(t("trade.inventoryEmpty"))}</p>` : "")
     : visible.map((item) => `
-      <div class="trade-own-cell${selected.has(item.assetId) ? " is-selected" : ""}">
-        <button class="trade-own-item" type="button" data-own-open="${escapeHtml(item.assetId)}" aria-label="${escapeHtml(t("itemModal.openAria", { name: item.name }))}">
+      <div class="trade-own-cell has-card-actions${selected.has(item.assetId) ? " is-selected" : ""}" data-card>
+        <div class="trade-own-item">
           <span class="trade-own-art">${item.iconUrl ? `<img src="${escapeHtml(item.iconUrl)}" alt="" loading="lazy">` : ""}</span>
           <strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong>
           <em class="trade-own-price">${escapeHtml(t("trade.priceEstimate", { ec: ownItemEc(item).toLocaleString() }))}</em>
-        </button>
-        <button class="trade-own-add" type="button" data-own-asset="${escapeHtml(item.assetId)}" aria-label="${escapeHtml(t("trade.inventoryAdd", { name: item.name }))}"${selected.has(item.assetId) ? " disabled" : ""}>+</button>
+        </div>
+        <div class="card-actions">
+          <button class="card-action is-primary" type="button" data-own-asset="${escapeHtml(item.assetId)}" aria-label="${escapeHtml(t("trade.inventoryAdd", { name: item.name }))}"${selected.has(item.assetId) ? " disabled" : ""}>${escapeHtml(t(selected.has(item.assetId) ? "cardActions.selected" : "cardActions.addOffer"))}</button>
+          <button class="card-action" type="button" data-own-open="${escapeHtml(item.assetId)}" aria-label="${escapeHtml(t("itemModal.openAria", { name: item.name }))}">${escapeHtml(t("cardActions.details"))}</button>
+        </div>
       </div>`).join("");
   renderLibrary();
 }
@@ -1987,6 +1999,7 @@ window.eloApp = {
     state.cart.clear();
     renderCart();
   },
+  openItemModal: openGenericItemModal,
   tradeSelection: () => ({
     offer: tradeState.offer.map((item) => ({ ...item })),
     receive: tradeState.receive.map((id) => products.find((item) => item.id === id)).filter(Boolean),
@@ -2103,6 +2116,20 @@ function openInventoryItemModal(assetId, context = "") {
   });
 }
 
+// 其他地方（例如管理頁的 Steam 匯入）用：給名稱、圖、細節就能開
+function openGenericItemModal({ name, type, iconUrl, details, marketHashName, priceText }) {
+  showItemModal({
+    name,
+    type,
+    iconUrl,
+    rarity: details?.rc,
+    price: priceText ? escapeHtml(priceText) : "",
+    wear: wearBarMarkup(details?.f),
+    specs: detailSpecRows(details, marketHashName),
+    actions: inspectLinkMarkup(details, name)
+  });
+}
+
 // 商店、首頁、交易頁上架的商品
 function openProductModal(productId, side = "") {
   const product = products.find((item) => item.id === productId);
@@ -2154,18 +2181,34 @@ document.addEventListener("click", (event) => {
     openInventoryItemModal(offer.dataset.offerOpen);
     return;
   }
-  if (event.target.closest("button") && !event.target.closest("#item-modal")) return;
-  const card = event.target.closest("[data-product-open]");
-  if (card && !event.target.closest("#item-modal")) openProductModal(card.dataset.productOpen, card.dataset.openSide);
+  const detail = event.target.closest("[data-product-detail]");
+  if (detail) {
+    closeCardActions();
+    openProductModal(detail.dataset.productDetail, detail.dataset.openSide);
+    return;
+  }
+  // 點卡片本身：打開／收起下面的兩個按鈕（手機用；電腦滑鼠移上去就會出現）
+  if (event.target.closest(".card-actions")) {
+    window.setTimeout(closeCardActions, 0);
+    return;
+  }
+  const card = event.target.closest("[data-card]");
+  if (card && !event.target.closest("button, a")) {
+    const open = !card.classList.contains("is-actions-open");
+    closeCardActions();
+    card.classList.toggle("is-actions-open", open);
+    return;
+  }
+  if (!event.target.closest("#item-modal")) closeCardActions();
 });
+
+function closeCardActions() {
+  document.querySelectorAll("[data-card].is-actions-open").forEach((card) => card.classList.remove("is-actions-open"));
+}
 
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") closeItemModal();
-  const card = event.target.closest?.("[data-product-open]");
-  if (card && event.target === card && (event.key === "Enter" || event.key === " ")) {
-    event.preventDefault();
-    openProductModal(card.dataset.productOpen, card.dataset.openSide);
-  }
+  if (event.key === "Escape") closeCardActions();
 });
 
 $("#item-modal-close").addEventListener("click", closeItemModal);

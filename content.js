@@ -266,6 +266,16 @@ window.ELOSKIN2_TEXT = {
     empty: "還沒讀取庫存，上面的「Steam 庫存」讀一次就會出現在這裡",
     noMatch: "沒有符合的物品"
   },
+  cardActions: {
+    addCart: "加入購物車",
+    addReceive: "加入想要的",
+    addOffer: "加入提供",
+    selected: "已選擇",
+    soldOut: "缺貨",
+    noPrice: "未定價",
+    details: "查看詳細資訊",
+    selectListing: "選擇上架"
+  },
   itemModal: {
     close: "關閉",
     openAria: "查看 {name} 的詳細資料",

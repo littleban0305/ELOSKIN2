@@ -892,3 +892,7 @@
 
 .admin-steam-cell .admin-steam-item { width: 100%; }
 .admin-steam-cell .inspect-link { margin-left: 10px; }
+
+.admin-steam-item.has-card-actions { min-height: 150px; }
+.admin-steam-item .card-actions { padding: 8px; gap: 5px; }
+.admin-steam-item .card-action { min-height: 32px; font-size: 12px; }
