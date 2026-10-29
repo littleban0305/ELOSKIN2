@@ -259,7 +259,11 @@ export function createBot({ db, steam, FieldValue, config = {}, now = () => Date
     await reference.update({ bot });
     open.set(id, { ...order, status: "processing", bot });
     log(`訂單 ${shortId(id)} 已送出報價 ${result.offerId}（${result.state}）`);
-    await notify(order.uid, "交易報價已送出", `你的${typeLabel(order.type)}訂單 #${shortId(id)}：機器人已經送出 Steam 交易報價，請到 Steam 接受`, id);
+    if (result.state === "confirming") {
+      await notify("admin", "交易報價等你確認", `${typeLabel(order.type)}訂單 #${shortId(id)}：${result.message || "請到 Steam App 確認交易報價"}`, id);
+    } else {
+      await notify(order.uid, "交易報價已送出", `你的${typeLabel(order.type)}訂單 #${shortId(id)}：機器人已經送出 Steam 交易報價，請到 Steam 接受`, id);
+    }
 
     // 送出途中管理員剛好取消了訂單，就把報價收回
     const fresh = await reference.get();
@@ -361,6 +365,7 @@ export function createBot({ db, steam, FieldValue, config = {}, now = () => Date
     if (["sent", "confirming", "escrow"].includes(state) && order.bot?.state !== state && ACTIVE_STATES.includes(order.bot?.state)) {
       const message = state === "escrow" ? "Steam 暫留這筆交易，暫留結束後物品會自動送到" : "";
       await doc.ref.update({ "bot.state": state, "bot.message": message, "bot.updatedAt": now() });
+      if (state === "sent" && order.bot?.state === "confirming") await notify(order.uid, "交易報價已送出", `你的${typeLabel(order.type)}訂單 #${shortId(doc.id)}：機器人已經送出 Steam 交易報價，請到 Steam 接受`, doc.id);
       if (state === "escrow") await notify(order.uid, "交易被 Steam 暫留", `你的${typeLabel(order.type)}訂單 #${shortId(doc.id)}：${message}`, doc.id);
     }
   }

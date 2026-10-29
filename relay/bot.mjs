@@ -57,14 +57,14 @@ function loadConfig() {
     identitySecret: String(config.identitySecret || maFile.identity_secret || "")
   };
   if (!account.accountName) fail("bot-config.json 缺少 accountName（或 maFile 裡的 account_name）");
-  if (!account.sharedSecret || !account.identitySecret) fail("缺少 shared_secret 或 identity_secret，請確認 maFile 路徑");
+  // 沒有 maFile 也能跑（半自動模式）：登入時輸入一次 Steam App 上的驗證碼，送出的報價要自己到 Steam App 按確認
   if (!account.password && !existsSync(TOKEN_FILE)) fail("bot-config.json 缺少 password（第一次登入需要）");
   return {
     account,
     autoPurchase: config.autoPurchase !== false,
     offerTimeoutMinutes: Math.max(10, Number(config.offerTimeoutMinutes) || 24 * 60),
     ownerSteamIds: Array.isArray(config.ownerSteamIds) ? config.ownerSteamIds.map(String) : [],
-    declineUnknownOffers: config.declineUnknownOffers !== false,
+    declineUnknownOffers: config.declineUnknownOffers === undefined ? Boolean(account.identitySecret) : config.declineUnknownOffers !== false,
     name: String(config.name || process.env.ELOSKIN_RELAY_NAME || os.hostname() || "phone")
   };
 }
@@ -122,7 +122,8 @@ async function main() {
     language: "tchinese",
     pollInterval: 30 * 1000,
     cancelTime: config.offerTimeoutMinutes * 60 * 1000,
-    pendingCancelTime: 30 * 60 * 1000,
+    // 半自動模式要等你在 Steam App 確認，等久一點
+    pendingCancelTime: account.identitySecret ? 30 * 60 * 1000 : config.offerTimeoutMinutes * 60 * 1000,
     useAccessToken: true,
     pollData: existsSync(POLL_FILE) ? readJson(POLL_FILE, "poll-data.json ") : undefined
   });
@@ -132,6 +133,7 @@ async function main() {
   const call = (fn) => new Promise((resolve, reject) => fn((error, ...values) => (error ? reject(error) : resolve(values))));
 
   async function confirm(offerId) {
+    if (!account.identitySecret) return false;
     for (let attempt = 1; attempt <= 3; attempt += 1) {
       try {
         await call((done) => community.acceptConfirmationForObject(account.identitySecret, offerId, done));
@@ -179,7 +181,9 @@ async function main() {
       }
       if (status === "pending") {
         const confirmed = await confirm(offer.id);
-        if (!confirmed) return { offerId: offer.id, state: "confirming", message: "報價已建立，但機器人的手機確認失敗，請到機器人帳號確認" };
+        if (!confirmed) {
+          return { offerId: offer.id, state: "confirming", message: account.identitySecret ? "報價已建立，但機器人的手機確認失敗，請到 Steam App 確認" : "請到 Steam App 的「確認」按確認這筆交易報價" };
+        }
       }
       return { offerId: offer.id, state: "sent" };
     },
@@ -249,13 +253,25 @@ async function main() {
       client.logOn({ refreshToken: readFileSync(TOKEN_FILE, "utf8").trim(), machineName: "ELOSKIN2 bot" });
     } else {
       usingToken = false;
-      client.logOn({ accountName: account.accountName, password: account.password, twoFactorCode: SteamTotp.generateAuthCode(account.sharedSecret), machineName: "ELOSKIN2 bot" });
+      const details = { accountName: account.accountName, password: account.password, machineName: "ELOSKIN2 bot" };
+      if (account.sharedSecret) details.twoFactorCode = SteamTotp.generateAuthCode(account.sharedSecret);
+      client.logOn(details);
     }
   }
 
-  client.on("steamGuard", (domain, callback, lastCodeWrong) => {
-    if (domain) return fail("Steam 要求電子郵件驗證碼，代表這個帳號沒有開手機驗證器。請先用 Steam Desktop Authenticator 綁定。");
-    setTimeout(() => callback(SteamTotp.generateAuthCode(account.sharedSecret)), lastCodeWrong ? 30000 : 0);
+  client.on("steamGuard", async (domain, callback, lastCodeWrong) => {
+    if (account.sharedSecret && !domain) {
+      setTimeout(() => callback(SteamTotp.generateAuthCode(account.sharedSecret)), lastCodeWrong ? 30000 : 0);
+      return;
+    }
+    // 半自動模式：第一次登入要手動輸入驗證碼，之後會記住登入狀態
+    if (!process.stdin.isTTY) fail("需要輸入 Steam Guard 驗證碼：請先在 Termux 手動執行一次 node bot.mjs 登入，之後再用 start.sh");
+    const { createInterface } = await import("node:readline/promises");
+    const prompt = createInterface({ input: process.stdin, output: process.stdout });
+    const where = domain ? `寄到 ${domain} 的電子郵件` : "手機 Steam App（Steam Guard）";
+    const code = await prompt.question(`${lastCodeWrong ? "驗證碼錯了，" : ""}請輸入${where}上的驗證碼：`);
+    prompt.close();
+    callback(code.trim());
   });
 
   client.on("refreshToken", (token) => {
@@ -276,7 +292,10 @@ async function main() {
       }
       const firstTime = !ready;
       ready = true;
-      if (firstTime) log(`交易功能就緒，${config.autoPurchase ? "購買訂單會自動送出" : "只處理管理員交給機器人的訂單"}`);
+      if (firstTime) {
+        log(`交易功能就緒，${config.autoPurchase ? "購買訂單會自動送出" : "只處理管理員交給機器人的訂單"}`);
+        if (!account.identitySecret) log("半自動模式：送出的報價要到手機 Steam App →「確認」按確認，買家才收得到");
+      }
       bot.onSteamReady();
     });
   });
