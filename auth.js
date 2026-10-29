@@ -298,6 +298,9 @@ document.querySelectorAll("[data-password-toggle]").forEach((button) => {
   });
 });
 
+// 管理頁驗證完電子郵件後用：不用重新登入就更新狀態
+window.eloRefreshAccount = (user) => updateAccount(user);
+
 function updateAccount(user) {
   if (user?.isAnonymous) user = null;
   window.eloAuthUser = user;

@@ -22,6 +22,7 @@
   const notice = $("#admin-notice");
   const noticeText = $("#admin-notice-text");
   const verifyButton = $("#admin-verify-email");
+  const verifyCheckButton = $("#admin-verify-check");
   const tagSuggestions = $("#admin-tag-suggestions");
 
   const createForm = $("#admin-create-form");
@@ -321,20 +322,52 @@
   function updateNotice() {
     let message = "";
     if (!db()) message = text("admin.firestoreUnavailable");
-    else if (!emailVerified) message = text("admin.emailUnverified");
+    else if (!emailVerified) message = text("admin.emailUnverified", { email: window.eloFirebaseAuth?.currentUser?.email || "" });
     else if (listingsError) message = text("admin.listingsError", { message: listingsError });
     notice.hidden = !message;
     noticeText.textContent = message;
     verifyButton.hidden = !isAdmin || emailVerified || !db();
+    verifyCheckButton.hidden = verifyButton.hidden;
   }
 
   verifyButton.addEventListener("click", async () => {
+    const user = window.eloFirebaseAuth.currentUser;
     try {
-      await window.eloFirebaseAuth.currentUser.sendEmailVerification();
-      noticeText.textContent = text("admin.verificationSent");
+      // 點完信裡的連結會回到網站
+      await user.sendEmailVerification({ url: `${location.origin}${location.pathname}#admin` });
+      noticeText.textContent = text("admin.verificationSent", { email: user.email || "" });
     } catch (error) {
-      noticeText.textContent = text("admin.verificationError", { message: error.message });
+      noticeText.textContent = error.code === "auth/too-many-requests"
+        ? text("admin.verificationTooMany")
+        : text("admin.verificationError", { message: error.message });
     }
+  });
+
+  // 驗證完不用登出：重新讀一次帳號狀態、換新的登入憑證，Firestore 規則就會認得
+  async function refreshVerification(showResult) {
+    const auth = window.eloFirebaseAuth;
+    const user = auth?.currentUser;
+    if (!user || emailVerified) return;
+    if (showResult) noticeText.textContent = text("admin.verifyChecking");
+    try {
+      await user.reload();
+      const fresh = auth.currentUser;
+      if (fresh?.emailVerified) {
+        await fresh.getIdToken(true);
+        window.eloRefreshAccount?.(fresh);
+        noticeText.textContent = text("admin.verifyDone");
+      } else if (showResult) {
+        noticeText.textContent = text("admin.verifyStillPending");
+      }
+    } catch (error) {
+      if (showResult) noticeText.textContent = text("admin.verificationError", { message: error.message });
+    }
+  }
+
+  verifyCheckButton.addEventListener("click", () => refreshVerification(true));
+  // 從信箱切回來時自動檢查一次
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && isAdmin && !emailVerified) refreshVerification(false);
   });
 
   // ---------- Tabs ----------
