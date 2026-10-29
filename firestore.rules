@@ -168,6 +168,17 @@ service cloud.firestore {
       }
     }
 
+    // Steam 綁定：由 Cloudflare Worker（服務帳戶）寫入，本人只能看自己的、可以解除
+    match /steamLinks/{steamId} {
+      allow read, create, update: if false;
+      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+    }
+
+    match /accountLinks/{userId} {
+      allow read, delete: if request.auth != null && request.auth.uid == userId;
+      allow create, update: if false;
+    }
+
     // 每位使用者自己的 SteamAnalyst 金鑰，只有本人讀寫
     match /userSecrets/{userId} {
       allow read: if request.auth != null && request.auth.uid == userId;

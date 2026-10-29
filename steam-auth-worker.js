@@ -93,7 +93,121 @@ function firebaseKeyBytes(pem) {
   return decodeBase64Url(base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""));
 }
 
-async function createFirebaseCustomToken(steamId, env) {
+async function serviceAccountKey(env) {
+  return crypto.subtle.importKey(
+    "pkcs8",
+    firebaseKeyBytes(String(env.FIREBASE_PRIVATE_KEY)),
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+}
+
+async function signJwt(payload, env) {
+  const header = base64Url(textEncoder.encode(JSON.stringify({ alg: "RS256", typ: "JWT" })));
+  const body = base64Url(textEncoder.encode(JSON.stringify(payload)));
+  const unsigned = `${header}.${body}`;
+  const signature = new Uint8Array(await crypto.subtle.sign("RSASSA-PKCS1-v1_5", await serviceAccountKey(env), textEncoder.encode(unsigned)));
+  return `${unsigned}.${base64Url(signature)}`;
+}
+
+// firebase-adminsdk-xxxx@<專案 ID>.iam.gserviceaccount.com → 專案 ID
+function firebaseProjectId(env) {
+  if (env.FIREBASE_PROJECT_ID) return String(env.FIREBASE_PROJECT_ID).trim();
+  const match = /@([a-z0-9-]+)\.iam\.gserviceaccount\.com$/.exec(String(env.FIREBASE_SERVICE_ACCOUNT_EMAIL || "").trim());
+  return match ? match[1] : "";
+}
+
+// 用服務帳戶換 Google API 的 access token（讀寫 Firestore、查 Firebase 使用者用）
+let cachedAccessToken = null;
+async function googleAccessToken(env) {
+  if (cachedAccessToken && cachedAccessToken.expiresAt > Date.now() + 60000) return cachedAccessToken.token;
+  const email = String(env.FIREBASE_SERVICE_ACCOUNT_EMAIL || "").trim();
+  const now = Math.floor(Date.now() / 1000);
+  const assertion = await signJwt({
+    iss: email,
+    sub: email,
+    aud: "https://oauth2.googleapis.com/token",
+    iat: now,
+    exp: now + 3600,
+    scope: "https://www.googleapis.com/auth/datastore https://www.googleapis.com/auth/identitytoolkit"
+  }, env);
+  const response = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion }).toString()
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.access_token) throw new Error(`google_token_${response.status}_${data.error || "unknown"}`);
+  cachedAccessToken = { token: data.access_token, expiresAt: Date.now() + (Number(data.expires_in) || 3600) * 1000 };
+  return cachedAccessToken.token;
+}
+
+function firestoreUrl(env, path) {
+  return `https://firestore.googleapis.com/v1/projects/${firebaseProjectId(env)}/databases/(default)/documents/${path}`;
+}
+
+async function firestoreGet(env, path) {
+  const response = await fetch(firestoreUrl(env, path), { headers: { Authorization: `Bearer ${await googleAccessToken(env)}` } });
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error(`firestore_get_${response.status}`);
+  const data = await response.json();
+  const fields = {};
+  for (const [key, value] of Object.entries(data.fields || {})) fields[key] = value.stringValue ?? value.integerValue ?? value.booleanValue ?? null;
+  return fields;
+}
+
+async function firestoreSet(env, path, values) {
+  const fields = {};
+  for (const [key, value] of Object.entries(values)) {
+    fields[key] = typeof value === "number" ? { integerValue: String(Math.round(value)) } : { stringValue: String(value) };
+  }
+  const response = await fetch(firestoreUrl(env, path), {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${await googleAccessToken(env)}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ fields })
+  });
+  if (!response.ok) throw new Error(`firestore_set_${response.status}`);
+}
+
+// 查 Firebase 有沒有這個 uid 的使用者
+async function firebaseUserExists(env, uid) {
+  const response = await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${firebaseProjectId(env)}/accounts:lookup`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${await googleAccessToken(env)}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ localId: [uid] })
+  });
+  if (!response.ok) throw new Error(`user_lookup_${response.status}`);
+  const data = await response.json();
+  return Array.isArray(data.users) && data.users.length > 0;
+}
+
+// 驗證網站傳來的 Firebase ID token（綁定 Steam 時用來確認是哪個帳號）
+let cachedJwks = null;
+async function verifyFirebaseIdToken(idToken, env) {
+  const parts = String(idToken || "").split(".");
+  if (parts.length !== 3) throw new Error("id_token_format");
+  const header = JSON.parse(new TextDecoder().decode(decodeBase64Url(parts[0])));
+  const payload = JSON.parse(new TextDecoder().decode(decodeBase64Url(parts[1])));
+  if (header.alg !== "RS256" || !header.kid) throw new Error("id_token_header");
+  if (!cachedJwks || cachedJwks.expiresAt < Date.now()) {
+    const response = await fetch("https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com");
+    if (!response.ok) throw new Error("id_token_keys");
+    cachedJwks = { keys: (await response.json()).keys || [], expiresAt: Date.now() + 3600 * 1000 };
+  }
+  const jwk = cachedJwks.keys.find((key) => key.kid === header.kid);
+  if (!jwk) throw new Error("id_token_kid");
+  const key = await crypto.subtle.importKey("jwk", jwk, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["verify"]);
+  const valid = await crypto.subtle.verify("RSASSA-PKCS1-v1_5", key, decodeBase64Url(parts[2]), textEncoder.encode(`${parts[0]}.${parts[1]}`));
+  if (!valid) throw new Error("id_token_signature");
+  const projectId = firebaseProjectId(env);
+  const now = Math.floor(Date.now() / 1000);
+  if (payload.aud !== projectId || payload.iss !== `https://securetoken.google.com/${projectId}`) throw new Error("id_token_audience");
+  if (!(payload.exp > now) || !(payload.iat <= now + 60) || typeof payload.sub !== "string" || !payload.sub) throw new Error("id_token_expired");
+  return payload.sub;
+}
+
+async function createFirebaseCustomToken(steamId, env, uid = `steam:${steamId}`) {
   if (!env.FIREBASE_SERVICE_ACCOUNT_EMAIL || !env.FIREBASE_PRIVATE_KEY) {
     throw new Error("firebase_credentials_missing");
   }
@@ -102,32 +216,17 @@ async function createFirebaseCustomToken(steamId, env) {
     throw new Error("firebase_service_account_invalid");
   }
 
-  const privateKey = await crypto.subtle.importKey(
-    "pkcs8",
-    firebaseKeyBytes(String(env.FIREBASE_PRIVATE_KEY)),
-    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
   const now = Math.floor(Date.now() / 1000);
-  const header = base64Url(textEncoder.encode(JSON.stringify({ alg: "RS256", typ: "JWT" })));
-  const claims = base64Url(textEncoder.encode(JSON.stringify({
+  // Firebase 只認 claims 物件裡的自訂欄位，放在最上層會被忽略
+  return signJwt({
     iss: serviceAccountEmail,
     sub: serviceAccountEmail,
     aud: FIREBASE_CUSTOM_TOKEN_AUDIENCE,
     iat: now,
     exp: now + 3600,
-    uid: `steam:${steamId}`,
-    provider: "steam",
-    steamId
-  })));
-  const unsignedToken = `${header}.${claims}`;
-  const signature = new Uint8Array(await crypto.subtle.sign(
-    "RSASSA-PKCS1-v1_5",
-    privateKey,
-    textEncoder.encode(unsignedToken)
-  ));
-  return `${unsignedToken}.${base64Url(signature)}`;
+    uid,
+    claims: { provider: "steam", steamId }
+  }, env);
 }
 
 function validReturnUrl(value, origins) {
@@ -179,9 +278,23 @@ async function steamLoginStart(requestUrl, env) {
     return callbackError(returnUrl.href, "not-configured");
   }
 
+  // mode=link：已登入的帳號要綁定 Steam，網站會一起傳 Firebase ID token
+  const mode = requestUrl.searchParams.get("mode") === "link" ? "link" : "login";
+  let linkUid = "";
+  if (mode === "link") {
+    try {
+      linkUid = await verifyFirebaseIdToken(requestUrl.searchParams.get("idToken") || "", env);
+    } catch {
+      return callbackError(returnUrl.href, "link-session-invalid");
+    }
+    if (linkUid.startsWith("steam:")) return callbackError(returnUrl.href, "link-already-steam");
+  }
+
   const state = base64Url(crypto.getRandomValues(new Uint8Array(32)));
   const payload = {
     state,
+    mode,
+    linkUid,
     returnUrl: returnUrl.href,
     expiresAt: Date.now() + STEAM_STATE_TTL_SECONDS * 1000
   };
@@ -298,11 +411,37 @@ async function steamLoginCallback(request, requestUrl, env) {
     return callbackError(returnUrl.href, "verification-failed");
   }
 
+  const steamId = steamMatch[1];
+
+  // 綁定：把這個 Steam 記到目前帳號底下
+  if (statePayload.mode === "link" && statePayload.linkUid) {
+    try {
+      const existing = await firestoreGet(env, `steamLinks/${steamId}`);
+      if (existing?.uid && existing.uid !== statePayload.linkUid) return callbackError(returnUrl.href, "link-steam-taken");
+      if (await firebaseUserExists(env, `steam:${steamId}`)) return callbackError(returnUrl.href, "link-steam-has-account");
+      const now = Date.now();
+      await firestoreSet(env, `steamLinks/${steamId}`, { uid: statePayload.linkUid, linkedAt: now });
+      await firestoreSet(env, `accountLinks/${statePayload.linkUid}`, { steamId, linkedAt: now });
+    } catch (error) {
+      return callbackError(returnUrl.href, `link-failed:${String(error.message || "unknown").slice(0, 60)}`);
+    }
+    return authRedirect(returnUrl.href, "steam-linked", steamId, true);
+  }
+
+  // 登入：這個 Steam 綁過其他帳號的話，就登入那個帳號
+  let uid = `steam:${steamId}`;
+  try {
+    const link = await firestoreGet(env, `steamLinks/${steamId}`);
+    if (link?.uid) uid = link.uid;
+  } catch (error) {
+    return callbackError(returnUrl.href, `link-lookup-failed:${String(error.message || "unknown").slice(0, 60)}`);
+  }
+
   let customToken;
   try {
-    customToken = await createFirebaseCustomToken(steamMatch[1], env);
-  } catch {
-    return callbackError(returnUrl.href, "firebase-token-failed");
+    customToken = await createFirebaseCustomToken(steamId, env, uid);
+  } catch (error) {
+    return callbackError(returnUrl.href, `firebase-token-failed:${String(error.message || "unknown").slice(0, 60)}`);
   }
   return authRedirect(returnUrl.href, "steam-auth", customToken, true);
 }
@@ -361,6 +500,35 @@ async function steamProfile(requestUrl, env) {
   }, 200, {});
 }
 
+// 健康檢查：在手機瀏覽器打開 /auth/steam/health 就知道哪一步壞掉（不會顯示任何金鑰內容）
+async function steamHealth(request, env) {
+  const checks = {
+    allowedOrigins: allowedOrigins(env),
+    stateSecret: String(env.STEAM_STATE_SECRET || "").length >= 32,
+    serviceAccountEmail: /^[^@\s]+@[^@\s]+\.gserviceaccount\.com$/.test(String(env.FIREBASE_SERVICE_ACCOUNT_EMAIL || "").trim()),
+    privateKey: Boolean(env.FIREBASE_PRIVATE_KEY),
+    projectId: firebaseProjectId(env)
+  };
+  const step = async (fn) => {
+    try {
+      return { ok: true, detail: await fn() };
+    } catch (error) {
+      return { ok: false, detail: String(error.message || error).slice(0, 120) };
+    }
+  };
+  checks.privateKeyReadable = await step(async () => { await serviceAccountKey(env); return "ok"; });
+  checks.googleAccessToken = await step(async () => { await googleAccessToken(env); return "ok"; });
+  checks.firestore = await step(async () => { await firestoreGet(env, "steamLinks/health-check"); return "ok"; });
+  checks.steamOpenId = await step(async () => {
+    const response = await fetch(STEAM_OPENID_URL, { headers: { "User-Agent": STEAM_USER_AGENT }, redirect: "manual" });
+    return `HTTP ${response.status}`;
+  });
+  return new Response(JSON.stringify(checks, null, 2), {
+    status: 200,
+    headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" }
+  });
+}
+
 async function handleSteamAuth(request, requestUrl, env) {
   const origin = request.headers.get("Origin");
   const origins = allowedOrigins(env);
@@ -369,6 +537,7 @@ async function handleSteamAuth(request, requestUrl, env) {
   }
   if (request.method !== "GET") return textResponse("Method not allowed.", 405);
   if (requestUrl.pathname === "/auth/steam/start") return steamLoginStart(requestUrl, env);
+  if (requestUrl.pathname === "/auth/steam/health") return steamHealth(request, env);
   if (requestUrl.pathname === "/auth/steam/callback") return steamLoginCallback(request, requestUrl, env);
   if (requestUrl.pathname === "/auth/steam/profile") {
     const corsHeaders = origin ? { "Access-Control-Allow-Origin": origin, "Vary": "Origin" } : {};

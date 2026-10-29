@@ -585,3 +585,53 @@ button.library-item {
 
 button.library-item:hover { background: #1a262d; }
 button.library-item:focus-visible { outline: 2px solid #50dbc5; outline-offset: 2px; }
+
+/* ---------- 登入方式綁定 ---------- */
+
+.account-links {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 10px;
+}
+
+.account-links[hidden] { display: none; }
+.account-links .account-section-heading { margin-bottom: 0; }
+.account-links-description { margin: 0; color: #8fa0a6; }
+
+.account-link-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+}
+
+.account-link-list li {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #1d2a31;
+}
+
+.account-link-list li:last-child { border-bottom: 0; }
+.account-link-name { color: #e5ecef; font-weight: 700; }
+.account-link-value { min-width: 0; overflow: hidden; color: #829098; text-overflow: ellipsis; white-space: nowrap; }
+.account-link-value[data-linked="true"] { color: #50dbc5; }
+.account-link-list .admin-ghost-button { min-height: 34px; padding-inline: 14px; white-space: nowrap; }
+.account-link-list .admin-ghost-button[hidden] { display: none; }
+.account-link-list .admin-ghost-button:disabled { opacity: .45; cursor: not-allowed; }
+
+.link-email-form {
+  padding: 14px;
+  background: #151f25;
+  border-radius: 12px;
+}
+
+.link-email-form[hidden] { display: none; }
+.account-links .account-status:empty { display: none; }
+
+@media (max-width: 720px) {
+  .account-link-list li { grid-template-columns: minmax(0, 1fr) auto; }
+  .account-link-value { grid-column: 1 / 2; grid-row: 2; white-space: normal; overflow-wrap: anywhere; }
+}

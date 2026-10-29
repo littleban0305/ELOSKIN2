@@ -25,12 +25,13 @@ const steamCallback = (() => {
   const parameters = new URLSearchParams(window.location.hash.slice(1));
   const token = parameters.get("steam-auth");
   const error = parameters.get("steam-error");
-  if (!token && !error) return null;
+  const linked = parameters.get("steam-linked");
+  if (!token && !error && !linked) return null;
   const cleanUrl = new URL(window.location.href);
   cleanUrl.hash = "#profile";
   window.history.replaceState(window.history.state, "", cleanUrl.href);
   window.dispatchEvent(new Event("hashchange"));
-  return { token, error };
+  return { token, error, linked };
 })();
 let authMode = "login";
 let firebaseAuth = null;
@@ -531,6 +532,10 @@ async function initializeFirebase() {
       if (steamCallback) showSteamLoginError(message);
       else showAuthMessage(message);
     });
+    // Google 綁定被擋彈出視窗時會改用整頁跳轉，回來時在這裡收結果
+    Promise.resolve(firebaseAuth.getRedirectResult?.()).then((result) => {
+      if (result?.operationType === "link") afterLinkChange(authText("profile.linkDone", { name: authText("profile.linkGoogle") }));
+    }).catch((error) => showLinkStatus(linkErrorMessage(error, authText("profile.linkGoogle")), "error"));
     firebaseReady = true;
     window.eloFirebaseAuth = firebaseAuth;
     window.eloFirebaseDb = firebaseDb;
@@ -667,24 +672,43 @@ steamAuthButton.addEventListener("click", () => {
   }
 });
 
+function steamErrorMessage(rawCode) {
+  const [code, detail = ""] = String(rawCode || "").split(":");
+  const messages = {
+    "not-configured": "profile.steamLoginNotConfigured",
+    cancelled: "profile.steamLoginCancelled",
+    "verification-failed": "profile.steamLoginVerificationFailed",
+    "service-unavailable": "profile.steamLoginUnavailable",
+    "steam-verification-unavailable": "profile.steamVerificationUnavailable",
+    "steam-verification-network-error": "profile.steamVerificationNetworkError",
+    "steam-verification-response-error": "profile.steamVerificationResponseError",
+    "firebase-token-failed": "profile.steamFirebaseTokenFailed",
+    "link-session-invalid": "profile.steamLinkSessionInvalid",
+    "link-already-steam": "profile.steamLinkAlreadySteam",
+    "link-steam-taken": "profile.steamLinkTaken",
+    "link-steam-has-account": "profile.steamLinkHasAccount",
+    "link-failed": "profile.steamLinkFailed",
+    "link-lookup-failed": "profile.steamLinkLookupFailed"
+  };
+  const httpError = /^steam-verification-http-(\d{3})$/.exec(code);
+  const message = httpError
+    ? authText("profile.steamVerificationHttpError", { status: httpError[1] })
+    : authText(messages[code] || "profile.steamLoginVerificationFailed");
+  // 錯誤代碼一起顯示，回報問題時直接截圖就好
+  return authText("profile.steamErrorDetail", { message, code: detail ? `${code}:${detail}` : code });
+}
+
 async function completeSteamSignIn() {
   if (!steamCallback) return;
+  if (steamCallback.linked) {
+    window.dispatchEvent(new Event("eloaccountlinkschange"));
+    showLinkStatus(authText("profile.steamLinked"), "success");
+    return;
+  }
   if (steamCallback.error) {
-    const messages = {
-      "not-configured": "profile.steamLoginNotConfigured",
-      cancelled: "profile.steamLoginCancelled",
-      "verification-failed": "profile.steamLoginVerificationFailed",
-      "service-unavailable": "profile.steamLoginUnavailable",
-      "steam-verification-unavailable": "profile.steamVerificationUnavailable",
-      "steam-verification-network-error": "profile.steamVerificationNetworkError",
-      "steam-verification-response-error": "profile.steamVerificationResponseError",
-      "firebase-token-failed": "profile.steamFirebaseTokenFailed"
-    };
-    const httpError = /^steam-verification-http-(\d{3})$/.exec(steamCallback.error);
-    const message = httpError
-      ? authText("profile.steamVerificationHttpError", { status: httpError[1] })
-      : authText(messages[steamCallback.error] || "profile.steamLoginVerificationFailed");
-    showSteamLoginError(message);
+    const message = steamErrorMessage(steamCallback.error);
+    if (steamCallback.error.startsWith("link-")) showLinkStatus(message, "error");
+    else showSteamLoginError(message);
     return;
   }
   if (!steamCallback.token) {
@@ -694,18 +718,9 @@ async function completeSteamSignIn() {
 
   try {
     const credential = await firebaseAuth.signInWithCustomToken(steamCallback.token);
-    const steamId = credential.user.uid.startsWith("steam:")
-      ? credential.user.uid.slice("steam:".length)
-      : "";
-    if (!steamId) {
-      showSteamLoginError(authText("profile.steamLoginVerificationFailed"));
-      return;
-    }
-    if (!steamAuthConfig?.authEndpoint) {
-      showSteamLoginError(authText("profile.steamLoginNotConfigured"));
-      return;
-    }
-    await loadSteamProfile(credential.user, steamId);
+    // 綁定過的 Steam 會登入原本的帳號（uid 不是 steam: 開頭），這時不要用 Steam 名稱蓋掉原本的資料
+    const steamId = credential.user.uid.startsWith("steam:") ? credential.user.uid.slice("steam:".length) : "";
+    if (steamId && steamAuthConfig?.authEndpoint) await loadSteamProfile(credential.user, steamId);
   } catch (error) {
     showSteamLoginError(authText("profile.steamLoginFirebaseFailed", {
       message: `${error.code || "unknown"}: ${error.message}`
@@ -825,3 +840,197 @@ document.querySelector("#sign-out").addEventListener("click", async () => {
 });
 
 initializeFirebase();
+
+
+// ---------- 帳號綁定：Google、電子郵件、Steam ----------
+
+const linkStatus = document.querySelector("#account-links-status");
+let accountSteamLink = "";
+let unlinkArmed = "";
+
+function showLinkStatus(message, kind = "") {
+  linkStatus.textContent = message;
+  linkStatus.dataset.kind = kind;
+}
+
+function linkedProviders(user) {
+  const providers = new Set((user?.providerData || []).map((entry) => entry?.providerId));
+  return {
+    google: (user?.providerData || []).find((entry) => entry?.providerId === "google.com"),
+    password: (user?.providerData || []).find((entry) => entry?.providerId === "password"),
+    steamPrimary: Boolean(user?.uid?.startsWith("steam:")),
+    count: providers.has("google.com") + providers.has("password") + (user?.uid?.startsWith("steam:") || accountSteamLink ? 1 : 0)
+  };
+}
+
+async function loadAccountSteamLink(user) {
+  accountSteamLink = "";
+  if (!user || user.uid.startsWith("steam:") || !firebaseDb) return;
+  try {
+    const snapshot = await firebaseDb.collection("accountLinks").doc(user.uid).get();
+    accountSteamLink = String(snapshot.data()?.steamId || "");
+  } catch (error) {
+    console.warn("Account links unavailable:", error);
+  }
+}
+
+function renderAccountLinks() {
+  const user = firebaseAuth?.currentUser;
+  const card = document.querySelector("#account-links-card");
+  if (!card) return;
+  card.hidden = !user || user.isAnonymous;
+  if (card.hidden) return;
+  const linked = linkedProviders(user);
+  const setRow = (key, value, isLinked, canUnlink) => {
+    document.querySelector(`#link-${key}-value`).textContent = value;
+    document.querySelector(`#link-${key}-value`).dataset.linked = String(isLinked);
+    const button = document.querySelector(`#link-${key}-button`);
+    button.hidden = isLinked && !canUnlink && key === "steam" && linked.steamPrimary;
+    button.dataset.action = isLinked ? "unlink" : "link";
+    button.textContent = authText(isLinked ? (unlinkArmed === key ? "profile.unlinkConfirm" : "profile.unlinkButton") : "profile.linkButton");
+    button.disabled = isLinked && !canUnlink;
+    button.title = isLinked && !canUnlink ? authText("profile.linkLastMethod") : "";
+  };
+  const canUnlink = linked.count > 1;
+  setRow("google", linked.google ? (linked.google.email || "Google") : authText("profile.linkNone"), Boolean(linked.google), canUnlink);
+  setRow("password", linked.password ? (linked.password.email || user.email || "") : authText("profile.linkNone"), Boolean(linked.password), canUnlink);
+  const steamId = linked.steamPrimary ? user.uid.slice("steam:".length) : accountSteamLink;
+  setRow(
+    "steam",
+    steamId ? authText(linked.steamPrimary ? "profile.linkSteamPrimary" : "profile.linkSteamValue", { id: steamId }) : authText("profile.linkNone"),
+    Boolean(steamId),
+    canUnlink && !linked.steamPrimary
+  );
+}
+
+function linkErrorMessage(error, name) {
+  const messages = {
+    "auth/credential-already-in-use": authText("profile.linkCredentialInUse", { name }),
+    "auth/email-already-in-use": authText("profile.linkEmailInUse"),
+    "auth/weak-password": authText("profile.linkWeakPassword"),
+    "auth/requires-recent-login": authText("profile.linkRecentLogin"),
+    "auth/popup-closed-by-user": authText("profile.googleLoginCancelled"),
+    "auth/cancelled-popup-request": authText("profile.googleLoginCancelled")
+  };
+  return messages[error.code] || authText("profile.linkError", { message: `${error.code || "unknown"}: ${error.message}` });
+}
+
+async function afterLinkChange(message) {
+  const user = firebaseAuth.currentUser;
+  await user.reload().catch(() => {});
+  await loadAccountSteamLink(firebaseAuth.currentUser);
+  unlinkArmed = "";
+  renderAccountLinks();
+  updateAccount(firebaseAuth.currentUser);
+  showLinkStatus(message, "success");
+}
+
+async function unlinkMethod(key) {
+  const user = firebaseAuth.currentUser;
+  const names = { google: authText("profile.linkGoogle"), password: authText("profile.linkEmail"), steam: authText("profile.linkSteam") };
+  if (unlinkArmed !== key) {
+    unlinkArmed = key;
+    renderAccountLinks();
+    return;
+  }
+  showLinkStatus(authText("profile.linkWorking"), "info");
+  try {
+    if (key === "steam") {
+      await firebaseDb.collection("steamLinks").doc(accountSteamLink).delete();
+      await firebaseDb.collection("accountLinks").doc(user.uid).delete();
+    } else {
+      await user.unlink(key === "google" ? "google.com" : "password");
+    }
+    await afterLinkChange(authText("profile.unlinkDone", { name: names[key] }));
+  } catch (error) {
+    unlinkArmed = "";
+    renderAccountLinks();
+    showLinkStatus(linkErrorMessage(error, names[key]), "error");
+  }
+}
+
+document.querySelector("#link-google-button").addEventListener("click", async (event) => {
+  if (event.currentTarget.dataset.action === "unlink") return unlinkMethod("google");
+  const user = firebaseAuth?.currentUser;
+  if (!user) return;
+  const provider = new window.firebase.auth.GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: "select_account" });
+  showLinkStatus(authText("profile.linkWorking"), "info");
+  try {
+    await user.linkWithPopup(provider);
+    await afterLinkChange(authText("profile.linkDone", { name: authText("profile.linkGoogle") }));
+  } catch (error) {
+    if (error.code === "auth/popup-blocked") {
+      showLinkStatus(authText("profile.linkPopupBlocked"), "info");
+      await user.linkWithRedirect(provider);
+      return;
+    }
+    showLinkStatus(linkErrorMessage(error, authText("profile.linkGoogle")), "error");
+  }
+});
+
+document.querySelector("#link-password-button").addEventListener("click", (event) => {
+  if (event.currentTarget.dataset.action === "unlink") return unlinkMethod("password");
+  const user = firebaseAuth?.currentUser;
+  if (!user) return;
+  const form = document.querySelector("#link-email-form");
+  const emailInput = document.querySelector("#link-email-address");
+  emailInput.value = user.email || "";
+  emailInput.readOnly = Boolean(user.email);
+  form.hidden = false;
+  (user.email ? document.querySelector("#link-email-password") : emailInput).focus();
+});
+
+document.querySelector("#link-email-cancel").addEventListener("click", () => {
+  document.querySelector("#link-email-form").hidden = true;
+});
+
+document.querySelector("#link-email-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const user = firebaseAuth?.currentUser;
+  if (!user) return;
+  const email = document.querySelector("#link-email-address").value.trim();
+  const password = document.querySelector("#link-email-password").value;
+  if (password.length < 6) {
+    showLinkStatus(authText("profile.linkWeakPassword"), "error");
+    return;
+  }
+  showLinkStatus(authText("profile.linkWorking"), "info");
+  try {
+    const credential = window.firebase.auth.EmailAuthProvider.credential(email, password);
+    await user.linkWithCredential(credential);
+    document.querySelector("#link-email-form").hidden = true;
+    document.querySelector("#link-email-password").value = "";
+    // 新綁定的電子郵件要驗證過才算數（管理員判斷也會看這個）
+    if (!user.emailVerified) await user.sendEmailVerification().catch(() => {});
+    await afterLinkChange(authText("profile.linkDone", { name: authText("profile.linkEmail") }));
+  } catch (error) {
+    showLinkStatus(linkErrorMessage(error, authText("profile.linkEmail")), "error");
+  }
+});
+
+document.querySelector("#link-steam-button").addEventListener("click", async (event) => {
+  if (event.currentTarget.dataset.action === "unlink") return unlinkMethod("steam");
+  const user = firebaseAuth?.currentUser;
+  if (!user) return;
+  try {
+    const endpoint = new URL("/auth/steam/start", steamAuthConfig?.authEndpoint || "");
+    endpoint.searchParams.set("returnUrl", `${window.location.origin}${window.location.pathname}${window.location.search}`);
+    endpoint.searchParams.set("mode", "link");
+    endpoint.searchParams.set("idToken", await user.getIdToken(true));
+    showLinkStatus(authText("profile.steamLoginProgress"), "info");
+    window.location.assign(endpoint.href);
+  } catch (error) {
+    showLinkStatus(linkErrorMessage(error, authText("profile.linkSteam")), "error");
+  }
+});
+
+window.addEventListener("eloauthchange", async () => {
+  unlinkArmed = "";
+  await loadAccountSteamLink(firebaseAuth?.currentUser);
+  renderAccountLinks();
+});
+window.addEventListener("eloaccountlinkschange", async () => {
+  await loadAccountSteamLink(firebaseAuth?.currentUser);
+  renderAccountLinks();
+});
