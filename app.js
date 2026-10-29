@@ -1572,17 +1572,21 @@ function renderOwnInventory() {
   $("#trade-own-grid").innerHTML = hasItems && !visible.length
     ? (priced.length ? `<p class="trade-filter-note">${escapeHtml(t("trade.inventoryEmpty"))}</p>` : "")
     : visible.map((item) => `
-      <div class="trade-own-cell has-card-actions${selected.has(item.assetId) ? " is-selected" : ""}" data-card>
-        <div class="trade-own-item">
-          <span class="trade-own-art">${item.iconUrl ? `<img src="${escapeHtml(item.iconUrl)}" alt="" loading="lazy">` : ""}</span>
-          <strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong>
-          <em class="trade-own-price">${escapeHtml(t("trade.priceEstimate", { ec: ownItemEc(item).toLocaleString() }))}</em>
+      <article class="product-card has-card-actions trade-own-card${selected.has(item.assetId) ? " is-selected" : ""}" data-card>
+        <div class="product-visual">
+          ${item.iconUrl ? `<img class="product-art steam-product-art" src="${escapeHtml(item.iconUrl)}" alt="${escapeHtml(item.name)}" loading="lazy">` : ""}
+        </div>
+        <div class="product-info">
+          <h3 title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</h3>
+          <div class="product-bottom">
+            <div class="product-price"><span class="currency-symbol">${escapeHtml(t("product.currency"))}</span>${ownItemEc(item).toLocaleString()}</div>
+          </div>
         </div>
         <div class="card-actions">
           <button class="card-action is-primary" type="button" data-own-asset="${escapeHtml(item.assetId)}" aria-label="${escapeHtml(t("trade.inventoryAdd", { name: item.name }))}"${selected.has(item.assetId) ? " disabled" : ""}>${escapeHtml(t(selected.has(item.assetId) ? "cardActions.selected" : "cardActions.addOffer"))}</button>
           <button class="card-action" type="button" data-own-open="${escapeHtml(item.assetId)}" aria-label="${escapeHtml(t("itemModal.openAria", { name: item.name }))}">${escapeHtml(t("cardActions.details"))}</button>
         </div>
-      </div>`).join("");
+      </article>`).join("");
   renderLibrary();
 }
 

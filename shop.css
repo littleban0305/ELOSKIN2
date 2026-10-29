@@ -92,13 +92,18 @@
   box-shadow: inset 0 0 0 1px rgba(80, 219, 197, .72);
 }
 
+/* 自己的庫存跟右邊「可選擇的物品」用同一種卡片和排列，只多了最高高度、超過可以捲動 */
 .trade-own-grid {
-  max-height: 360px;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 6px;
+  max-height: 520px;
   overflow-y: auto;
+  padding: 0 10px 10px;
+  /* 卡片有 overflow: hidden，不加這兩行的話格子會被壓扁塞進最高高度裡 */
+  grid-auto-rows: max-content;
+  align-content: start;
 }
+
+.trade-own-card.is-selected .product-visual,
+.trade-own-card.is-selected .product-info { opacity: .45; }
 
 .trade-own-grid:empty { display: none; }
 
