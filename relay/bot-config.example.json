@@ -1,0 +1,9 @@
+{
+  "accountName": "機器人帳號的登入名稱",
+  "password": "機器人帳號的密碼",
+  "maFile": "bot.maFile",
+  "autoPurchase": true,
+  "offerTimeoutMinutes": 1440,
+  "ownerSteamIds": [],
+  "declineUnknownOffers": true
+}

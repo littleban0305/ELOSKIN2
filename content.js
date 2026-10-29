@@ -696,7 +696,21 @@ window.ELOSKIN2_TEXT = {
     quantity: "×{count}",
     insufficientBalance: "EC 不夠喔，需要 {need} EC，可用 {available} EC，請先到「儲值」",
     buyerInsufficient: "買家餘額不足（餘額 {balance} EC，需要 {charge} EC）",
-    ledgerNote: "{type}訂單 #{id}"
+    ledgerNote: "{type}訂單 #{id}",
+    botLabel: "交易機器人",
+    botSending: "正在準備 Steam 交易報價…",
+    botConfirming: "交易報價已建立，等機器人確認中",
+    botSent: "已經送出 Steam 交易報價，請到 Steam 接受",
+    botOpenOffer: "打開交易報價",
+    botAccepted: "已經在 Steam 交易完成",
+    botManualUser: "這筆需要管理員手動處理，請稍等",
+    botStopped: "機器人已停止處理這筆訂單",
+    botSend: "交給機器人",
+    botRetry: "重新交給機器人",
+    botQueued: "已交給機器人，稍等一下就會送出報價",
+    botOnline: "交易機器人在線",
+    botOnlineAuto: "交易機器人在線（購買訂單自動出貨）",
+    botOffline: "交易機器人離線"
   },
   inventory: {
     quickTitle: "一鍵讀取（推薦）",

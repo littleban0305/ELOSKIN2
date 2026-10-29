@@ -16,6 +16,10 @@
   const primedSources = new Set();
   let promptShownThisPage = false;
   const confirmTimers = new WeakMap();
+  // 交易機器人（relay/bot.mjs）回報的在線狀態
+  const BOT_ONLINE_MS = 3 * 60 * 1000;
+  const BOT_ACTIVE = ["sending", "confirming", "sent", "escrow"];
+  let botStatus = null;
 
   const app = () => window.eloApp;
   const db = () => window.eloFirebaseDb || null;
@@ -257,6 +261,34 @@
 
   // ---------- Order cards ----------
 
+  function botOnline() {
+    return Boolean(botStatus?.loggedIn) && Date.now() - (Number(botStatus.lastSeen) || 0) < BOT_ONLINE_MS;
+  }
+
+  // 機器人處理到哪裡了
+  function botLine(order, mode) {
+    const bot = order.bot;
+    if (!bot?.state) return null;
+    const line = element("p", `order-note order-bot order-bot-${bot.state}`);
+    const message = String(bot.message || "");
+    let content;
+    if (bot.state === "sending") content = text("orders.botSending");
+    else if (bot.state === "confirming") content = mode === "admin" && message ? message : text("orders.botConfirming");
+    else if (bot.state === "sent") content = text("orders.botSent");
+    else if (bot.state === "accepted") content = text("orders.botAccepted");
+    else if (bot.state === "manual") content = mode === "admin" ? message : text("orders.botManualUser");
+    else content = message || text("orders.botStopped");
+    line.append(element("span", "order-note-label", `${text("orders.botLabel")}：`), document.createTextNode(content));
+    if (["sent", "confirming", "escrow"].includes(bot.state) && /^\d{1,20}$/.test(String(bot.offerId || ""))) {
+      const link = element("a", "order-trade-link", text("orders.botOpenOffer"));
+      link.href = `https://steamcommunity.com/tradeoffer/${bot.offerId}/`;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      line.append(" ", link);
+    }
+    return line;
+  }
+
   function itemRow(item, quantityLabel = true) {
     const row = element("div", "order-item");
     const art = element("div", "order-item-art");
@@ -349,6 +381,8 @@
       note.append(element("span", "order-note-label", `${text("orders.buyerNote")}：`), document.createTextNode(order.note));
       card.append(note);
     }
+    const bot = botLine(order, mode);
+    if (bot) card.append(bot);
     if (mode === "user" && order.adminNote) {
       const note = element("p", "order-note order-admin-note");
       note.append(element("span", "order-note-label", `${text("orders.adminNote")}：`), document.createTextNode(order.adminNote));
@@ -366,8 +400,12 @@
         noteInput.setAttribute("aria-label", text("orders.adminNote"));
         noteInput.value = order.adminNote || "";
         actions.append(noteInput);
+        const botBusy = BOT_ACTIVE.includes(order.bot?.state);
+        // 機器人在線就可以把訂單交給它送 Steam 報價；機器人處理中時不能手動完成，避免重複出貨
+        if (botOnline() && !order.bot && order.status === "pending") actions.append(actionButton("bot", "orders.botSend", "admin-primary-button"));
+        if (botOnline() && order.bot && !botBusy) actions.append(actionButton("bot", "orders.botRetry", "admin-ghost-button"));
         if (order.status === "pending") actions.append(actionButton("processing", "orders.accept", "admin-ghost-button"));
-        if (order.status === "processing") actions.append(actionButton("completed", "orders.complete", "admin-primary-button"));
+        if (order.status === "processing" && !botBusy) actions.append(actionButton("completed", "orders.complete", "admin-primary-button"));
         actions.append(actionButton("cancelled", "orders.cancel", "admin-faq-delete"));
       } else if (order.adminNote) {
         const note = element("p", "order-note order-admin-note");
@@ -422,6 +460,14 @@
 
   $("#admin-order-filter").addEventListener("change", renderAdminOrders);
 
+  function renderBotStatus() {
+    const label = $("#admin-bot-status");
+    if (!label) return;
+    const online = botOnline();
+    label.textContent = text(online ? (botStatus.autoPurchase ? "orders.botOnlineAuto" : "orders.botOnline") : "orders.botOffline");
+    label.dataset.kind = online ? "success" : "muted";
+  }
+
   async function completeOrder(transaction, reference, order) {
     const fresh = await transaction.get(reference);
     if (!fresh.exists || fresh.data().status !== "processing") throw new Error("order_changed");
@@ -465,7 +511,8 @@
     return { clamped, now };
   }
 
-  async function changeStatus(card, nextStatus, mode) {
+  async function changeStatus(card, requestedStatus, mode) {
+    let nextStatus = requestedStatus;
     const order = (mode === "admin" ? adminOrders : userOrders).find((item) => item.id === card.dataset.orderId);
     if (!order) return;
     const status = card.querySelector(".order-action-status");
@@ -477,7 +524,15 @@
     const reference = db().collection("orders").doc(order.id);
     try {
       let clamped = false;
-      if (mode === "admin" && nextStatus === "completed") {
+      if (mode === "admin" && nextStatus === "bot") {
+        await reference.update({ status: "processing", botRequested: true, bot: null, adminNote, updatedAt: Date.now() });
+        if (order.status === "processing") {
+          status.textContent = text("orders.botQueued");
+          status.dataset.kind = "success";
+          return;
+        }
+        nextStatus = "processing";
+      } else if (mode === "admin" && nextStatus === "completed") {
         await db().runTransaction(async (transaction) => {
           const result = await completeOrder(transaction, reference, order);
           clamped = result.clamped;
@@ -687,6 +742,20 @@
         adminOrders = next;
         renderAdminOrders();
       }, (error) => console.warn("Admin orders unavailable:", error)));
+      listeners.push(db().collection("relayStatus").doc("bot").onSnapshot((snapshot) => {
+        const previous = botOnline();
+        botStatus = snapshot.exists ? snapshot.data() : null;
+        renderBotStatus();
+        if (previous !== botOnline()) renderAdminOrders();
+      }, (error) => console.warn("Bot status unavailable:", error)));
+      // 在線狀態超過 3 分鐘沒更新就算離線
+      const timer = window.setInterval(() => {
+        const label = $("#admin-bot-status");
+        const before = label?.dataset.kind;
+        renderBotStatus();
+        if (label && before !== label.dataset.kind) renderAdminOrders();
+      }, 60 * 1000);
+      listeners.push(() => window.clearInterval(timer));
       listeners.push(db().collection("notifications").where("to", "==", "admin").onSnapshot(
         (snapshot) => handleNotificationSnapshot("admin", snapshot),
         (error) => console.warn("Admin notifications unavailable:", error)

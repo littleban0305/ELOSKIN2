@@ -416,3 +416,29 @@
     bottom: 64px !important;
   }
 }
+
+/* 交易機器人狀態 */
+.order-bot { background: rgba(120, 150, 255, .08); }
+.order-bot-sent, .order-bot-confirming, .order-bot-escrow { background: rgba(80, 219, 197, .1); }
+.order-bot-manual { background: rgba(255, 190, 80, .1); }
+.order-bot .order-trade-link { white-space: nowrap; }
+
+.admin-bot-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  color: #829098;
+  font-size: .85rem;
+}
+
+.admin-bot-status::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #56636a;
+}
+
+.admin-bot-status[data-kind="success"] { color: #50dbc5; }
+.admin-bot-status[data-kind="success"]::before { background: #50dbc5; }

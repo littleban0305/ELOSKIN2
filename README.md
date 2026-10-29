@@ -12,6 +12,7 @@
 | 資料庫、登入 | Firebase（Spark 免費方案） | Auth：Email、Google、Steam；Firestore 存所有資料 |
 | Steam 登入 | Cloudflare Worker（`steam-auth-worker.js`） | Steam OpenID 驗證後簽發 Firebase Custom Token |
 | 讀 Steam 庫存 | 家裡手機的中繼站（`relay/`） | Steam 會擋雲端主機，所以用家用網路讀；說明見 [relay/README.md](./relay/README.md) |
+| 自動出貨 | 同一支手機的交易機器人（`relay/bot.mjs`） | 送 Steam 交易報價、買家接受後自動完成訂單；設定見 [relay/README.md](./relay/README.md) 第五節 |
 | 市價 | SteamAnalyst API | 每位使用者在個人頁貼自己的免費金鑰；查到的價格存進 `marketPrices` 大家共用 |
 | 台幣匯率 | open.er-api.com | 換算 EC 用，0.03 台幣 = 1 EC |
 
@@ -41,7 +42,7 @@
 | `userProfiles` | 顯示名稱、Steam 交易連結 |
 | `userSecrets` | 使用者自己的 SteamAnalyst 金鑰（只有本人讀寫） |
 | `userInventories` | 使用者的 Steam 庫存（同步到不同裝置） |
-| `inventoryRequests`、`relayStatus`、`adminInventory` | 中繼站的請求、在線狀態、管理頁上架用庫存 |
+| `inventoryRequests`、`relayStatus`、`adminInventory` | 中繼站的請求、中繼站和交易機器人的在線狀態（`relayStatus/inventory`、`relayStatus/bot`）、管理頁上架用庫存 |
 | `marketPrices` | 共用的 SteamAnalyst 價格快取 |
 | `productFavorites`、`productFavoriteCounts` | 收藏 |
 

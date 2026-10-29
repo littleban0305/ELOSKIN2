@@ -2,3 +2,6 @@ relay/serviceAccount.json
 relay/node_modules/
 *.serviceAccount.json
 relay/last-inventory.json
+relay/bot-config.json
+relay/*.maFile
+relay/bot-data/

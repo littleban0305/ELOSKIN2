@@ -2,11 +2,17 @@
   "name": "eloskin2-inventory-relay",
   "private": true,
   "type": "module",
-  "description": "在家用網路的舊手機上跑，幫 ELOSKIN2 讀取 Steam 庫存",
+  "description": "在家用網路的舊手機上跑：幫 ELOSKIN2 讀 Steam 庫存，也可以當 Steam 交易機器人",
   "scripts": {
-    "start": "node relay.mjs"
+    "start": "node relay.mjs",
+    "bot": "node bot.mjs",
+    "test": "node --test bot-core.test.mjs"
   },
   "dependencies": {
-    "firebase-admin": "^12.7.0"
+    "firebase-admin": "^12.7.0",
+    "steam-user": "^5.3.0",
+    "steamcommunity": "^3.50.3",
+    "steam-tradeoffer-manager": "^2.13.0",
+    "steam-totp": "^2.1.2"
   }
 }

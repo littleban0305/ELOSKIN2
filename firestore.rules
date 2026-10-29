@@ -69,10 +69,13 @@ service cloud.firestore {
     match /orders/{orderId} {
       allow read: if isAdmin() || (request.auth != null && resource.data.uid == request.auth.uid);
       allow create: if request.auth != null && validOrderCreate(request.resource.data);
+      // 管理員可以改狀態、備註，以及「交給機器人」（botRequested = true、清掉 bot 讓機器人重送）；bot 的內容只有機器人能寫
       allow update: if (isAdmin()
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "adminNote", "updatedAt"])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "adminNote", "updatedAt", "botRequested", "bot"])
           && request.resource.data.status in ["pending", "processing", "completed", "cancelled"]
-          && request.resource.data.adminNote is string && request.resource.data.adminNote.size() <= 300)
+          && request.resource.data.adminNote is string && request.resource.data.adminNote.size() <= 300
+          && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(["botRequested"]) || request.resource.data.botRequested == true)
+          && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(["bot"]) || request.resource.data.bot == null))
         || (request.auth != null
           && resource.data.uid == request.auth.uid
           && resource.data.status == "pending"
