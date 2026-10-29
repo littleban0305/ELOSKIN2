@@ -574,3 +574,14 @@
 @media (max-width: 720px) {
   #preview-library-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+button.library-item {
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  border: 0;
+  cursor: pointer;
+}
+
+button.library-item:hover { background: #1a262d; }
+button.library-item:focus-visible { outline: 2px solid #50dbc5; outline-offset: 2px; }

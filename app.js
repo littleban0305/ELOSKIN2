@@ -82,6 +82,7 @@ function listingProduct(listing) {
     accent: "#74c9c0",
     iconUrl: /^https:\/\//.test(listing.imageUrl || "") ? listing.imageUrl : "",
     marketHashName: listing.steam?.marketHashName || "",
+    steamType: listing.steam?.type || "",
     createdAt: Number(listing.createdAt) || 0
   };
 }
@@ -514,7 +515,7 @@ function productCardMarkup(product, tradeMode = false, tradeSide = "receive") {
     ? `<button class="add-button" type="button" data-trade-add="${escapeHtml(product.id)}" data-trade-side="${tradeSide}" aria-label="${escapeHtml(tradeActionLabel)}：${safeName}" ${tradeSelected || product.stock === 0 || !priced ? "disabled" : ""}><img src="assets/icon_new/add_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="" aria-hidden="true"></button>`
     : `<button class="add-button" type="button" data-add="${escapeHtml(product.id)}" aria-label="${escapeHtml(addLabel)}" ${isDemo || product.stock === 0 || !priced ? "disabled" : ""}><img src="assets/icon_new/add_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="" aria-hidden="true"></button>`;
   return `
-    <article class="product-card">
+    <article class="product-card is-openable" data-product-open="${escapeHtml(product.id)}" data-open-side="${tradeMode ? tradeSide : ""}" tabindex="0" aria-label="${escapeHtml(t("itemModal.openAria", { name: product.name }))}">
       <div class="product-visual art-${product.art}">
         <button class="favorite-button${favorite ? " is-favorite" : ""}" type="button" data-favorite="${escapeHtml(product.id)}" aria-label="${escapeHtml(favoriteLabel)}：${safeName}" aria-pressed="${favorite}">
           <img src="assets/icon_new/${favoriteIcon}" alt="" aria-hidden="true">
@@ -523,14 +524,8 @@ function productCardMarkup(product, tradeMode = false, tradeSide = "receive") {
       </div>
       <div class="product-info">
         <h3 title="${safeName}">${safeName}</h3>
-        ${isDemo ? "" : `<div class="product-description">${escapeHtml(product.description)}${product.wear === copy.product.notApplicable ? "" : ` <span>／ ${escapeHtml(product.wear)}</span>`}</div>`}
-        ${product.details ? itemDetailMarkup(product.details) : ""}
-        ${product.details ? inspectLinkMarkup(product.details, product.name) : ""}
-        ${product.tags?.length ? `<div class="product-tags">${product.tags.slice(0, 4).map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
-        <div class="product-favorite-count">${escapeHtml(t("home.marketFavoriteCount", { count: favoriteCount }))}</div>
         <div class="product-bottom">
           <div class="product-price">${priced ? `<span class="currency-symbol">${escapeHtml(t("product.currency"))}</span>${product.price.toLocaleString()}` : `<span class="unpriced-label">${escapeHtml(t("product.noPrice"))}</span>`}</div>
-          ${isDemo ? "" : `<div class="product-stock">${product.stock === 0 ? escapeHtml(t("product.unavailable")) : stockLabel}</div>`}
           ${actionButton}
         </div>
       </div>
@@ -625,7 +620,7 @@ function renderOfferSide() {
     const art = /^https:\/\//.test(item.iconUrl || "")
       ? `<img src="${escapeHtml(item.iconUrl)}" alt="" loading="lazy">`
       : `<span class="product-art-placeholder" aria-hidden="true">${escapeHtml(copy.games.cs2)}</span>`;
-    return `<div class="trade-selected-item"><div class="trade-selected-art">${art}</div><div class="trade-selected-info"><strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong><small>${item.value ? `${Number(item.value).toLocaleString()} EC` : escapeHtml(t("trade.offerNoValue"))}</small>${inspectLinkMarkup(item.details, item.name, true)}</div><button type="button" data-trade-remove="${escapeHtml(item.id)}" data-trade-side="offer" aria-label="${escapeHtml(removeLabel)}">×</button></div>`;
+    return `<div class="trade-selected-item"><div class="trade-selected-art">${art}</div><button class="trade-selected-info" type="button" data-offer-open="${escapeHtml(item.assetId || "")}" aria-label="${escapeHtml(t("itemModal.openAria", { name: item.name }))}"><strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong><small>${item.value ? `${Number(item.value).toLocaleString()} EC` : escapeHtml(t("trade.offerNoValue"))}</small></button><button type="button" data-trade-remove="${escapeHtml(item.id)}" data-trade-side="offer" aria-label="${escapeHtml(removeLabel)}">×</button></div>`;
   }).join("");
   const placeholders = Array.from({ length: Math.max(0, 4 - tradeState.offer.length) }, () =>
     `<div class="trade-slot"><span aria-hidden="true">+</span><small>${escapeHtml(t("trade.emptyOffer"))}</small></div>`
@@ -1081,15 +1076,20 @@ document.querySelectorAll("[data-market-mode]").forEach((button) => {
 function handleTradeInventoryClick(event) {
   const button = event.target.closest("[data-trade-add]");
   if (!button) return;
-  const product = products.find((item) => item.id === button.dataset.tradeAdd);
-  if (!product || !isProductPublished(product) || product.stock === 0 || !Number.isFinite(product.price)) return;
+  addProductToReceive(button.dataset.tradeAdd);
+}
+
+function addProductToReceive(id) {
+  const product = products.find((item) => item.id === id);
+  if (!product || !isProductPublished(product) || product.stock === 0 || !Number.isFinite(product.price)) return false;
   if (tradeState.receive.includes(product.id)) {
     showToast(t("trade.alreadySelected"));
-    return;
+    return false;
   }
   tradeState.receive.push(product.id);
   renderTrade();
   renderTradeItems();
+  return true;
 }
 
 $("#trade-grid").addEventListener("click", handleTradeInventoryClick);
@@ -1564,14 +1564,12 @@ function renderOwnInventory() {
     ? (priced.length ? `<p class="trade-filter-note">${escapeHtml(t("trade.inventoryEmpty"))}</p>` : "")
     : visible.map((item) => `
       <div class="trade-own-cell${selected.has(item.assetId) ? " is-selected" : ""}">
-        <button class="trade-own-item" type="button" data-own-asset="${escapeHtml(item.assetId)}" aria-label="${escapeHtml(t("trade.inventoryAdd", { name: item.name }))}"${selected.has(item.assetId) ? " disabled" : ""}>
+        <button class="trade-own-item" type="button" data-own-open="${escapeHtml(item.assetId)}" aria-label="${escapeHtml(t("itemModal.openAria", { name: item.name }))}">
           <span class="trade-own-art">${item.iconUrl ? `<img src="${escapeHtml(item.iconUrl)}" alt="" loading="lazy">` : ""}</span>
           <strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong>
-          <small>${escapeHtml(item.type)}</small>
-          ${itemDetailMarkup(item.details)}
           <em class="trade-own-price">${escapeHtml(t("trade.priceEstimate", { ec: ownItemEc(item).toLocaleString() }))}</em>
         </button>
-        ${inspectLinkMarkup(item.details, item.name, true)}
+        <button class="trade-own-add" type="button" data-own-asset="${escapeHtml(item.assetId)}" aria-label="${escapeHtml(t("trade.inventoryAdd", { name: item.name }))}"${selected.has(item.assetId) ? " disabled" : ""}>+</button>
       </div>`).join("");
   renderLibrary();
 }
@@ -1629,14 +1627,11 @@ function renderLibrary() {
 function libraryCardMarkup(item) {
   const price = libraryPriceLabel(item);
   const color = /^[0-9a-f]{6}$/.test(item.details?.rc || "") ? item.details.rc : "";
-  return `<article class="library-item"${color ? ` style="--rarity:#${color}"` : ""}>
+  return `<button class="library-item" type="button" data-library-open="${escapeHtml(item.assetId)}" aria-label="${escapeHtml(t("itemModal.openAria", { name: item.name }))}"${color ? ` style="--rarity:#${color}"` : ""}>
       <span class="library-art">${item.iconUrl ? `<img src="${escapeHtml(item.iconUrl)}" alt="" loading="lazy">` : ""}</span>
       <strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong>
-      <small>${escapeHtml(item.type)}</small>
-      ${itemDetailMarkup(item.details)}
       <em class="library-price${price.priced ? "" : " is-muted"}">${escapeHtml(price.text)}</em>
-      ${inspectLinkMarkup(item.details, item.name)}
-    </article>`;
+    </button>`;
 }
 
 // 個人頁的「帳號設定」摘要
@@ -1674,9 +1669,18 @@ $("#library-search").addEventListener("input", renderLibrary);
 $("#library-sort").addEventListener("change", renderLibrary);
 
 $("#trade-own-grid").addEventListener("click", (event) => {
+  const opener = event.target.closest("[data-own-open]");
+  if (opener) {
+    openInventoryItemModal(opener.dataset.ownOpen, "offer");
+    return;
+  }
   const button = event.target.closest("[data-own-asset]");
   if (!button) return;
-  const item = ownInventory.items.find((entry) => entry.assetId === button.dataset.ownAsset);
+  addOwnItemToOffer(button.dataset.ownAsset);
+});
+
+function addOwnItemToOffer(assetId) {
+  const item = ownInventory.items.find((entry) => entry.assetId === assetId);
   if (!item || ownItemEc(item) === null || tradeState.offer.some((entry) => entry.assetId === item.assetId)) return;
   if (tradeState.offer.length >= 20) {
     showToast(t("trade.offerLimit"));
@@ -1685,7 +1689,8 @@ $("#trade-own-grid").addEventListener("click", (event) => {
   const marketEc = window.eloPrices?.ec(item.marketHashName) ?? null;
   tradeState.offer.push({ id: `asset-${item.assetId}`, name: item.name, value: marketEc || 0, autoValue: true, assetId: item.assetId, marketHashName: item.marketHashName, iconUrl: item.iconUrl, details: item.details || {} });
   renderTrade();
-});
+  return true;
+}
 
 window.addEventListener("eloauthchange", restoreOwnInventory);
 window.addEventListener("elofirebaseready", restoreOwnInventory);
@@ -2000,6 +2005,189 @@ renderFaq();
 renderFilters();
 renderTradeFilters();
 renderHomeCategories();
+// ---------- 物品詳細資料視窗（全站共用） ----------
+
+const WEAR_RANGES = [
+  { max: 0.07, label: "全新出廠" },
+  { max: 0.15, label: "輕微磨損" },
+  { max: 0.38, label: "戰場實測" },
+  { max: 0.45, label: "重度磨損" },
+  { max: 1, label: "戰痕累累" }
+];
+
+function specRow(label, value) {
+  return value ? `<dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd>` : "";
+}
+
+function detailSpecRows(details, marketHashName) {
+  const d = details || {};
+  return [
+    specRow(t("itemModal.quality"), d.q === "st" ? t("itemModal.stattrak") : d.q === "sv" ? t("itemModal.souvenir") : ""),
+    specRow(t("itemModal.wear"), d.w || ""),
+    specRow(t("itemModal.float"), Number.isFinite(d.f) ? d.f.toFixed(10).replace(/0+$/, "").replace(/\.$/, "") : ""),
+    specRow(t("itemModal.pattern"), Number.isFinite(d.p) ? String(d.p) : ""),
+    specRow(t("itemModal.stickers"), d.s?.length ? d.s.join("、") : ""),
+    specRow(t("itemModal.charms"), d.k?.length ? d.k.join("、") : ""),
+    specRow(t("itemModal.nameTag"), d.t || ""),
+    specRow(t("itemModal.marketName"), marketHashName || "")
+  ].join("");
+}
+
+// 磨損值條：五段磨損區間，標出這件物品的位置
+function wearBarMarkup(value) {
+  if (!Number.isFinite(value)) return "";
+  let start = 0;
+  const segments = WEAR_RANGES.map((range) => {
+    const width = (range.max - start) * 100;
+    const active = value >= start && (value < range.max || range.max === 1);
+    start = range.max;
+    return `<span class="wear-segment${active ? " is-active" : ""}" style="width:${width}%" title="${escapeHtml(range.label)}"></span>`;
+  }).join("");
+  return `<div class="wear-bar">${segments}<span class="wear-marker" style="left:${Math.min(100, Math.max(0, value * 100))}%"></span></div>`;
+}
+
+let itemModalReturnFocus = null;
+
+function showItemModal({ name, type, iconUrl, artHtml, price, wear, specs, actions, rarity }) {
+  $("#item-modal-name").textContent = name;
+  $("#item-modal-type").textContent = type || "";
+  $("#item-modal-type").hidden = !type;
+  $("#item-modal-price").innerHTML = price || "";
+  $("#item-modal-price").hidden = !price;
+  $("#item-modal-art").innerHTML = iconUrl ? `<img src="${escapeHtml(iconUrl)}" alt="">` : (artHtml || "");
+  $("#item-modal-art").style.setProperty("--rarity", rarity ? `#${rarity}` : "#3a4a52");
+  $("#item-modal-wear").innerHTML = wear || "";
+  $("#item-modal-wear").hidden = !wear;
+  $("#item-modal-specs").innerHTML = specs;
+  $("#item-modal-specs").hidden = !specs;
+  $("#item-modal-actions").innerHTML = actions;
+  itemModalReturnFocus = document.activeElement;
+  $("#item-modal").hidden = false;
+  document.body.classList.add("item-modal-open");
+  $("#item-modal-close").focus();
+}
+
+function closeItemModal() {
+  if ($("#item-modal").hidden) return;
+  $("#item-modal").hidden = true;
+  document.body.classList.remove("item-modal-open");
+  itemModalReturnFocus?.focus?.();
+}
+
+function inventoryPriceMarkup(item) {
+  const price = libraryPriceLabel(item);
+  if (!price.priced) return `<span class="is-muted">${escapeHtml(price.text)}</span>`;
+  const twd = window.eloPrices?.twd(item.marketHashName);
+  return `${escapeHtml(price.text)}${Number.isFinite(twd) ? ` <small>NT$ ${escapeHtml(twd.toLocaleString())}</small>` : ""}`;
+}
+
+// 自己庫存裡的物品（物品庫、交易頁）
+function openInventoryItemModal(assetId, context = "") {
+  const item = ownInventory.items.find((entry) => entry.assetId === assetId) || tradeState.offer.find((entry) => entry.assetId === assetId);
+  if (!item) return;
+  const selected = tradeState.offer.some((entry) => entry.assetId === assetId);
+  const priced = ownItemEc(item) !== null;
+  const actionButtons = [inspectLinkMarkup(item.details, item.name)];
+  if (context === "offer") {
+    actionButtons.unshift(`<button class="admin-primary-button" type="button" data-modal-offer="${escapeHtml(assetId)}"${selected || !priced ? " disabled" : ""}>${escapeHtml(t(selected ? "itemModal.alreadySelected" : priced ? "itemModal.addToOffer" : "itemModal.noPrice"))}</button>`);
+  }
+  showItemModal({
+    name: item.name,
+    type: item.type,
+    iconUrl: item.iconUrl,
+    rarity: item.details?.rc,
+    price: inventoryPriceMarkup(item),
+    wear: wearBarMarkup(item.details?.f),
+    specs: detailSpecRows(item.details, item.marketHashName),
+    actions: actionButtons.filter(Boolean).join("")
+  });
+}
+
+// 商店、首頁、交易頁上架的商品
+function openProductModal(productId, side = "") {
+  const product = products.find((item) => item.id === productId);
+  if (!product) return;
+  const priced = Number.isFinite(product.price) && product.price > 0;
+  const details = product.details || {};
+  const marketTwd = product.marketHashName ? window.eloPrices?.twd(product.marketHashName) : null;
+  const marketEc = product.marketHashName ? window.eloPrices?.ec(product.marketHashName) : null;
+  const favoriteCount = favoriteCounts.get(favoriteDocumentId(product)) || 0;
+  const specs = [
+    specRow(t("itemModal.game"), product.game === "ROBLOX RIVALS" ? copy.trade.roblox : copy.games.cs2),
+    detailSpecRows(details, product.marketHashName),
+    marketEc !== null && marketEc !== undefined ? specRow(t("itemModal.marketPrice"), t("itemModal.marketPriceValue", { ec: marketEc.toLocaleString(), twd: marketTwd.toLocaleString() })) : "",
+    product.source === "demo" ? "" : specRow(t("itemModal.stock"), t("itemModal.stockValue", { amount: product.stock })),
+    specRow(t("itemModal.favorites"), String(favoriteCount)),
+    product.tags?.length ? specRow(t("itemModal.tags"), product.tags.join("、")) : "",
+    specRow(t("itemModal.description"), product.description || "")
+  ].join("");
+  const available = priced && product.stock > 0 && product.source !== "demo";
+  let action;
+  if (side === "receive") {
+    const chosen = tradeState.receive.includes(product.id);
+    action = `<button class="admin-primary-button" type="button" data-modal-receive="${escapeHtml(product.id)}"${chosen || !available ? " disabled" : ""}>${escapeHtml(t(chosen ? "itemModal.alreadySelected" : available ? "itemModal.addToReceive" : priced ? "itemModal.unavailable" : "itemModal.noPrice"))}</button>`;
+  } else {
+    action = `<button class="admin-primary-button" type="button" data-add="${escapeHtml(product.id)}"${available ? "" : " disabled"}>${escapeHtml(t(available ? "itemModal.addToCart" : priced ? "itemModal.unavailable" : "itemModal.noPrice"))}</button>`;
+  }
+  showItemModal({
+    name: product.name,
+    type: product.steamType || product.category,
+    iconUrl: product.iconUrl,
+    artHtml: product.iconUrl ? "" : productArtwork(product),
+    rarity: details.rc,
+    price: priced ? `${escapeHtml(product.price.toLocaleString())} EC` : `<span class="is-muted">${escapeHtml(t("product.noPrice"))}</span>`,
+    wear: wearBarMarkup(details.f),
+    specs,
+    actions: [action, inspectLinkMarkup(details, product.name)].filter(Boolean).join("")
+  });
+}
+
+document.addEventListener("click", (event) => {
+  if (event.target.closest("a, input, select, textarea")) return;
+  const library = event.target.closest("[data-library-open]");
+  if (library) {
+    openInventoryItemModal(library.dataset.libraryOpen);
+    return;
+  }
+  const offer = event.target.closest("[data-offer-open]");
+  if (offer && offer.dataset.offerOpen) {
+    openInventoryItemModal(offer.dataset.offerOpen);
+    return;
+  }
+  if (event.target.closest("button") && !event.target.closest("#item-modal")) return;
+  const card = event.target.closest("[data-product-open]");
+  if (card && !event.target.closest("#item-modal")) openProductModal(card.dataset.productOpen, card.dataset.openSide);
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") closeItemModal();
+  const card = event.target.closest?.("[data-product-open]");
+  if (card && event.target === card && (event.key === "Enter" || event.key === " ")) {
+    event.preventDefault();
+    openProductModal(card.dataset.productOpen, card.dataset.openSide);
+  }
+});
+
+$("#item-modal-close").addEventListener("click", closeItemModal);
+$("#item-modal").addEventListener("click", (event) => {
+  if (event.target === $("#item-modal")) {
+    closeItemModal();
+    return;
+  }
+  const offerButton = event.target.closest("[data-modal-offer]");
+  if (offerButton && addOwnItemToOffer(offerButton.dataset.modalOffer)) {
+    closeItemModal();
+    showToast(t("trade.offerAdded"));
+    return;
+  }
+  const receiveButton = event.target.closest("[data-modal-receive]");
+  if (receiveButton && addProductToReceive(receiveButton.dataset.modalReceive)) {
+    closeItemModal();
+    return;
+  }
+  if (event.target.closest("[data-add]")) window.setTimeout(closeItemModal, 0);
+});
+
 renderProducts();
 renderTrade();
 renderTradeItems();
