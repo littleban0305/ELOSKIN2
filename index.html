@@ -12,21 +12,21 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css?v=60">
     <link rel="stylesheet" href="admin.css?v=8">
-    <link rel="stylesheet" href="profile.css?v=8">
+    <link rel="stylesheet" href="profile.css?v=9">
     <link rel="stylesheet" href="orders.css?v=2">
     <link rel="stylesheet" href="wallet.css?v=1">
     <link rel="stylesheet" href="shop.css?v=5">
     <link rel="stylesheet" href="mobile.css?v=1">
-    <script src="content.js?v=48" defer></script>
+    <script src="content.js?v=49" defer></script>
     <script src="item-details.js?v=3" defer></script>
-    <script src="inventory-import.js?v=4" defer></script>
+    <script src="inventory-import.js?v=5" defer></script>
     <script src="prices.js?v=5" defer></script>
     <script src="firebase-config.js?v=1" defer></script>
     <script src="steam-config.js?v=5" defer></script>
-    <script src="app.js?v=47" defer></script>
+    <script src="app.js?v=48" defer></script>
     <script src="auth.js?v=26" defer></script>
     <script src="admin.js?v=15" defer></script>
-    <script src="orders.js?v=6" defer></script>
+    <script src="orders.js?v=7" defer></script>
     <script src="wallet.js?v=3" defer></script>
   </head>
   <body>
@@ -46,6 +46,8 @@
         <a class="nav-link nav-link-mobile nav-link-member" href="#wallet" data-page-link="wallet" data-copy="nav.wallet"></a>
         <a class="nav-link nav-link-mobile nav-link-member" href="#notifications" data-page-link="notifications" data-copy="nav.notifications"></a>
         <a class="nav-link nav-link-mobile nav-link-member" href="#profile" data-page-link="profile" data-copy="nav.profile"></a>
+        <a class="nav-link nav-link-mobile nav-link-member" href="#library" data-page-link="library" data-copy="library.pageTitle"></a>
+        <a class="nav-link nav-link-mobile nav-link-member" href="#settings" data-page-link="settings" data-copy="profile.settingsPageTitle"></a>
         <span class="nav-active-indicator" aria-hidden="true"></span>
       </nav>
       <div class="header-actions header-utility-card">
@@ -137,7 +139,7 @@
                 <span id="trade-own-count"></span>
               </div>
               <p class="account-status trade-inv-status" id="trade-inv-status"></p>
-              <a class="admin-ghost-button trade-inv-goto" id="trade-inv-goto" href="#profile" data-copy="inventory.gotoProfile" hidden></a>
+              <a class="admin-ghost-button trade-inv-goto" id="trade-inv-goto" href="#settings" data-copy="inventory.gotoProfile" hidden></a>
               <p class="trade-price-hint" id="trade-price-hint" hidden></p>
               <input class="trade-inv-search" id="trade-inv-search" type="search" data-copy-placeholder="trade.inventorySearch" data-copy-aria="trade.inventorySearch" hidden>
               <div class="trade-own-grid" id="trade-own-grid"></div>
@@ -195,7 +197,7 @@
           <p data-copy="profile.guestDescription"></p>
           <button class="admin-primary-button" id="profile-login" type="button" data-copy="nav.account"></button>
         </div>
-        <div class="account-layout" id="profile-signed-in" hidden>
+        <div class="account-layout profile-overview" id="profile-signed-in" hidden>
           <section class="account-card account-identity">
             <div class="account-avatar" id="profile-avatar" data-copy-aria="profile.avatarAria">
               <span class="account-avatar-initial" id="profile-avatar-initial">E</span>
@@ -211,7 +213,42 @@
             </div>
             <p class="account-status" id="avatar-status" role="status" aria-live="polite" hidden></p>
           </section>
-          <div class="account-settings-stack">
+          <section class="account-card profile-status-card">
+            <div class="account-section-heading"><h2 data-copy="profile.settingsTitle"></h2></div>
+            <ul class="profile-status-list">
+              <li><span data-copy="profile.statusTradeUrl"></span><strong id="status-trade-url"></strong></li>
+              <li><span data-copy="profile.statusPriceKey"></span><strong id="status-price-key"></strong></li>
+              <li><span data-copy="profile.statusInventory"></span><strong id="status-inventory"></strong></li>
+            </ul>
+            <a class="admin-primary-button profile-status-goto" href="#settings" data-copy="profile.gotoSettings"></a>
+          </section>
+          <section class="account-favorites profile-preview">
+            <div class="account-section-heading"><h2 data-copy="library.title"></h2><span id="preview-library-count">0</span><a class="preview-more" href="#library" data-copy="profile.viewAll"></a></div>
+            <p class="library-total" id="preview-library-total"></p>
+            <div class="library-grid" id="preview-library-grid"></div>
+            <p class="admin-empty" id="preview-library-empty" hidden></p>
+          </section>
+          <section class="account-favorites profile-preview">
+            <div class="account-section-heading"><h2 data-copy="orders.myOrders"></h2><span id="preview-orders-count">0</span><a class="preview-more" href="#orders" data-copy="profile.viewAll"></a></div>
+            <div class="order-list" id="preview-orders-list"></div>
+            <p class="admin-empty" id="preview-orders-empty" data-copy="orders.empty" hidden></p>
+          </section>
+          <section class="account-favorites profile-preview">
+            <div class="account-section-heading"><h2 data-copy="profile.favoritesTitle"></h2><span id="preview-favorites-count">0</span><a class="preview-more" href="#favorites" data-copy="profile.viewAll"></a></div>
+            <div class="product-grid" id="preview-favorites-grid" aria-live="polite"></div>
+            <p class="admin-empty" id="preview-favorites-empty" data-copy="profile.favoritesEmpty" hidden></p>
+          </section>
+        </div>
+      </section>
+
+      <section class="page-view section-wrap profile-page profile-subpage" id="page-settings" data-page-view="settings" hidden>
+        <div class="page-heading"><div><a class="subpage-back" href="#profile" data-page-link-back data-copy="profile.back"></a><h1 data-copy="profile.settingsPageTitle"></h1></div></div>
+        <div class="account-guest" data-auth-guest>
+          <p data-copy="profile.guestDescription"></p>
+          <button class="admin-primary-button" type="button" data-open-login data-copy="nav.account"></button>
+        </div>
+        <div class="profile-subpage-body" data-auth-member hidden>
+          <div class="account-settings-stack settings-page-stack">
           <section class="account-card account-settings">
             <h2 data-copy="profile.settingsTitle"></h2>
             <form class="account-form" id="profile-edit-form" novalidate>
@@ -284,7 +321,17 @@
             </details>
           </section>
           </div>
-          <section class="account-favorites account-library" id="library-section" hidden>
+        </div>
+      </section>
+
+      <section class="page-view section-wrap profile-page profile-subpage" id="page-library" data-page-view="library" hidden>
+        <div class="page-heading"><div><a class="subpage-back" href="#profile" data-page-link-back data-copy="profile.back"></a><h1 data-copy="library.pageTitle"></h1></div></div>
+        <div class="account-guest" data-auth-guest>
+          <p data-copy="profile.guestDescription"></p>
+          <button class="admin-primary-button" type="button" data-open-login data-copy="nav.account"></button>
+        </div>
+        <div class="profile-subpage-body" data-auth-member hidden>
+          <section class="account-favorites account-library" id="library-section">
             <div class="account-section-heading"><h2 data-copy="library.title"></h2><span id="library-count">0</span></div>
             <p class="library-total" id="library-total"></p>
             <div class="library-toolbar">
@@ -299,11 +346,31 @@
             <div class="library-grid" id="library-grid"></div>
             <p class="admin-empty" id="library-empty" hidden></p>
           </section>
+        </div>
+      </section>
+
+      <section class="page-view section-wrap profile-page profile-subpage" id="page-orders" data-page-view="orders" hidden>
+        <div class="page-heading"><div><a class="subpage-back" href="#profile" data-page-link-back data-copy="profile.back"></a><h1 data-copy="orders.pageTitle"></h1></div></div>
+        <div class="account-guest" data-auth-guest>
+          <p data-copy="profile.guestDescription"></p>
+          <button class="admin-primary-button" type="button" data-open-login data-copy="nav.account"></button>
+        </div>
+        <div class="profile-subpage-body" data-auth-member hidden>
           <section class="account-favorites account-orders">
             <div class="account-section-heading"><h2 data-copy="orders.myOrders"></h2><span id="profile-orders-count">0</span></div>
             <div class="order-list" id="profile-orders-list"></div>
             <p class="admin-empty" id="profile-orders-empty" data-copy="orders.empty" hidden></p>
           </section>
+        </div>
+      </section>
+
+      <section class="page-view section-wrap profile-page profile-subpage" id="page-favorites" data-page-view="favorites" hidden>
+        <div class="page-heading"><div><a class="subpage-back" href="#profile" data-page-link-back data-copy="profile.back"></a><h1 data-copy="profile.favoritesPageTitle"></h1></div></div>
+        <div class="account-guest" data-auth-guest>
+          <p data-copy="profile.guestDescription"></p>
+          <button class="admin-primary-button" type="button" data-open-login data-copy="nav.account"></button>
+        </div>
+        <div class="profile-subpage-body" data-auth-member hidden>
           <section class="account-favorites">
             <div class="account-section-heading"><h2 data-copy="profile.favoritesTitle"></h2><span id="profile-favorites-count">0</span></div>
             <div class="product-grid" id="profile-favorites-grid" aria-live="polite"></div>

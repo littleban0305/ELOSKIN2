@@ -593,15 +593,21 @@ function checkFavoriteStatus(product) {
   }).catch(() => favoriteStatusChecks.delete(key));
 }
 
+const PREVIEW_COUNT = 5;
+
 function renderProfileFavorites() {
-  const page = $("#page-profile");
-  if (!page || page.hidden || !window.eloAuthUser) return;
+  if (!window.eloAuthUser || ($("#page-profile").hidden && $("#page-favorites").hidden)) return;
   products.forEach(checkFavoriteStatus);
   const favorites = products.filter((product) => state.favorites.has(productFavoriteKey(product)));
   $("#profile-favorites-grid").innerHTML = favorites.map((product) => productCardMarkup(product)).join("");
   $("#profile-favorites-grid").hidden = favorites.length === 0;
   $("#profile-favorites-count").textContent = favorites.length;
   $("#profile-favorites-empty").hidden = favorites.length > 0;
+  // 個人頁只放前 5 個
+  $("#preview-favorites-grid").innerHTML = favorites.slice(0, PREVIEW_COUNT).map((product) => productCardMarkup(product)).join("");
+  $("#preview-favorites-grid").hidden = favorites.length === 0;
+  $("#preview-favorites-count").textContent = favorites.length;
+  $("#preview-favorites-empty").hidden = favorites.length > 0;
 }
 
 function tradeTotal(side) {
@@ -778,7 +784,7 @@ function updateMarketIndicator() {
 }
 
 function navigateTo(page, shouldScroll = true) {
-  const validPages = ["home", "shop", "trade", "profile", "notifications", "wallet", ...(window.eloIsAdmin ? ["admin"] : [])];
+  const validPages = ["home", "shop", "trade", "profile", "settings", "library", "orders", "favorites", "notifications", "wallet", ...(window.eloIsAdmin ? ["admin"] : [])];
   const destination = validPages.includes(page) ? page : "home";
   document.querySelectorAll("[data-page-view]").forEach((view) => {
     const active = view.dataset.pageView === destination;
@@ -792,7 +798,8 @@ function navigateTo(page, shouldScroll = true) {
     else link.removeAttribute("aria-current");
   });
   updateNavIndicator();
-  if (destination === "profile") renderProfileFavorites();
+  if (destination === "profile" || destination === "favorites") renderProfileFavorites();
+  if (destination === "profile" || destination === "library") renderLibrary();
   window.dispatchEvent(new CustomEvent("elopagechange", { detail: { page: destination } }));
   if (shouldScroll) window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -1314,7 +1321,8 @@ $("#inventory-modal-run").addEventListener("click", () => {
   }
   inventoryPromptDismissed = true;
   $("#inventory-modal").hidden = true;
-  navigateTo("profile");
+  history.pushState(null, "", "#settings");
+  navigateTo("settings");
   window.setTimeout(() => $("#inventory-card").scrollIntoView({ behavior: "smooth", block: "start" }), 150);
 });
 
@@ -1582,10 +1590,7 @@ function libraryPriceLabel(item) {
 }
 
 function renderLibrary() {
-  const section = $("#library-section");
-  const signedIn = Boolean(window.eloAuthUser);
-  section.hidden = !signedIn;
-  if (!signedIn) return;
+  if (!window.eloAuthUser) return;
   const items = ownInventory.items;
   $("#library-count").textContent = String(items.length);
   const priced = items.filter((item) => ownItemEc(item) !== null);
@@ -1609,10 +1614,22 @@ function renderLibrary() {
   const empty = $("#library-empty");
   empty.hidden = visible.length > 0;
   empty.textContent = items.length ? t("library.noMatch") : t("library.empty");
-  $("#library-grid").innerHTML = visible.map((item) => {
-    const price = libraryPriceLabel(item);
-    const color = /^[0-9a-f]{6}$/.test(item.details?.rc || "") ? item.details.rc : "";
-    return `<article class="library-item"${color ? ` style="--rarity:#${color}"` : ""}>
+  $("#library-grid").innerHTML = visible.map(libraryCardMarkup).join("");
+
+  // 個人頁的預覽：價格最高的前 5 件
+  const top = [...items].sort((a, b) => ecOf(b) - ecOf(a)).slice(0, PREVIEW_COUNT);
+  $("#preview-library-count").textContent = String(items.length);
+  $("#preview-library-total").textContent = $("#library-total").textContent;
+  $("#preview-library-grid").innerHTML = top.map(libraryCardMarkup).join("");
+  $("#preview-library-empty").hidden = items.length > 0;
+  $("#preview-library-empty").textContent = t("library.empty");
+  renderProfileStatus();
+}
+
+function libraryCardMarkup(item) {
+  const price = libraryPriceLabel(item);
+  const color = /^[0-9a-f]{6}$/.test(item.details?.rc || "") ? item.details.rc : "";
+  return `<article class="library-item"${color ? ` style="--rarity:#${color}"` : ""}>
       <span class="library-art">${item.iconUrl ? `<img src="${escapeHtml(item.iconUrl)}" alt="" loading="lazy">` : ""}</span>
       <strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong>
       <small>${escapeHtml(item.type)}</small>
@@ -1620,8 +1637,38 @@ function renderLibrary() {
       <em class="library-price${price.priced ? "" : " is-muted"}">${escapeHtml(price.text)}</em>
       ${inspectLinkMarkup(item.details, item.name)}
     </article>`;
-  }).join("");
 }
+
+// 個人頁的「帳號設定」摘要
+function renderProfileStatus() {
+  if (!window.eloAuthUser) return;
+  const setStatus = (id, done, label) => {
+    const element = $(id);
+    element.textContent = label;
+    element.dataset.done = String(done);
+  };
+  setStatus("#status-trade-url", Boolean(window.eloUserProfile?.tradeUrl), t(window.eloUserProfile?.tradeUrl ? "profile.statusDone" : "profile.statusMissing"));
+  const hasKey = Boolean(window.eloPrices?.status().hasKey);
+  setStatus("#status-price-key", hasKey, t(hasKey ? "profile.statusDone" : "profile.statusMissing"));
+  const count = ownInventory.items.length;
+  setStatus("#status-inventory", count > 0, count
+    ? t("profile.statusInventoryLoaded", { count, time: inventoryTime(ownInventory.savedAt) })
+    : t("profile.statusInventoryNone"));
+}
+
+// 子頁面（設定、物品庫、訂單、收藏）：沒登入時顯示登入提示
+function updateSubpageAuth() {
+  const signedIn = Boolean(window.eloAuthUser);
+  document.querySelectorAll("[data-auth-guest]").forEach((element) => { element.hidden = signedIn; });
+  document.querySelectorAll("[data-auth-member]").forEach((element) => { element.hidden = !signedIn; });
+}
+
+document.querySelectorAll("[data-open-login]").forEach((button) => {
+  button.addEventListener("click", () => $("#profile-login").click());
+});
+window.addEventListener("eloauthchange", updateSubpageAuth);
+window.addEventListener("eloprofilechange", renderProfileStatus);
+updateSubpageAuth();
 
 $("#library-search").addEventListener("input", renderLibrary);
 $("#library-sort").addEventListener("change", renderLibrary);
@@ -1692,6 +1739,7 @@ function renderPriceKeyCard() {
     else if (status.blockedReason === "daily" || status.usedToday >= status.dailyLimit) lines.push(t("priceKey.blockedDaily", { time: resume }));
   } else lines.push(t("priceKey.none"));
   $("#price-key-usage").textContent = lines.join("\n");
+  renderProfileStatus();
   updatePriceKeyModal();
 }
 
@@ -1770,7 +1818,7 @@ document.addEventListener("click", (event) => {
 
 window.addEventListener("eloauthchange", renderPriceKeyCard);
 window.setInterval(() => {
-  if (!$("#page-profile").hidden) renderPriceKeyCard();
+  if (!$("#page-settings").hidden) renderPriceKeyCard();
   else updatePriceKeyModal();
   updateInventoryModal();
 }, 2000);

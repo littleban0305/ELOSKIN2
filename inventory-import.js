@@ -4,7 +4,7 @@ window.eloInventoryImport = (() => {
   const SITE_URL = "https://littleban0305.github.io/ELOSKIN2/";
   // 舊書籤帶回 trade-import，新書籤帶回 profile-import，兩個都交給個人頁處理
   const HASH_KEYS = { "trade-import": "profile", "profile-import": "profile", "admin-import": "admin" };
-  const HASH_PAGES = { "trade-import": "trade", "profile-import": "profile", "admin-import": "admin" };
+  const HASH_PAGES = { "trade-import": "settings", "profile-import": "settings", "admin-import": "admin" };
 
   function iconUrl(icon) {
     return typeof icon === "string" && icon ? ICON_BASE + icon.split("/").map(encodeURIComponent).join("/") : "";

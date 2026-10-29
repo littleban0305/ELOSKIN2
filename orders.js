@@ -104,8 +104,8 @@
     }
     toast(text("orders.profileRequired"));
     app()?.closeCart?.();
-    history.pushState(null, "", "#profile");
-    app()?.navigateTo("profile");
+    history.pushState(null, "", "#settings");
+    app()?.navigateTo("settings");
     return false;
   }
 
@@ -398,6 +398,10 @@
     list.replaceChildren(...sorted.map((order) => buildOrderCard(order, "user")));
     $("#profile-orders-count").textContent = sorted.length;
     $("#profile-orders-empty").hidden = sorted.length > 0;
+    // 個人頁只放最新 5 筆
+    $("#preview-orders-list").replaceChildren(...sorted.slice(0, 5).map((order) => buildOrderCard(order, "user")));
+    $("#preview-orders-count").textContent = sorted.length;
+    $("#preview-orders-empty").hidden = sorted.length > 0;
   }
 
   function renderAdminOrders() {
@@ -514,6 +518,7 @@
 
   $("#admin-order-list").addEventListener("click", handleOrderClick("admin"));
   $("#profile-orders-list").addEventListener("click", handleOrderClick("user"));
+  $("#preview-orders-list").addEventListener("click", handleOrderClick("user"));
 
   // ---------- Notifications ----------
 

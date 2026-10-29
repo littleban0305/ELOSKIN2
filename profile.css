@@ -484,3 +484,93 @@
   .library-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .library-art { height: 64px; }
 }
+
+/* ---------- 個人頁總覽 + 子頁面 ---------- */
+
+.profile-status-card {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+}
+
+.profile-status-card .account-section-heading { margin-bottom: 0; }
+
+.profile-status-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 2px;
+}
+
+.profile-status-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  color: #b7c4c9;
+  border-bottom: 1px solid #1d2a31;
+}
+
+.profile-status-list li:last-child { border-bottom: 0; }
+
+.profile-status-list strong {
+  color: #ff8f8f;
+  font-weight: 700;
+  text-align: right;
+}
+
+.profile-status-list strong[data-done="true"] { color: #50dbc5; }
+
+.profile-status-goto {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding-inline: 18px;
+  text-decoration: none;
+}
+
+.preview-more {
+  margin-left: auto;
+  color: #50dbc5;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.preview-more::after { content: " →"; }
+.preview-more:hover { text-decoration: underline; }
+
+.profile-preview .account-section-heading { flex-wrap: wrap; }
+
+.subpage-back {
+  display: inline-block;
+  margin-bottom: 8px;
+  color: #8fa0a6;
+  text-decoration: none;
+}
+
+.subpage-back:hover { color: #50dbc5; }
+
+.profile-subpage-body[hidden] { display: none !important; }
+
+.settings-page-stack {
+  max-width: 860px;
+}
+
+@media (max-width: 720px) {
+  .profile-status-list li { flex-direction: column; align-items: flex-start; gap: 2px; }
+  .profile-status-list strong { text-align: left; }
+}
+
+#preview-library-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+
+@media (max-width: 900px) {
+  #preview-library-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 720px) {
+  #preview-library-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
