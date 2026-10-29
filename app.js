@@ -72,10 +72,11 @@ function listingProduct(listing) {
     wear: copy.product.notApplicable,
     wearCondition: detectWear(listing.steam?.marketHashName),
     rarityColor: detectRarity(listing.steam?.type || listing.description),
-    stattrak: /stattrak/i.test(`${name} ${listing.steam?.marketHashName || ""}`),
+    stattrak: listing.steam?.details?.q === "st" || /stattrak/i.test(`${name} ${listing.steam?.marketHashName || ""}`),
     miniGame: listing.game === "ROBLOX RIVALS" ? "rivals" : "",
-    hasStickers: false,
-    hasCharm: false,
+    hasStickers: Boolean(listing.steam?.details?.s?.length),
+    hasCharm: Boolean(listing.steam?.details?.k?.length),
+    details: listing.steam?.details || null,
     label: category.toUpperCase(),
     art: LISTING_CATEGORY_ART[key] || "",
     accent: "#74c9c0",
@@ -523,6 +524,7 @@ function productCardMarkup(product, tradeMode = false, tradeSide = "receive") {
       <div class="product-info">
         <h3 title="${safeName}">${safeName}</h3>
         ${isDemo ? "" : `<div class="product-description">${escapeHtml(product.description)}${product.wear === copy.product.notApplicable ? "" : ` <span>／ ${escapeHtml(product.wear)}</span>`}</div>`}
+        ${product.details ? itemDetailMarkup(product.details) : ""}
         ${product.tags?.length ? `<div class="product-tags">${product.tags.slice(0, 4).map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
         <div class="product-favorite-count">${escapeHtml(t("home.marketFavoriteCount", { count: favoriteCount }))}</div>
         <div class="product-bottom">
@@ -1144,7 +1146,8 @@ function compactInventory(items) {
     n: String(item.name).slice(0, 120),
     m: String(item.marketHashName).slice(0, 200),
     y: String(item.type).slice(0, 80),
-    i: String(item.iconUrl || "").startsWith(STEAM_ICON_BASE) ? item.iconUrl.slice(STEAM_ICON_BASE.length).slice(0, 400) : ""
+    i: String(item.iconUrl || "").startsWith(STEAM_ICON_BASE) ? item.iconUrl.slice(STEAM_ICON_BASE.length).slice(0, 400) : "",
+    ...window.eloItemDetails.pick(item.details)
   }));
 }
 
@@ -1155,8 +1158,16 @@ function expandInventory(rows) {
     name: String(row.n || ""),
     marketHashName: String(row.m || ""),
     type: String(row.y || ""),
-    iconUrl: row.i ? STEAM_ICON_BASE + row.i : ""
+    iconUrl: row.i ? STEAM_ICON_BASE + row.i : "",
+    details: window.eloItemDetails.pick(row)
   })).filter((item) => item.assetId && item.marketHashName);
+}
+
+function itemDetailMarkup(details) {
+  const summary = window.eloItemDetails.summary(details);
+  const extras = window.eloItemDetails.extras(details);
+  if (!summary && !extras.length) return "";
+  return `<span class="item-detail${details?.q === "st" ? " is-stattrak" : ""}${details?.q === "sv" ? " is-souvenir" : ""}">${summary ? `<span>${escapeHtml(summary)}</span>` : ""}${extras.map((line) => `<span class="item-detail-extra" title="${escapeHtml(line)}">${escapeHtml(line)}</span>`).join("")}</span>`;
 }
 
 async function syncInventoryToCloud() {
@@ -1487,6 +1498,7 @@ function renderOwnInventory() {
         <span class="trade-own-art">${item.iconUrl ? `<img src="${escapeHtml(item.iconUrl)}" alt="" loading="lazy">` : ""}</span>
         <strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong>
         <small>${escapeHtml(item.type)}</small>
+        ${itemDetailMarkup(item.details)}
         <em class="trade-own-price">${escapeHtml(t("trade.priceEstimate", { ec: ownItemEc(item).toLocaleString() }))}</em>
       </button>`).join("");
 }
@@ -1503,7 +1515,7 @@ $("#trade-own-grid").addEventListener("click", (event) => {
     return;
   }
   const marketEc = window.eloPrices?.ec(item.marketHashName) ?? null;
-  tradeState.offer.push({ id: `asset-${item.assetId}`, name: item.name, value: marketEc || 0, autoValue: true, assetId: item.assetId, marketHashName: item.marketHashName, iconUrl: item.iconUrl });
+  tradeState.offer.push({ id: `asset-${item.assetId}`, name: item.name, value: marketEc || 0, autoValue: true, assetId: item.assetId, marketHashName: item.marketHashName, iconUrl: item.iconUrl, details: item.details || {} });
   renderTrade();
 });
 

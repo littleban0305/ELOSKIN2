@@ -224,7 +224,12 @@
       offerItems: selection.offer.map((item) => ({
         name: item.name,
         value: Number(item.value) || 0,
-        ...(item.assetId ? { assetId: item.assetId, marketHashName: item.marketHashName || "", imageUrl: item.iconUrl || "" } : {})
+        ...(item.assetId ? {
+          assetId: item.assetId,
+          marketHashName: item.marketHashName || "",
+          imageUrl: item.iconUrl || "",
+          detail: [window.eloItemDetails?.summary(item.details), ...(window.eloItemDetails?.extras(item.details) || [])].filter(Boolean).join(" · ").slice(0, 300)
+        } : {})
       })),
       total: selection.receiveTotal,
       offerTotal: selection.offerTotal,
@@ -262,7 +267,8 @@
       art.append(image);
     }
     const name = element("span", "order-item-name", item.name);
-    name.title = item.name;
+    name.title = item.detail ? `${item.name}\n${item.detail}` : item.name;
+    if (item.detail) name.append(element("small", "order-item-detail", item.detail));
     const meta = element("span", "order-item-meta");
     const value = Number.isInteger(item.price) ? item.price : Number(item.value) || 0;
     meta.textContent = [

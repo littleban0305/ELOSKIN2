@@ -217,3 +217,34 @@
   color: #829098;
   font-weight: 700;
 }
+
+/* ---------- 物品細節：磨損、磨損值、圖案、貼紙、吊飾、命名牌 ---------- */
+
+.item-detail {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  color: #9fb0b6;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.item-detail > span {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.item-detail.is-stattrak > span:first-child { color: #f0a35e; }
+.item-detail.is-souvenir > span:first-child { color: #ffd76a; }
+.item-detail-extra { color: #7f9198; }
+
+.order-item-detail {
+  display: block;
+  color: #8fa0a6;
+  font-size: 12px;
+  white-space: normal;
+}

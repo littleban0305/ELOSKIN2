@@ -5,7 +5,8 @@
 //
 // 啟動：node relay.mjs（同資料夾要有 serviceAccount.json，取得方式見 README.md）
 
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, writeFileSync } from "node:fs";
+import itemDetails from "../item-details.js";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import os from "node:os";
@@ -21,8 +22,9 @@ const MAX_SAVED_ITEMS = 1000; // Firestore 一份文件 1 MB 上限
 
 // ---------- 讀取 Steam 庫存 ----------
 
-export function toItems(assets, descriptions) {
+export function toItems(assets, descriptions, assetProperties = []) {
   const byKey = new Map(descriptions.map((description) => [`${description.classid}_${description.instanceid}`, description]));
+  const properties = itemDetails.propertiesByAsset(assetProperties);
   const items = [];
   for (const asset of assets) {
     const description = byKey.get(`${asset.classid}_${asset.instanceid}`);
@@ -34,7 +36,8 @@ export function toItems(assets, descriptions) {
       n: String(description.name || marketHashName).slice(0, 120),
       m: marketHashName.slice(0, 200),
       y: String(description.type || "").slice(0, 80),
-      i: String(description.icon_url || "").slice(0, 400)
+      i: String(description.icon_url || "").slice(0, 400),
+      ...itemDetails.pick(itemDetails.extract(description, properties.get(String(asset.assetid)), marketHashName))
     });
   }
   return items;
@@ -50,6 +53,7 @@ export class SteamError extends Error {
 export async function fetchInventory(steamId, { fetchImpl = fetch } = {}) {
   const assets = [];
   const descriptions = [];
+  const assetProperties = [];
   let startAssetId = "";
   for (let page = 0; page < MAX_PAGES; page += 1) {
     const url = `https://steamcommunity.com/inventory/${steamId}/730/2?l=tchinese&count=2000${startAssetId ? `&start_assetid=${startAssetId}` : ""}`;
@@ -65,13 +69,34 @@ export async function fetchInventory(steamId, { fetchImpl = fetch } = {}) {
     const data = await response.json().catch(() => null);
     if (!data) throw new SteamError("private", "Steam 庫存不是公開的，請到 Steam 隱私設定把「庫存」改成公開");
     if (data.success === false || data.success === 0) throw new SteamError("steam_error", "Steam 讀取失敗，請確認帳號與隱私設定");
+    if (page === 0) saveRawSample(data);
     assets.push(...(data.assets || []));
+    assetProperties.push(...(data.asset_properties || []));
     descriptions.push(...(data.descriptions || []));
     if (!data.more_items || !data.last_assetid) break;
     startAssetId = data.last_assetid;
     await sleep(STEAM_GAP_MS);
   }
-  return { items: toItems(assets, descriptions), total: assets.length };
+  return { items: toItems(assets, descriptions, assetProperties), total: assets.length };
+}
+
+// 把最近一次 Steam 回傳的原始資料存一份（只留前 20 件），方便檢查欄位
+function saveRawSample(data) {
+  try {
+    const assets = (data.assets || []).slice(0, 20);
+    const keys = new Set(assets.map((asset) => `${asset.classid}_${asset.instanceid}`));
+    const ids = new Set(assets.map((asset) => String(asset.assetid)));
+    const sample = {
+      savedAt: new Date().toISOString(),
+      topLevelKeys: Object.keys(data),
+      assets,
+      descriptions: (data.descriptions || []).filter((item) => keys.has(`${item.classid}_${item.instanceid}`)),
+      asset_properties: (data.asset_properties || []).filter((item) => ids.has(String(item.assetid)))
+    };
+    writeFileSync(join(HERE, "last-inventory.json"), JSON.stringify(sample, null, 2));
+  } catch {
+    // 存不了就算了
+  }
 }
 
 function sleep(ms) {

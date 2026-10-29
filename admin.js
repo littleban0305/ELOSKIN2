@@ -824,7 +824,8 @@
       steam: createMode === "steam" ? {
         marketHashName: selectedSteamItem.marketHashName,
         assetIds: selectedSteamItem.assetIds.slice(0, 50),
-        type: selectedSteamItem.type
+        type: selectedSteamItem.type,
+        details: window.eloItemDetails.pick(selectedSteamItem.details)
       } : null,
       listed: createFields.listed.checked,
       createdAt: now,
@@ -868,7 +869,10 @@
   function applySteamItems(items) {
     const grouped = new Map();
     for (const item of items) {
-      const key = item.marketHashName || item.name;
+      // 有磨損值、貼紙、吊飾或命名牌的是獨一無二的物品，一件一張卡；武器箱這類一樣的才合併
+      const details = window.eloItemDetails.pick(item.details);
+      const unique = Number.isFinite(details.f) || details.s || details.k || details.t;
+      const key = unique ? `asset:${item.assetId}` : (item.marketHashName || item.name);
       const entry = grouped.get(key);
       if (entry) {
         entry.count += Number(item.amount) || 1;
@@ -881,7 +885,8 @@
           type: String(item.type || ""),
           iconUrl: /^https:\/\//.test(item.iconUrl || "") ? item.iconUrl : "",
           count: Number(item.amount) || 1,
-          assetIds: [String(item.assetId)]
+          assetIds: [String(item.assetId)],
+          details
         });
       }
     }
@@ -916,7 +921,8 @@
       name: String(row.n || ""),
       marketHashName: String(row.m || ""),
       type: String(row.y || ""),
-      iconUrl: row.i ? STEAM_ICON_BASE + row.i : ""
+      iconUrl: row.i ? STEAM_ICON_BASE + row.i : "",
+      details: window.eloItemDetails.pick(row)
     })).filter((item) => item.assetId && item.marketHashName);
   }
 
@@ -1120,6 +1126,20 @@
       const marketTwd = window.eloPrices?.twd(item.marketHashName);
       meta.textContent = [item.type, text("admin.steamCount", { count: item.count })].filter(Boolean).join(" · ");
       button.append(art, name, meta);
+      const detailText = window.eloItemDetails.summary(item.details);
+      const extraLines = window.eloItemDetails.extras(item.details);
+      if (detailText || extraLines.length) {
+        const detail = document.createElement("span");
+        detail.className = `item-detail${item.details?.q === "st" ? " is-stattrak" : ""}${item.details?.q === "sv" ? " is-souvenir" : ""}`;
+        for (const line of [detailText, ...extraLines].filter(Boolean)) {
+          const part = document.createElement("span");
+          part.textContent = line;
+          part.title = line;
+          if (line !== detailText) part.className = "item-detail-extra";
+          detail.append(part);
+        }
+        button.append(detail);
+      }
       if (marketTwd !== null && marketTwd !== undefined) {
         const price = document.createElement("span");
         price.className = "admin-steam-price";
