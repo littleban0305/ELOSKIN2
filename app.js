@@ -525,6 +525,7 @@ function productCardMarkup(product, tradeMode = false, tradeSide = "receive") {
         <h3 title="${safeName}">${safeName}</h3>
         ${isDemo ? "" : `<div class="product-description">${escapeHtml(product.description)}${product.wear === copy.product.notApplicable ? "" : ` <span>／ ${escapeHtml(product.wear)}</span>`}</div>`}
         ${product.details ? itemDetailMarkup(product.details) : ""}
+        ${product.details ? inspectLinkMarkup(product.details, product.name) : ""}
         ${product.tags?.length ? `<div class="product-tags">${product.tags.slice(0, 4).map((tag) => `<span>${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
         <div class="product-favorite-count">${escapeHtml(t("home.marketFavoriteCount", { count: favoriteCount }))}</div>
         <div class="product-bottom">
@@ -618,7 +619,7 @@ function renderOfferSide() {
     const art = /^https:\/\//.test(item.iconUrl || "")
       ? `<img src="${escapeHtml(item.iconUrl)}" alt="" loading="lazy">`
       : `<span class="product-art-placeholder" aria-hidden="true">${escapeHtml(copy.games.cs2)}</span>`;
-    return `<div class="trade-selected-item"><div class="trade-selected-art">${art}</div><div class="trade-selected-info"><strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong><small>${item.value ? `${Number(item.value).toLocaleString()} EC` : escapeHtml(t("trade.offerNoValue"))}</small></div><button type="button" data-trade-remove="${escapeHtml(item.id)}" data-trade-side="offer" aria-label="${escapeHtml(removeLabel)}">×</button></div>`;
+    return `<div class="trade-selected-item"><div class="trade-selected-art">${art}</div><div class="trade-selected-info"><strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong><small>${item.value ? `${Number(item.value).toLocaleString()} EC` : escapeHtml(t("trade.offerNoValue"))}</small>${inspectLinkMarkup(item.details, item.name, true)}</div><button type="button" data-trade-remove="${escapeHtml(item.id)}" data-trade-side="offer" aria-label="${escapeHtml(removeLabel)}">×</button></div>`;
   }).join("");
   const placeholders = Array.from({ length: Math.max(0, 4 - tradeState.offer.length) }, () =>
     `<div class="trade-slot"><span aria-hidden="true">+</span><small>${escapeHtml(t("trade.emptyOffer"))}</small></div>`
@@ -1164,6 +1165,13 @@ function expandInventory(rows) {
   })).filter((item) => item.assetId && item.marketHashName);
 }
 
+// 「在遊戲中檢視」：steam:// 連結會打開 CS2 檢視這件物品（要有裝 Steam）
+function inspectLinkMarkup(details, name = "", short = false) {
+  const link = window.eloItemDetails?.safeInspect(details);
+  if (!link) return "";
+  return `<a class="inspect-link" href="${escapeHtml(link)}" aria-label="${escapeHtml(t("inspect.aria", { name }))}">${escapeHtml(t(short ? "inspect.short" : "inspect.label"))}</a>`;
+}
+
 function itemDetailMarkup(details) {
   const summary = window.eloItemDetails.summary(details);
   const extras = window.eloItemDetails.extras(details);
@@ -1439,7 +1447,7 @@ function renderInventoryCard() {
 }
 
 function parseInventoryText(raw) {
-  const { items, truncated } = window.eloInventoryImport.parse(raw, t);
+  const { items, truncated } = window.eloInventoryImport.parse(raw, t, ownInventory.steamId);
   if (!items.length) throw new Error(truncated ? t("inventory.truncated", { count: 0 }) : t("admin.pasteNoTradable"));
   return { items, truncated };
 }
@@ -1547,16 +1555,76 @@ function renderOwnInventory() {
   $("#trade-own-grid").innerHTML = hasItems && !visible.length
     ? (priced.length ? `<p class="trade-filter-note">${escapeHtml(t("trade.inventoryEmpty"))}</p>` : "")
     : visible.map((item) => `
-      <button class="trade-own-item${selected.has(item.assetId) ? " is-selected" : ""}" type="button" data-own-asset="${escapeHtml(item.assetId)}" aria-label="${escapeHtml(t("trade.inventoryAdd", { name: item.name }))}"${selected.has(item.assetId) ? " disabled" : ""}>
-        <span class="trade-own-art">${item.iconUrl ? `<img src="${escapeHtml(item.iconUrl)}" alt="" loading="lazy">` : ""}</span>
-        <strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong>
-        <small>${escapeHtml(item.type)}</small>
-        ${itemDetailMarkup(item.details)}
-        <em class="trade-own-price">${escapeHtml(t("trade.priceEstimate", { ec: ownItemEc(item).toLocaleString() }))}</em>
-      </button>`).join("");
+      <div class="trade-own-cell${selected.has(item.assetId) ? " is-selected" : ""}">
+        <button class="trade-own-item" type="button" data-own-asset="${escapeHtml(item.assetId)}" aria-label="${escapeHtml(t("trade.inventoryAdd", { name: item.name }))}"${selected.has(item.assetId) ? " disabled" : ""}>
+          <span class="trade-own-art">${item.iconUrl ? `<img src="${escapeHtml(item.iconUrl)}" alt="" loading="lazy">` : ""}</span>
+          <strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong>
+          <small>${escapeHtml(item.type)}</small>
+          ${itemDetailMarkup(item.details)}
+          <em class="trade-own-price">${escapeHtml(t("trade.priceEstimate", { ec: ownItemEc(item).toLocaleString() }))}</em>
+        </button>
+        ${inspectLinkMarkup(item.details, item.name, true)}
+      </div>`).join("");
+  renderLibrary();
 }
 
 $("#trade-inv-search").addEventListener("input", renderOwnInventory);
+
+// ---------- 個人頁：我的物品庫 ----------
+
+function libraryPriceLabel(item) {
+  const prices = window.eloPrices;
+  const ec = ownItemEc(item);
+  if (ec !== null) return { text: t("trade.priceEstimate", { ec: ec.toLocaleString() }), priced: true };
+  if (!prices?.status().hasKey) return { text: t("library.priceNoKey"), priced: false };
+  if (prices.missing(item.marketHashName)) return { text: t("library.priceMissing"), priced: false };
+  return { text: t("library.priceQueued"), priced: false };
+}
+
+function renderLibrary() {
+  const section = $("#library-section");
+  const signedIn = Boolean(window.eloAuthUser);
+  section.hidden = !signedIn;
+  if (!signedIn) return;
+  const items = ownInventory.items;
+  $("#library-count").textContent = String(items.length);
+  const priced = items.filter((item) => ownItemEc(item) !== null);
+  const totalEc = priced.reduce((sum, item) => sum + ownItemEc(item), 0);
+  const totalTwd = priced.reduce((sum, item) => sum + (window.eloPrices?.twd(item.marketHashName) || 0), 0);
+  $("#library-total").textContent = priced.length
+    ? t("library.total", { count: priced.length, ec: totalEc.toLocaleString(), twd: Math.round(totalTwd).toLocaleString() })
+    : (items.length ? t("library.totalNone") : "");
+  const term = $("#library-search").value.trim().toLocaleLowerCase("zh-Hant");
+  const searchText = (item) => [item.name, item.type, item.marketHashName, window.eloItemDetails.summary(item.details), ...window.eloItemDetails.extras(item.details)].join(" ").toLocaleLowerCase("zh-Hant");
+  const visible = items.filter((item) => !term || searchText(item).includes(term));
+  const sort = $("#library-sort").value;
+  const ecOf = (item) => ownItemEc(item) ?? -1;
+  const floatOf = (item) => (Number.isFinite(item.details?.f) ? item.details.f : 2);
+  visible.sort((a, b) => {
+    if (sort === "price-asc") return (ecOf(a) < 0) - (ecOf(b) < 0) || ecOf(a) - ecOf(b);
+    if (sort === "float-asc") return floatOf(a) - floatOf(b);
+    if (sort === "name") return a.name.localeCompare(b.name, "zh-Hant");
+    return ecOf(b) - ecOf(a);
+  });
+  const empty = $("#library-empty");
+  empty.hidden = visible.length > 0;
+  empty.textContent = items.length ? t("library.noMatch") : t("library.empty");
+  $("#library-grid").innerHTML = visible.map((item) => {
+    const price = libraryPriceLabel(item);
+    const color = /^[0-9a-f]{6}$/.test(item.details?.rc || "") ? item.details.rc : "";
+    return `<article class="library-item"${color ? ` style="--rarity:#${color}"` : ""}>
+      <span class="library-art">${item.iconUrl ? `<img src="${escapeHtml(item.iconUrl)}" alt="" loading="lazy">` : ""}</span>
+      <strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong>
+      <small>${escapeHtml(item.type)}</small>
+      ${itemDetailMarkup(item.details)}
+      <em class="library-price${price.priced ? "" : " is-muted"}">${escapeHtml(price.text)}</em>
+      ${inspectLinkMarkup(item.details, item.name)}
+    </article>`;
+  }).join("");
+}
+
+$("#library-search").addEventListener("input", renderLibrary);
+$("#library-sort").addEventListener("change", renderLibrary);
 
 $("#trade-own-grid").addEventListener("click", (event) => {
   const button = event.target.closest("[data-own-asset]");

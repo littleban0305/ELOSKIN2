@@ -248,6 +248,27 @@ window.ELOSKIN2_TEXT = {
     offerValueInvalid: "估價需為 0 以上的整數",
     offerLimit: "最多提供 20 件物品"
   },
+  library: {
+    title: "我的物品庫",
+    total: "{count} 件有市價，合計 ≈ {ec} EC（約 NT$ {twd}）",
+    totalNone: "還沒有查到市價的物品",
+    search: "搜尋物品名稱、磨損、貼紙",
+    sortAria: "排序方式",
+    sortPriceDesc: "價格高到低",
+    sortPriceAsc: "價格低到高",
+    sortFloatAsc: "磨損值低到高",
+    sortName: "名稱",
+    priceQueued: "排隊查價中",
+    priceMissing: "SteamAnalyst 查不到",
+    priceNoKey: "設定金鑰後顯示",
+    empty: "還沒讀取庫存，上面的「Steam 庫存」讀一次就會出現在這裡",
+    noMatch: "沒有符合的物品"
+  },
+  inspect: {
+    label: "在遊戲中檢視",
+    short: "檢視",
+    aria: "在 CS2 遊戲中檢視 {name}"
+  },
   priceKey: {
     title: "市價 API 金鑰",
     modalTitle: "設定市價 API 金鑰",

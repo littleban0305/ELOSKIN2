@@ -22,7 +22,7 @@ const MAX_SAVED_ITEMS = 1000; // Firestore 一份文件 1 MB 上限
 
 // ---------- 讀取 Steam 庫存 ----------
 
-export function toItems(assets, descriptions, assetProperties = []) {
+export function toItems(assets, descriptions, assetProperties = [], steamId = "") {
   const byKey = new Map(descriptions.map((description) => [`${description.classid}_${description.instanceid}`, description]));
   const properties = itemDetails.propertiesByAsset(assetProperties);
   const items = [];
@@ -37,7 +37,7 @@ export function toItems(assets, descriptions, assetProperties = []) {
       m: marketHashName.slice(0, 200),
       y: String(description.type || "").slice(0, 80),
       i: String(description.icon_url || "").slice(0, 400),
-      ...itemDetails.pick(itemDetails.extract(description, properties.get(String(asset.assetid)), marketHashName))
+      ...itemDetails.pick(itemDetails.extract(description, properties.get(String(asset.assetid)), marketHashName, { assetId: String(asset.assetid), steamId }))
     });
   }
   return items;
@@ -77,7 +77,7 @@ export async function fetchInventory(steamId, { fetchImpl = fetch } = {}) {
     startAssetId = data.last_assetid;
     await sleep(STEAM_GAP_MS);
   }
-  return { items: toItems(assets, descriptions, assetProperties), total: assets.length };
+  return { items: toItems(assets, descriptions, assetProperties, steamId), total: assets.length };
 }
 
 // 把最近一次 Steam 回傳的原始資料存一份（只留前 20 件），方便檢查欄位

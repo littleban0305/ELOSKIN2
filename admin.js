@@ -1058,7 +1058,7 @@
 
   $("#admin-steam-paste-load").addEventListener("click", () => {
     try {
-      const { items, truncated } = window.eloInventoryImport.parse(steamPasteInput.value, text);
+      const { items, truncated } = window.eloInventoryImport.parse(steamPasteInput.value, text, inventorySteamId);
       if (!items.length) throw new Error(truncated ? text("inventory.truncated", { count: 0 }) : text("admin.pasteNoTradable"));
       applySteamItems(items);
       steamPasteInput.value = "";
@@ -1137,7 +1137,20 @@
         badge.textContent = text("admin.steamAlreadyListed");
         button.append(badge);
       }
-      fragment.append(button);
+      // 「在遊戲中檢視」不能放在按鈕裡，所以外面包一層
+      const cell = document.createElement("div");
+      cell.className = "admin-steam-cell";
+      cell.append(button);
+      const inspect = window.eloItemDetails.safeInspect(item.details);
+      if (inspect) {
+        const link = document.createElement("a");
+        link.className = "inspect-link";
+        link.href = inspect;
+        link.textContent = text("inspect.short");
+        link.setAttribute("aria-label", text("inspect.aria", { name: item.name }));
+        cell.append(link);
+      }
+      fragment.append(cell);
     }
     steamGrid.replaceChildren(fragment);
     if (!visible.length) {

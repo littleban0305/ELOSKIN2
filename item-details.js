@@ -46,9 +46,33 @@
     return null;
   }
 
+  // 「在遊戲中檢視」連結：Steam 給的是範本，例如
+  //   steam://run/730//+csgo_econ_action_preview%20%propid:6%
+  // %propid:6% 要換成這件物品的屬性 6（物品證書）；舊格式還有 %owner_steamid%、%assetid%
+  function inspectLink(description, assetProperties, context = {}) {
+    const actions = [...(Array.isArray(description?.actions) ? description.actions : []), ...(Array.isArray(description?.market_actions) ? description.market_actions : [])];
+    const template = String(actions.find((action) => /csgo_econ_action_preview/.test(String(action?.link || "")))?.link || "");
+    if (!template) return "";
+    const properties = Array.isArray(assetProperties) ? assetProperties : [];
+    const link = template
+      .replace(/%propid:(\d+)%/g, (_, id) => {
+        const property = properties.find((entry) => Number(entry.propertyid) === Number(id));
+        const value = property ? propertyValue(property) : null;
+        return value === null ? "%missing%" : String(value);
+      })
+      .replace(/%owner_steamid%/g, context.steamId || "%missing%")
+      .replace(/%assetid%/g, context.assetId || "%missing%");
+    if (/%[a-z_]+(:\d+)?%/i.test(link)) return "";
+    if (!/^steam:\/\/(run|rungame)\/730\/[A-Za-z0-9%:/+._-]*$/.test(link) || link.length > 400) return "";
+    return link;
+  }
+
   // assetProperties：Steam 回傳的 asset_properties 裡，這個 assetid 的那一組
-  function extract(description, assetProperties, marketHashName) {
+  // context：{ assetId, steamId }，用來組「在遊戲中檢視」連結
+  function extract(description, assetProperties, marketHashName, context) {
     const details = {};
+    const inspect = inspectLink(description, assetProperties, context);
+    if (inspect) details.x = inspect;
     const tags = Array.isArray(description?.tags) ? description.tags : [];
     const tag = (category) => tags.find((entry) => String(entry.category || "").toLowerCase() === category);
 
@@ -133,13 +157,19 @@
   // 只留下有值的欄位，方便存進 Firestore
   function pick(source) {
     const details = {};
-    for (const key of ["w", "f", "p", "q", "rc", "s", "k", "t"]) {
+    for (const key of ["w", "f", "p", "q", "rc", "s", "k", "t", "x"]) {
       if (source && source[key] !== undefined && source[key] !== null && source[key] !== "") details[key] = source[key];
     }
     return details;
   }
 
-  const api = { extract, propertiesByAsset, summary, extras, pick };
+  // 給 href 用之前再檢查一次（資料可能來自 Firestore）
+  function safeInspect(details) {
+    const link = String(details?.x || "");
+    return /^steam:\/\/(run|rungame)\/730\/[A-Za-z0-9%:/+._-]*$/.test(link) && link.length <= 400 ? link : "";
+  }
+
+  const api = { extract, propertiesByAsset, summary, extras, pick, inspectLink, safeInspect };
   root.eloItemDetails = api;
   if (typeof module === "object" && module.exports) module.exports = api;
 })(typeof window !== "undefined" ? window : globalThis);

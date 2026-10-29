@@ -12,7 +12,7 @@ window.eloInventoryImport = (() => {
 
   const itemDetails = window.eloItemDetails;
 
-  function toItems(assets, descriptions, assetProperties = []) {
+  function toItems(assets, descriptions, assetProperties = [], steamId = "") {
     const byKey = new Map(descriptions.map((description) => [`${description.classid}_${description.instanceid}`, description]));
     const properties = itemDetails.propertiesByAsset(assetProperties);
     const items = [];
@@ -27,7 +27,7 @@ window.eloInventoryImport = (() => {
         marketHashName,
         type: String(description.type || ""),
         iconUrl: iconUrl(description.icon_url),
-        details: itemDetails.pick(itemDetails.extract(description, properties.get(String(asset.assetid)), marketHashName))
+        details: itemDetails.pick(itemDetails.extract(description, properties.get(String(asset.assetid)), marketHashName, { assetId: String(asset.assetid), steamId }))
       });
     }
     return items;
@@ -79,7 +79,7 @@ window.eloInventoryImport = (() => {
     return { assets, descriptions, asset_properties: assetProperties };
   }
 
-  function parse(raw, text) {
+  function parse(raw, text, steamId = "") {
     const source = String(raw || "");
     const start = source.indexOf("{");
     const end = source.lastIndexOf("}");
@@ -98,7 +98,7 @@ window.eloInventoryImport = (() => {
       if (!data) throw new Error(text("admin.pasteInvalid"));
       truncated = true;
     }
-    return { items: toItems(data.assets, data.descriptions, data.asset_properties || []), truncated };
+    return { items: toItems(data.assets, data.descriptions, data.asset_properties || [], steamId), truncated };
   }
 
   // 書籤小工具：在 steamcommunity.com 上執行，讀完庫存後帶著精簡資料跳回 ELOSKIN2
@@ -107,11 +107,11 @@ window.eloInventoryImport = (() => {
       + `if(location.hostname!=='steamcommunity.com'){alert('請先打開 Steam 社群網站（steamcommunity.com）再使用');location.href='https://steamcommunity.com/';return}`
       + `try{const r=await fetch('/inventory/'+S+'/730/2?l=tchinese&count=2000',{credentials:'include'});const d=await r.json();`
       + `if(!d||!d.assets){alert('讀不到庫存，請確認 Steam 物品庫是公開的');return}`
-      + `const m={},P={};d.descriptions.forEach(x=>m[x.classid+'_'+x.instanceid]=x);(d.asset_properties||[]).forEach(p=>P[p.assetid]=(p.asset_properties||[]).filter(q=>q.propertyid==1||q.propertyid==2));const i=[];`
+      + `const m={},P={};d.descriptions.forEach(x=>m[x.classid+'_'+x.instanceid]=x);(d.asset_properties||[]).forEach(p=>P[p.assetid]=(p.asset_properties||[]).filter(q=>q.propertyid==1||q.propertyid==2||q.propertyid==6));const i=[];`
       + `const C=['exterior','quality','rarity'],N=['sticker_info','keychain_info','nametag'],H=v=>String(v||'').replace(/<[^>]*>/g,' ').replace(/\\s+/g,' ').trim();`
       + `d.assets.forEach(a=>{const x=m[a.classid+'_'+a.instanceid];if(x&&x.tradable==1)i.push([a.assetid,x.name,x.market_hash_name,x.type,x.icon_url,`
       + `(x.tags||[]).filter(t=>C.includes(String(t.category).toLowerCase())).map(t=>[t.category,t.internal_name,t.localized_tag_name,t.color||'']),`
-      + `(x.descriptions||[]).filter(e=>N.includes(e.name)).map(e=>[e.name,H(e.value)]),P[a.assetid]||[]])});`
+      + `(x.descriptions||[]).filter(e=>N.includes(e.name)).map(e=>[e.name,H(e.value)]),P[a.assetid]||[],((x.actions||[])[0]||{}).link||''])});`
       + `location.href=U+'#'+T+'-import='+encodeURIComponent(JSON.stringify({s:S,i}))}catch(e){alert('讀取失敗：'+e.message)}})()`;
     return `javascript:${code}`;
   }
@@ -127,8 +127,9 @@ window.eloInventoryImport = (() => {
       if (!Array.isArray(payload?.i)) return null;
       const items = payload.i
         .filter((row) => Array.isArray(row) && row.length >= 5)
-        .map(([assetId, name, marketHashName, type, icon, tags, descriptions, properties]) => {
+        .map(([assetId, name, marketHashName, type, icon, tags, descriptions, properties, inspect]) => {
           const description = {
+            actions: inspect ? [{ link: String(inspect) }] : [],
             tags: (Array.isArray(tags) ? tags : []).map(([category, internal_name, localized_tag_name, color]) => ({ category, internal_name, localized_tag_name, color })),
             descriptions: (Array.isArray(descriptions) ? descriptions : []).map(([entryName, value]) => ({ name: entryName, value }))
           };
@@ -140,7 +141,7 @@ window.eloInventoryImport = (() => {
             marketHashName: hashName,
             type: String(type || ""),
             iconUrl: iconUrl(icon),
-            details: itemDetails.pick(itemDetails.extract(description, Array.isArray(properties) ? properties : [], hashName))
+            details: itemDetails.pick(itemDetails.extract(description, Array.isArray(properties) ? properties : [], hashName, { assetId: String(assetId), steamId: String(payload.s || "") }))
           };
         });
       return { target: page, steamId: String(payload.s || ""), items };

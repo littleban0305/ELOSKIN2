@@ -882,3 +882,13 @@
 }
 
 #admin-relay-status:empty { display: none; }
+
+.admin-steam-cell {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 6px;
+}
+
+.admin-steam-cell .admin-steam-item { width: 100%; }
+.admin-steam-cell .inspect-link { margin-left: 10px; }

@@ -136,7 +136,8 @@
       name: product.name,
       price: product.price,
       quantity,
-      imageUrl: product.iconUrl || ""
+      imageUrl: product.iconUrl || "",
+      ...(window.eloItemDetails?.safeInspect(product.details) ? { inspect: window.eloItemDetails.safeInspect(product.details) } : {})
     };
   }
 
@@ -228,7 +229,8 @@
           assetId: item.assetId,
           marketHashName: item.marketHashName || "",
           imageUrl: item.iconUrl || "",
-          detail: [window.eloItemDetails?.summary(item.details), ...(window.eloItemDetails?.extras(item.details) || [])].filter(Boolean).join(" · ").slice(0, 300)
+          detail: [window.eloItemDetails?.summary(item.details), ...(window.eloItemDetails?.extras(item.details) || [])].filter(Boolean).join(" · ").slice(0, 300),
+          inspect: window.eloItemDetails?.safeInspect(item.details) || ""
         } : {})
       })),
       total: selection.receiveTotal,
@@ -269,6 +271,14 @@
     const name = element("span", "order-item-name", item.name);
     name.title = item.detail ? `${item.name}\n${item.detail}` : item.name;
     if (item.detail) name.append(element("small", "order-item-detail", item.detail));
+    // 交易訂單裡的物品，或從 Steam 匯入上架的商品，都附上「在遊戲中檢視」
+    const inspect = window.eloItemDetails?.safeInspect({ x: item.inspect || item.steam?.details?.x || "" });
+    if (inspect) {
+      const link = element("a", "inspect-link", text("inspect.short"));
+      link.href = inspect;
+      link.setAttribute("aria-label", text("inspect.aria", { name: item.name }));
+      name.append(link);
+    }
     const meta = element("span", "order-item-meta");
     const value = Number.isInteger(item.price) ? item.price : Number(item.value) || 0;
     meta.textContent = [

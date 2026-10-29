@@ -395,3 +395,92 @@
 
 .inventory-modal-actions { display: grid; gap: 10px; margin-top: 14px; }
 .inventory-modal-actions .auth-submit:disabled { opacity: .55; cursor: default; }
+
+/* ---------- 我的物品庫 ---------- */
+
+.account-library .account-section-heading { margin-bottom: 6px; }
+
+.library-total {
+  margin: 0 0 12px;
+  color: #50dbc5;
+  font-weight: 700;
+}
+
+.library-total:empty { display: none; }
+
+.library-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.library-toolbar .trade-inv-search { flex: 1 1 220px; margin: 0; }
+
+.library-toolbar select {
+  min-height: 40px;
+  padding: 0 12px;
+  color: #dce5e8;
+  background: #151f25;
+  border: 1px solid #263540;
+  border-radius: 10px;
+}
+
+.library-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 10px;
+}
+
+.library-grid:empty { display: none; }
+
+.library-item {
+  --rarity: #3a4a52;
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  padding: 10px;
+  color: #dce5e8;
+  background: #151f25;
+  border-radius: 12px;
+  box-shadow: inset 0 -3px 0 var(--rarity);
+}
+
+.library-art {
+  height: 84px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #0d1418;
+  border-radius: 8px;
+}
+
+.library-art img { width: 100%; height: 100%; object-fit: contain; }
+
+.library-item strong {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.library-item small {
+  overflow: hidden;
+  color: #829098;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.library-price {
+  color: #50dbc5;
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.library-price.is-muted { color: #829098; font-weight: 400; }
+
+@media (max-width: 720px) {
+  .library-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .library-art { height: 64px; }
+}
