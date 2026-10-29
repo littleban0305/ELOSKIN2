@@ -382,20 +382,21 @@ async function steamLoginCallback(request, requestUrl, env) {
 
   const verificationParameters = new URLSearchParams(parameters);
   verificationParameters.set("openid.mode", "check_authentication");
+  // 注意：Cloudflare Worker 的 fetch 不支援 cache 選項，加了會直接丟錯（之前 Steam 登入失敗就是這個原因）
   let verification;
   try {
     verification = await fetch(STEAM_OPENID_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
+        "Accept": "text/plain",
         "User-Agent": STEAM_USER_AGENT
       },
       body: verificationParameters.toString(),
-      redirect: "error",
-      cache: "no-store"
+      redirect: "manual"
     });
-  } catch {
-    return callbackError(returnUrl.href, "steam-verification-network-error");
+  } catch (error) {
+    return callbackError(returnUrl.href, `steam-verification-network-error:${String(error.message || "unknown").slice(0, 60)}`);
   }
   if (!verification.ok) {
     return callbackError(returnUrl.href, `steam-verification-http-${verification.status}`);
@@ -465,7 +466,7 @@ async function steamProfile(requestUrl, env) {
         "Accept": "application/xml, text/xml",
         "User-Agent": STEAM_USER_AGENT
       },
-      redirect: "error",
+      redirect: "manual",
       cf: { cacheTtl: 3600, cacheEverything: true }
     });
   } catch {
