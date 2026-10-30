@@ -48,10 +48,119 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    function validOrderCreate(data) {
-      return data.keys().hasOnly(["type", "uid", "buyerName", "tradeUrl", "items", "offerItems", "total", "offerTotal", "note", "adminNote", "status", "createdAt", "updatedAt"])
+    // ---------- 折價券、禮品券 ----------
+    // coupons/{代碼}：管理員建立。知道代碼的人才讀得到（不能列出全部代碼）
+    // userCoupons/{uid}_{代碼}：使用者領取的券；used = true 代表已經用在 orderId 這筆訂單
+
+    function couponPath(code) {
+      return /databases/$(database)/documents/coupons/$(code);
+    }
+
+    function userCouponPath(code) {
+      return /databases/$(database)/documents/userCoupons/$(request.auth.uid + "_" + code);
+    }
+
+    function couponUsable(coupon) {
+      return coupon.active == true && (coupon.expiresAt == 0 || request.time.toMillis() < coupon.expiresAt);
+    }
+
+    function validCoupon(data, code) {
+      return data.keys().hasOnly(["code", "type", "title", "description", "imageUrl", "percent", "amount", "maxDiscount", "minSubtotal", "listingId", "listingName", "maxUses", "usedCount", "expiresAt", "active", "createdAt", "updatedAt"])
+        && data.keys().hasAll(["code", "type", "title", "description", "imageUrl", "percent", "amount", "maxDiscount", "minSubtotal", "listingId", "listingName", "maxUses", "usedCount", "expiresAt", "active", "createdAt", "updatedAt"])
+        && data.code == code && code.matches("^[A-Z0-9-]{4,24}$")
+        && data.type in ["discount", "gift"]
+        && data.title is string && data.title.size() > 0 && data.title.size() <= 40
+        && data.description is string && data.description.size() <= 200
+        && data.imageUrl is string && data.imageUrl.size() <= 2048 && (data.imageUrl == "" || data.imageUrl.matches("^https://.+"))
+        && data.percent is int && data.percent >= 0 && data.percent <= 100
+        && data.amount is int && data.amount >= 0 && data.amount <= 10000000
+        && data.maxDiscount is int && data.maxDiscount >= 0
+        && data.minSubtotal is int && data.minSubtotal >= 0
+        && data.listingId is string && data.listingId.size() <= 100
+        && data.listingName is string && data.listingName.size() <= 100
+        && ((data.type == "gift" && data.listingId.size() > 0) || (data.type == "discount" && (data.percent > 0 || data.amount > 0)))
+        && data.maxUses is int && data.maxUses >= 0
+        && data.usedCount is int && data.usedCount >= 0
+        && data.expiresAt is int
+        && data.active is bool;
+    }
+
+    match /coupons/{code} {
+      allow get: if request.auth != null;
+      allow list: if isAdmin();
+      allow create, update: if isAdmin() && validCoupon(request.resource.data, code);
+      allow delete: if isAdmin();
+      // 使用者領取：使用次數 +1，而且同一批寫入要建立自己的 userCoupons（每人限領一次）
+      allow update: if request.auth != null
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["usedCount"])
+        && request.resource.data.usedCount == resource.data.usedCount + 1
+        && (resource.data.maxUses == 0 || request.resource.data.usedCount <= resource.data.maxUses)
+        && couponUsable(resource.data)
+        && !exists(userCouponPath(code))
+        && existsAfter(userCouponPath(code));
+    }
+
+    // 這張券用在 orderId 這筆訂單（同一批寫入建立的、自己的、couponCode 對得上）
+    function couponOrderAfter(orderId, code) {
+      return orderId is string && orderId.size() > 0 && orderId.size() <= 100
+        && existsAfter(/databases/$(database)/documents/orders/$(orderId))
+        && getAfter(/databases/$(database)/documents/orders/$(orderId)).data.uid == request.auth.uid
+        && getAfter(/databases/$(database)/documents/orders/$(orderId)).data.get("couponCode", "") == code;
+    }
+
+    match /userCoupons/{userCouponId} {
+      allow read: if isAdmin() || (request.auth != null && resource.data.uid == request.auth.uid);
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(["uid", "code", "type", "used", "orderId", "redeemedAt", "usedAt"])
+        && request.resource.data.keys().hasAll(["uid", "code", "type", "used", "orderId", "redeemedAt", "usedAt"])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.code is string && request.resource.data.code.matches("^[A-Z0-9-]{4,24}$")
+        && userCouponId == request.auth.uid + "_" + request.resource.data.code
+        && getAfter(couponPath(request.resource.data.code)).data.usedCount == get(couponPath(request.resource.data.code)).data.usedCount + 1
+        && request.resource.data.type == get(couponPath(request.resource.data.code)).data.type
+        && request.resource.data.redeemedAt is int && request.resource.data.usedAt is int
+        && ((request.resource.data.used == false && request.resource.data.orderId == "")
+          || (request.resource.data.used == true && couponOrderAfter(request.resource.data.orderId, request.resource.data.code)));
+      allow update: if isAdmin()
+        || (request.auth != null
+          && resource.data.uid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["used", "orderId", "usedAt"])
+          && request.resource.data.usedAt is int
+          && ((resource.data.used == false && request.resource.data.used == true && couponOrderAfter(request.resource.data.orderId, resource.data.code))
+            // 訂單取消後把券還回來
+            || (resource.data.used == true && request.resource.data.used == false && request.resource.data.orderId == ""
+              && getAfter(/databases/$(database)/documents/orders/$(resource.data.orderId)).data.status == "cancelled")));
+      allow delete: if false;
+    }
+
+    // 下單時用了券：券要能用、同一批寫入把自己的券標成用在這筆訂單；折扣不能超過券的上限
+    function couponOrderOk(data, orderId) {
+      let coupon = get(couponPath(data.couponCode)).data;
+      let mine = userCouponPath(data.couponCode);
+      return couponUsable(coupon)
+        && (!exists(mine) || get(mine).data.used == false)
+        && getAfter(mine).data.used == true
+        && getAfter(mine).data.orderId == orderId
+        && ((coupon.type == "discount" && data.type == "purchase"
+            && data.subtotal is int && data.discount is int && data.discount > 0
+            && data.total == data.subtotal - data.discount
+            && data.subtotal >= coupon.minSubtotal
+            && ((coupon.percent > 0 && data.discount <= data.subtotal * coupon.percent / 100 && (coupon.maxDiscount == 0 || data.discount <= coupon.maxDiscount))
+              || (coupon.percent == 0 && data.discount <= coupon.amount)))
+          || (coupon.type == "gift" && data.type == "gift"
+            && data.total == 0 && data.offerTotal == 0 && data.get("discount", 0) == 0
+            && data.items.size() == 1 && data.items[0].listingId == coupon.listingId && data.items[0].quantity == 1));
+    }
+
+    function couponFieldsOk(data, orderId) {
+      return (data.get("couponCode", "") == "" && data.type != "gift" && data.get("discount", 0) == 0)
+        || (data.get("couponCode", "") is string && data.get("couponCode", "") != "" && couponOrderOk(data, orderId));
+    }
+
+    function validOrderCreate(data, orderId) {
+      return data.keys().hasOnly(["type", "uid", "buyerName", "tradeUrl", "items", "offerItems", "total", "offerTotal", "note", "adminNote", "status", "createdAt", "updatedAt", "subtotal", "discount", "couponCode"])
         && data.keys().hasAll(["type", "uid", "buyerName", "tradeUrl", "items", "offerItems", "total", "offerTotal", "note", "adminNote", "status", "createdAt", "updatedAt"])
-        && data.type in ["purchase", "trade"]
+        && data.type in ["purchase", "trade", "gift"]
         && data.uid == request.auth.uid
         && data.buyerName is string && data.buyerName.size() <= 30
         && data.tradeUrl is string && data.tradeUrl.size() <= 200
@@ -68,7 +177,7 @@ service cloud.firestore {
 
     match /orders/{orderId} {
       allow read: if isAdmin() || (request.auth != null && resource.data.uid == request.auth.uid);
-      allow create: if request.auth != null && validOrderCreate(request.resource.data);
+      allow create: if request.auth != null && validOrderCreate(request.resource.data, orderId) && couponFieldsOk(request.resource.data, orderId);
       // 管理員可以改狀態、備註，以及「交給機器人」（botRequested = true、清掉 bot 讓機器人重送）；bot 的內容只有機器人能寫
       allow update: if (isAdmin()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "adminNote", "updatedAt", "botRequested", "bot"])

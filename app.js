@@ -712,6 +712,8 @@ function renderCart() {
   $("#cart-empty").hidden = count > 0;
   $("#cart-items").hidden = count === 0;
   $("#checkout").disabled = count === 0;
+  // 折價券（coupons.js）會接著算折扣、改合計
+  window.dispatchEvent(new CustomEvent("elocartrender", { detail: { subtotal: total, count } }));
 }
 
 function setCatalog(nextProducts) {
@@ -802,8 +804,10 @@ function updateMarketIndicator() {
 }
 
 function navigateTo(page, shouldScroll = true) {
-  const validPages = ["home", "shop", "trade", "profile", "settings", "library", "orders", "favorites", "notifications", "wallet", ...(window.eloIsAdmin ? ["admin"] : [])];
-  const destination = validPages.includes(page) ? page : "home";
+  const validPages = ["home", "shop", "trade", "profile", "settings", "library", "orders", "favorites", "notifications", "wallet", "redeem", ...(window.eloIsAdmin ? ["admin"] : [])];
+  // 「#redeem?code=XXX」這種帶參數的網址，只看問號前面
+  const name = String(page || "").split("?")[0];
+  const destination = validPages.includes(name) ? name : "home";
   document.querySelectorAll("[data-page-view]").forEach((view) => {
     const active = view.dataset.pageView === destination;
     view.hidden = !active;

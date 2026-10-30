@@ -315,3 +315,39 @@ test("補貨報價：管理員送來的收下，其他拒絕", () => {
   assert.equal(bot.decideIncoming({ partner: "76561198000000099", giving: 1, receiving: 3 }), "decline");
   assert.equal(bot.decideIncoming({ partner: "76561198000000555", giving: 0, receiving: 1 }), "decline");
 });
+
+test("禮品券訂單：自動送出、不扣 EC；被拒絕會把券還回去", async () => {
+  const context = setup();
+  context.fake.put("coupons", "GIFT-AK", { code: "GIFT-AK", type: "gift", listingId: "case" });
+  context.fake.put("userCoupons", "u1_GIFT-AK", { uid: "u1", code: "GIFT-AK", type: "gift", used: true, orderId: "g1" });
+  context.fake.put("orders", "g1", { ...purchase([{ listingId: "case", name: "千瓦武器箱", price: 50, quantity: 1 }]), type: "gift", total: 0, couponCode: "GIFT-AK" });
+  context.fake.put("userCoupons", "u1_GIFT-B", { uid: "u1", code: "GIFT-B", type: "gift", used: true, orderId: "g2" });
+  context.fake.put("coupons", "GIFT-B", { code: "GIFT-B", type: "gift", listingId: "case" });
+  context.fake.put("orders", "g2", { ...purchase([{ listingId: "case", name: "千瓦武器箱", price: 50, quantity: 1 }], { createdAt: 2 }), type: "gift", total: 0, couponCode: "GIFT-B" });
+  await start(context);
+  assert.equal(context.steam.sent.length, 2);
+  await context.bot.onOfferChanged(context.fake.get("orders", "g1").bot.offerId, "accepted");
+  assert.equal(context.fake.get("orders", "g1").status, "completed");
+  assert.equal(context.fake.get("wallets", "u1").balance, 1000);
+  assert.equal(context.fake.get("listings", "case").stock, 4);
+  await context.bot.onOfferChanged(context.fake.get("orders", "g2").bot.offerId, "declined");
+  assert.equal(context.fake.get("orders", "g2").status, "cancelled");
+  assert.deepEqual([context.fake.get("userCoupons", "u1_GIFT-B").used, context.fake.get("userCoupons", "u1_GIFT-B").orderId], [false, ""]);
+  assert.equal(context.fake.get("userCoupons", "u1_GIFT-AK").used, true);
+});
+
+test("折價券：折扣算對就送出，算錯交給管理員", async () => {
+  const context = setup();
+  context.fake.put("coupons", "OFF10", { code: "OFF10", type: "discount", percent: 10, amount: 0, maxDiscount: 30, minSubtotal: 0 });
+  context.fake.put("userCoupons", "u1_OFF10", { uid: "u1", code: "OFF10", type: "discount", used: true, orderId: "d1" });
+  // 小計 100，打九折 = 10，最多折 30 → 折 10
+  context.fake.put("orders", "d1", { ...purchase([{ listingId: "case", name: "千瓦武器箱", price: 50, quantity: 2 }]), subtotal: 100, discount: 10, total: 90, couponCode: "OFF10" });
+  context.fake.put("coupons", "BIG", { code: "BIG", type: "discount", percent: 0, amount: 20, maxDiscount: 0, minSubtotal: 0 });
+  context.fake.put("userCoupons", "u1_BIG", { uid: "u1", code: "BIG", type: "discount", used: true, orderId: "d2" });
+  context.fake.put("orders", "d2", { ...purchase([{ listingId: "case", name: "千瓦武器箱", price: 50, quantity: 1 }], { createdAt: 2 }), subtotal: 50, discount: 49, total: 1, couponCode: "BIG" });
+  await start(context);
+  assert.equal(context.fake.get("orders", "d1").bot.state, "sent");
+  assert.equal(context.fake.get("orders", "d2").bot.state, "manual");
+  await context.bot.onOfferChanged(context.fake.get("orders", "d1").bot.offerId, "accepted");
+  assert.equal(context.fake.get("wallets", "u1").balance, 910);
+});

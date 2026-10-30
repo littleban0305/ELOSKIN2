@@ -23,7 +23,17 @@ const TRADE_URL = /^https:\/\/steamcommunity\.com\/tradeoffer\/new\/?\?/;
 
 export function orderCharge(order) {
   const total = Number(order.total) || 0;
+  if (order.type === "gift") return 0;
   return order.type === "trade" ? Math.max(0, total - (Number(order.offerTotal) || 0)) : total;
+}
+
+// 折價券能折多少（跟網站 coupons.js 的算法一樣）
+export function couponDiscount(coupon, subtotal) {
+  if (!coupon || coupon.type !== "discount" || subtotal < (Number(coupon.minSubtotal) || 0)) return 0;
+  const percent = Number(coupon.percent) || 0;
+  let discount = percent > 0 ? Math.floor(subtotal * percent / 100) : Number(coupon.amount) || 0;
+  if (percent > 0 && Number(coupon.maxDiscount) > 0) discount = Math.min(discount, Number(coupon.maxDiscount));
+  return Math.max(0, Math.min(discount, subtotal));
 }
 
 export function shortId(id) {
@@ -31,7 +41,7 @@ export function shortId(id) {
 }
 
 export function typeLabel(type) {
-  return type === "trade" ? "交易" : "購買";
+  return type === "trade" ? "交易" : type === "gift" ? "禮品" : "購買";
 }
 
 // 交易連結 → 對方的 SteamID64
@@ -62,7 +72,7 @@ function quantities(order) {
 }
 
 // 檢查訂單能不能交給機器人。回傳 null 代表沒問題，不然回傳 { cancel, message }
-export function checkOrder(order, listings, { strictPrice }) {
+export function checkOrder(order, listings, { strictPrice, coupon = null, userCoupon = null, orderId = "" }) {
   if (!partnerSteamId(order.tradeUrl)) {
     return { cancel: true, message: "Steam 交易連結格式不正確，請到「設定」重新貼上交易連結後再下單" };
   }
@@ -73,8 +83,28 @@ export function checkOrder(order, listings, { strictPrice }) {
       return { cancel: false, message: `「${item.name}」不是從 Steam 庫存上架的商品，需要管理員手動出貨` };
     }
   }
+  // 有用券的訂單：確認券真的用在這筆、折扣算得對
+  if (order.couponCode) {
+    if (!coupon || !userCoupon || userCoupon.used !== true || userCoupon.orderId !== orderId) {
+      return { cancel: false, message: `折價券／禮品券「${order.couponCode}」對不上，需要管理員確認` };
+    }
+    if (order.type === "gift") {
+      if (coupon.type !== "gift" || (order.items || []).length !== 1 || order.items[0].listingId !== coupon.listingId) {
+        return { cancel: false, message: `禮品券「${order.couponCode}」兌換的禮品對不上，需要管理員確認` };
+      }
+    } else if (strictPrice) {
+      const subtotal = (order.items || []).reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 1), 0);
+      const discount = couponDiscount(coupon, subtotal);
+      if (Number(order.subtotal) !== subtotal || Number(order.discount) !== discount || Number(order.total) !== subtotal - discount) {
+        return { cancel: false, message: `折價券「${order.couponCode}」的折扣金額不對，需要管理員確認` };
+      }
+    }
+  } else if (order.type === "gift") {
+    return { cancel: false, message: "禮品訂單沒有禮品券代碼，需要管理員確認" };
+  }
   if (strictPrice) {
     for (const item of order.items || []) {
+      if (order.type === "gift") break;
       const listing = listings.get(item.listingId);
       if (listing.listed === false || Number(listing.price) !== Number(item.price)) {
         return { cancel: false, message: `「${item.name}」的價格或上架狀態變了，需要管理員確認` };
@@ -159,7 +189,7 @@ export function createBot({ db, steam, FieldValue, config = {}, now = () => Date
 
   function eligible(order) {
     if (order.bot) return false;
-    if (order.status === "pending" && order.type === "purchase" && autoPurchase) return true;
+    if (order.status === "pending" && (order.type === "purchase" || order.type === "gift") && autoPurchase) return true;
     return order.status === "processing" && order.botRequested === true;
   }
 
@@ -190,9 +220,23 @@ export function createBot({ db, steam, FieldValue, config = {}, now = () => Date
     log(`訂單 ${shortId(id)} 需要手動處理：${message}`);
   }
 
+  // 訂單取消時把用掉的券還給使用者
+  function restoreCoupon(tx, id, order) {
+    if (!order.couponCode) return;
+    const reference = db.collection("userCoupons").doc(`${order.uid}_${order.couponCode}`);
+    return tx.get(reference).then((snapshot) => {
+      if (snapshot.exists && snapshot.data().orderId === id) return () => tx.update(reference, { used: false, orderId: "", usedAt: 0 });
+      return null;
+    });
+  }
+
   async function cancelOrder(id, order, state, message, { notifyAdmin = false } = {}) {
     const time = now();
-    await orders().doc(id).update({ status: "cancelled", bot: { state, message, updatedAt: time }, updatedAt: time });
+    await db.runTransaction(async (tx) => {
+      const restore = await restoreCoupon(tx, id, order);
+      tx.update(orders().doc(id), { status: "cancelled", bot: { state, message, updatedAt: time }, updatedAt: time });
+      restore?.();
+    });
     await notify(order.uid, "訂單已取消", `你的${typeLabel(order.type)}訂單 #${shortId(id)}：${message}`, id);
     if (notifyAdmin) await notify("admin", "機器人取消了訂單", `${typeLabel(order.type)}訂單 #${shortId(id)}：${message}`, id);
     log(`訂單 ${shortId(id)} 取消：${message}`);
@@ -210,7 +254,15 @@ export function createBot({ db, steam, FieldValue, config = {}, now = () => Date
       const listings = await readListings(tx, order);
       const wallet = await tx.get(db.collection("wallets").doc(order.uid));
       const balance = wallet.exists ? Number(wallet.data().balance) || 0 : 0;
-      const problem = checkOrder(order, listings, { strictPrice: order.status === "pending" });
+      let coupon = null;
+      let userCoupon = null;
+      if (order.couponCode) {
+        const couponSnapshot = await tx.get(db.collection("coupons").doc(String(order.couponCode)));
+        const userCouponSnapshot = await tx.get(db.collection("userCoupons").doc(`${order.uid}_${order.couponCode}`));
+        coupon = couponSnapshot.exists ? couponSnapshot.data() : null;
+        userCoupon = userCouponSnapshot.exists ? userCouponSnapshot.data() : null;
+      }
+      const problem = checkOrder(order, listings, { strictPrice: order.status === "pending", coupon, userCoupon, orderId: id });
       const time = now();
       if (problem) return { order, problem };
       const charge = orderCharge(order);
@@ -345,8 +397,10 @@ export function createBot({ db, steam, FieldValue, config = {}, now = () => Date
       if (order.bot?.offerId !== String(offerId) || !ACTIVE_STATES.includes(order.bot?.state)) return null;
       const time = now();
       const update = { bot: { ...order.bot, state, message, updatedAt: time } };
+      const restore = order.status === "processing" ? await restoreCoupon(tx, id, order) : null;
       if (order.status === "processing") Object.assign(update, { status: "cancelled", updatedAt: time });
       tx.update(reference, update);
+      restore?.();
       return order;
     });
     if (!result) return;

@@ -33,7 +33,7 @@
   }
 
   function typeLabel(type) {
-    return type === "trade" ? text("orders.typeTrade") : text("orders.typePurchase");
+    return type === "trade" ? text("orders.typeTrade") : type === "gift" ? text("orders.typeGift") : text("orders.typePurchase");
   }
 
   function shortId(id) {
@@ -114,6 +114,7 @@
   }
 
   function orderCharge(order) {
+    if (order.type === "gift") return 0;
     const total = Number(order.total) || 0;
     return order.type === "trade" ? Math.max(0, total - (Number(order.offerTotal) || 0)) : total;
   }
@@ -145,8 +146,17 @@
     };
   }
 
+  // 有用券的話，同一批寫入把自己的券標成「用在這筆訂單」（Firestore 規則會檢查）
   async function createOrder(order) {
-    const reference = await db().collection("orders").add(order);
+    const reference = db().collection("orders").doc();
+    if (order.couponCode) {
+      const batch = db().batch();
+      batch.set(reference, order);
+      batch.update(db().collection("userCoupons").doc(`${order.uid}_${order.couponCode}`), { used: true, orderId: reference.id, usedAt: Date.now() });
+      await batch.commit();
+    } else {
+      await reference.set(order);
+    }
     await notify("admin", text("notifications.newOrderTitle"), text("notifications.newOrderBody", {
       name: order.buyerName,
       type: typeLabel(order.type),
@@ -176,6 +186,14 @@
     }
     const items = entries.map(({ product, quantity }) => orderItem(product, quantity));
     const now = Date.now();
+    const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    // 購物車選的折價券（coupons.js）
+    const coupon = window.eloCoupons?.cartCoupon(subtotal) || null;
+    if (coupon?.error) {
+      status.textContent = coupon.error;
+      status.dataset.kind = "error";
+      return;
+    }
     const order = {
       type: "purchase",
       uid: currentUser.uid,
@@ -183,13 +201,14 @@
       tradeUrl: window.eloUserProfile.tradeUrl,
       items,
       offerItems: [],
-      total: items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+      total: subtotal - (coupon?.discount || 0),
       offerTotal: 0,
       note: "",
       adminNote: "",
       status: "pending",
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
+      ...(coupon ? { subtotal, discount: coupon.discount, couponCode: coupon.code } : {})
     };
     if (!hasEnoughBalance(orderCharge(order), status)) return;
     const checkout = $("#checkout");
@@ -198,6 +217,7 @@
     status.dataset.kind = "info";
     try {
       await createOrder(order);
+      window.eloCoupons?.clearCartCoupon();
       app().clearCart();
       status.textContent = "";
       app().closeCart();
@@ -371,7 +391,13 @@
       totals.append(element("span", "", `${text("orders.youGive")} ${Number(order.offerTotal || 0).toLocaleString()} EC`));
       totals.append(element("span", "", `${text("orders.youGet")} ${Number(order.total || 0).toLocaleString()} EC`));
       totals.append(element("strong", "", `${text("orders.difference")} ${difference.toLocaleString()} EC（${text("orders.approxTwd", { twd: formatTwd(difference) })}）`));
+    } else if (order.type === "gift") {
+      totals.append(element("strong", "", text("orders.giftTotal", { code: order.couponCode || "" })));
     } else {
+      if (order.couponCode && Number(order.discount) > 0) {
+        totals.append(element("span", "", `${text("orders.subtotal")} ${Number(order.subtotal || 0).toLocaleString()} EC`));
+        totals.append(element("span", "order-discount", `${text("orders.couponDiscount", { code: order.couponCode })} −${Number(order.discount).toLocaleString()} EC`));
+      }
       totals.append(element("strong", "", `${text("orders.total")} ${Number(order.total || 0).toLocaleString()} EC（${text("orders.approxTwd", { twd: formatTwd(order.total || 0) })}）`));
     }
     card.append(totals);
@@ -511,6 +537,18 @@
     return { clamped, now };
   }
 
+  // 取消有用券的訂單：同一批寫入把券還給使用者
+  async function cancelWithCoupon(reference, order, extra) {
+    const couponRef = db().collection("userCoupons").doc(`${order.uid}_${order.couponCode}`);
+    const couponSnapshot = await couponRef.get().catch(() => null);
+    const batch = db().batch();
+    batch.update(reference, { status: "cancelled", ...extra, updatedAt: Date.now() });
+    if (couponSnapshot?.exists && couponSnapshot.data().orderId === order.id) {
+      batch.update(couponRef, { used: false, orderId: "", usedAt: Date.now() });
+    }
+    await batch.commit();
+  }
+
   async function changeStatus(card, requestedStatus, mode) {
     let nextStatus = requestedStatus;
     const order = (mode === "admin" ? adminOrders : userOrders).find((item) => item.id === card.dataset.orderId);
@@ -538,8 +576,12 @@
           clamped = result.clamped;
           transaction.update(reference, { status: nextStatus, adminNote, updatedAt: result.now });
         });
+      } else if (mode === "admin" && nextStatus === "cancelled" && order.couponCode) {
+        await cancelWithCoupon(reference, order, { adminNote });
       } else if (mode === "admin") {
         await reference.update({ status: nextStatus, adminNote, updatedAt: Date.now() });
+      } else if (order.couponCode) {
+        await cancelWithCoupon(reference, order, {});
       } else {
         await reference.update({ status: "cancelled", updatedAt: Date.now() });
       }

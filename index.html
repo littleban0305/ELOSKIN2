@@ -14,20 +14,22 @@
     <link rel="stylesheet" href="admin.css?v=9">
     <link rel="stylesheet" href="profile.css?v=11">
     <link rel="stylesheet" href="orders.css?v=3">
+    <link rel="stylesheet" href="coupons.css?v=1">
     <link rel="stylesheet" href="wallet.css?v=1">
     <link rel="stylesheet" href="shop.css?v=9">
     <link rel="stylesheet" href="mobile.css?v=1">
-    <script src="content.js?v=55" defer></script>
+    <script src="content.js?v=56" defer></script>
     <script src="item-details.js?v=3" defer></script>
     <script src="inventory-import.js?v=5" defer></script>
     <script src="prices.js?v=5" defer></script>
     <script src="firebase-config.js?v=1" defer></script>
     <script src="steam-config.js?v=5" defer></script>
-    <script src="app.js?v=53" defer></script>
+    <script src="app.js?v=54" defer></script>
     <script src="auth.js?v=28" defer></script>
     <script src="admin.js?v=18" defer></script>
-    <script src="orders.js?v=8" defer></script>
+    <script src="orders.js?v=9" defer></script>
     <script src="wallet.js?v=3" defer></script>
+    <script src="coupons.js?v=1" defer></script>
   </head>
   <body>
     <header class="site-header">
@@ -113,7 +115,7 @@
 
       <section class="page-view section-wrap shop-page" id="page-shop" data-page-view="shop" hidden>
         <div class="section-heading page-heading">
-          <div><h1 data-copy="shop.title"></h1></div>
+          <div class="shop-title-row"><h1 data-copy="shop.title"></h1><a class="admin-ghost-button shop-redeem-link" href="#redeem" data-copy="coupons.shopLink"></a></div>
           <label class="search-box"><img src="assets/icon_new/search_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="" aria-hidden="true"><input id="search" type="search" data-copy-placeholder="shop.searchPlaceholder" data-copy-aria="shop.searchAria"><span class="search-shortcut">⌕</span></label>
         </div>
         <div class="store-controls shop-filters" id="shop-filters"></div>
@@ -221,6 +223,11 @@
               <li><span data-copy="profile.statusInventory"></span><strong id="status-inventory"></strong></li>
             </ul>
             <a class="admin-primary-button profile-status-goto" href="#settings" data-copy="profile.gotoSettings"></a>
+          </section>
+          <section class="account-card profile-coupons-card">
+            <div class="account-section-heading"><h2 data-copy="coupons.myTitle"></h2><span id="profile-coupons-count"></span></div>
+            <p class="account-sub" data-copy="coupons.profileHint"></p>
+            <a class="admin-primary-button profile-status-goto" href="#redeem" data-copy="coupons.gotoRedeem"></a>
           </section>
           <section class="account-card account-links" id="account-links-card">
             <div class="account-section-heading"><h2 data-copy="profile.linksTitle"></h2></div>
@@ -398,6 +405,29 @@
         </div>
       </section>
 
+      <section class="page-view section-wrap profile-page coupons-page" id="page-redeem" data-page-view="redeem" hidden>
+        <div class="page-heading"><div><h1 data-copy="coupons.pageTitle"></h1></div></div>
+        <div class="account-guest" data-auth-guest>
+          <p data-copy="coupons.loginFirst"></p>
+          <button class="admin-primary-button" type="button" data-open-login data-copy="nav.account"></button>
+        </div>
+        <div class="coupons-body" data-auth-member hidden>
+          <section class="account-card coupon-redeem-card">
+            <form class="coupon-redeem-form" id="coupon-redeem-form">
+              <label class="admin-field"><span class="admin-field-label" data-copy="coupons.codeLabel"></span><input id="coupon-code" type="text" maxlength="24" autocomplete="off" autocapitalize="characters" spellcheck="false" data-copy-placeholder="coupons.codePlaceholder"></label>
+              <button class="admin-primary-button" id="coupon-lookup" type="submit" data-copy="coupons.lookup"></button>
+            </form>
+            <p class="account-status" id="coupon-redeem-status" role="status" aria-live="polite"></p>
+            <div class="coupon-preview" id="coupon-preview" hidden></div>
+          </section>
+          <section class="coupon-mine">
+            <div class="account-section-heading"><h2 data-copy="coupons.myTitle"></h2><span id="my-coupons-count">0</span></div>
+            <div class="coupon-list" id="my-coupons-list"></div>
+            <p class="admin-empty" id="my-coupons-empty" data-copy="coupons.myEmpty" hidden></p>
+          </section>
+        </div>
+      </section>
+
       <section class="page-view section-wrap wallet-page" id="page-wallet" data-page-view="wallet" hidden>
         <div class="page-heading"><div><h1 data-copy="wallet.title"></h1></div></div>
         <div class="account-guest" id="wallet-guest">
@@ -487,6 +517,7 @@
           <button class="admin-tab" id="admin-tab-create" type="button" role="tab" aria-selected="false" aria-controls="admin-create-panel" data-admin-tab="create" data-copy="admin.tabCreate"></button>
           <button class="admin-tab" id="admin-tab-orders" type="button" role="tab" aria-selected="false" aria-controls="admin-orders-panel" data-admin-tab="orders"><span data-copy="admin.tabOrders"></span><span class="admin-tab-badge" id="admin-orders-badge" hidden>0</span></button>
           <button class="admin-tab" id="admin-tab-topups" type="button" role="tab" aria-selected="false" aria-controls="admin-topups-panel" data-admin-tab="topups"><span data-copy="wallet.adminTab"></span><span class="admin-tab-badge" id="admin-topups-badge" hidden>0</span></button>
+          <button class="admin-tab" id="admin-tab-coupons" type="button" role="tab" aria-selected="false" aria-controls="admin-coupons-panel" data-admin-tab="coupons" data-copy="coupons.adminTab"></button>
           <button class="admin-tab" id="admin-tab-faq" type="button" role="tab" aria-selected="false" aria-controls="admin-faq-panel" data-admin-tab="faq" data-copy="admin.tabFaq"></button>
         </div>
         <datalist id="admin-tag-suggestions"></datalist>
@@ -602,6 +633,32 @@
           </div>
           <div class="order-list" id="admin-topup-list"></div>
           <p class="admin-empty" id="admin-topup-empty" data-copy="wallet.adminEmpty" hidden></p>
+        </section>
+        <section class="admin-card admin-coupons-panel" id="admin-coupons-panel" role="tabpanel" aria-labelledby="admin-tab-coupons" hidden>
+          <form class="admin-coupon-form" id="admin-coupon-form" novalidate>
+            <h2 data-copy="coupons.adminCreateTitle"></h2>
+            <div class="admin-create-fields">
+              <label class="admin-field"><span class="admin-field-label" data-copy="coupons.adminType"></span><select class="admin-select" id="coupon-type"><option value="discount" data-copy="coupons.typeDiscount"></option><option value="gift" data-copy="coupons.typeGift"></option></select></label>
+              <div class="admin-field"><span class="admin-field-label" data-copy="coupons.adminCode"></span><div class="coupon-code-row"><input id="coupon-new-code" type="text" maxlength="24" autocomplete="off" spellcheck="false" data-copy-title="coupons.adminCodeHint"><button class="admin-ghost-button" id="coupon-random" type="button" data-copy="coupons.adminRandom"></button></div></div>
+              <label class="admin-field admin-field-wide"><span class="admin-field-label" data-copy="coupons.adminTitle"></span><input id="coupon-title" type="text" maxlength="40" data-copy-placeholder="coupons.adminTitlePlaceholder"></label>
+              <label class="admin-field admin-field-wide"><span class="admin-field-label" data-copy="coupons.adminDescription"></span><input id="coupon-description" type="text" maxlength="200"></label>
+              <label class="admin-field admin-field-wide"><span class="admin-field-label" data-copy="coupons.adminImage"></span><input id="coupon-image" type="url" maxlength="2048" placeholder="https://..."></label>
+              <label class="admin-field" data-coupon-for="discount"><span class="admin-field-label" data-copy="coupons.adminMode"></span><select class="admin-select" id="coupon-mode"><option value="percent" data-copy="coupons.adminModePercent"></option><option value="amount" data-copy="coupons.adminModeAmount"></option></select></label>
+              <label class="admin-field" data-coupon-for="discount"><span class="admin-field-label" id="coupon-value-label" data-copy="coupons.adminPercent"></span><input id="coupon-value" type="number" min="1" step="1" inputmode="numeric"></label>
+              <label class="admin-field" data-coupon-for="percent"><span class="admin-field-label" data-copy="coupons.adminMaxDiscount"></span><input id="coupon-max-discount" type="number" min="0" step="1" inputmode="numeric" value="0"></label>
+              <label class="admin-field" data-coupon-for="discount"><span class="admin-field-label" data-copy="coupons.adminMin"></span><input id="coupon-min" type="number" min="0" step="1" inputmode="numeric" value="0"></label>
+              <label class="admin-field admin-field-wide" data-coupon-for="gift" hidden><span class="admin-field-label" data-copy="coupons.adminGift"></span><select class="admin-select" id="coupon-gift"></select><small class="admin-field-hint" data-copy="coupons.adminGiftHint"></small></label>
+              <label class="admin-field"><span class="admin-field-label" data-copy="coupons.adminMaxUses"></span><input id="coupon-max-uses" type="number" min="0" step="1" inputmode="numeric" value="0"></label>
+              <label class="admin-field"><span class="admin-field-label" data-copy="coupons.adminExpires"></span><input id="coupon-expires" type="date"></label>
+              <label class="admin-checkbox admin-field-wide"><input id="coupon-active" type="checkbox" checked><span data-copy="coupons.adminActive"></span></label>
+            </div>
+            <div class="admin-create-footer">
+              <p class="admin-create-status" id="coupon-create-status" role="status" aria-live="polite"></p>
+              <button class="admin-primary-button" id="coupon-submit" type="submit" data-copy="coupons.adminSubmit"></button>
+            </div>
+          </form>
+          <div class="coupon-list admin-coupon-list" id="admin-coupon-list"></div>
+          <p class="admin-empty" id="admin-coupon-empty" data-copy="coupons.adminListEmpty" hidden></p>
         </section>
         <section class="admin-card" id="admin-faq-panel" role="tabpanel" aria-labelledby="admin-tab-faq" hidden>
           <div class="admin-toolbar">
@@ -724,6 +781,13 @@
       <section class="cart-modal" role="dialog" aria-modal="true" aria-labelledby="cart-title">
         <div class="cart-head"><div><h2 id="cart-title" data-copy="cart.title"></h2></div><button class="close-button" id="close-cart" type="button" data-copy-aria="cart.closeAria"><img src="assets/icon_new/close_256dp_E3E3E3_FILL0_wght400_GRAD0_opsz48.png" alt="" aria-hidden="true"></button></div>
         <div class="cart-items" id="cart-items"></div><div class="cart-empty" id="cart-empty" data-copy="cart.empty"></div>
+        <div class="cart-coupon" id="cart-coupon" hidden>
+          <label class="cart-coupon-field"><span data-copy="coupons.cartLabel"></span><select class="admin-select" id="cart-coupon-select"></select></label>
+          <div class="cart-discount-lines" id="cart-discount-lines" hidden>
+            <span data-copy="coupons.subtotal"></span><span id="cart-subtotal"></span>
+            <span data-copy="coupons.discount"></span><span class="cart-discount-value" id="cart-discount"></span>
+          </div>
+        </div>
         <p class="account-status cart-status" id="cart-status" role="status" aria-live="polite"></p>
         <div class="cart-footer"><div class="cart-total"><span data-copy="cart.total"></span><strong><span class="currency-symbol" data-copy="product.currency"></span><span id="cart-total">0</span></strong></div><button class="checkout-button" id="checkout" type="button" data-copy="cart.checkout"></button></div>
       </section>

@@ -25,6 +25,7 @@
 - `admin.js`：管理頁（商品、上架、訂單、儲值、Q&A）
 - `orders.js`：購買與交易訂單、通知
 - `wallet.js`：EC 錢包與儲值
+- `coupons.js`：折價券、禮品券（管理頁「禮券」建立，使用者在「兌換禮券」頁兌換、購物車選券）
 - `prices.js`：SteamAnalyst 查價（每分鐘 30 次、24 小時 100 次排隊）
 - `inventory-import.js`：書籤、剪貼簿讀庫存
 - `item-details.js`：從 Steam 資料抓磨損等級、磨損值、圖案編號、StatTrak™、貼紙、吊飾、命名牌（網站和中繼站共用）
@@ -45,6 +46,7 @@
 | `inventoryRequests`、`relayStatus`、`adminInventory` | 中繼站的請求、中繼站和交易機器人的在線狀態（`relayStatus/inventory`、`relayStatus/bot`）、管理頁上架用庫存 |
 | `marketPrices` | 共用的 SteamAnalyst 價格快取 |
 | `productFavorites`、`productFavoriteCounts` | 收藏 |
+| `coupons`、`userCoupons` | 禮券（代碼當文件 id，只有知道代碼才讀得到）、使用者領到的券 |
 
 ## Cloudflare Worker（Steam 登入）
 

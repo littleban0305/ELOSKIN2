@@ -1,0 +1,236 @@
+/* ---------- 折價券、禮品券 ---------- */
+
+.shop-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.shop-redeem-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 14px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.coupons-body {
+  display: grid;
+  gap: 20px;
+}
+
+.coupon-redeem-card {
+  display: grid;
+  gap: 12px;
+}
+
+.coupon-redeem-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.coupon-redeem-form .admin-field { flex: 1; }
+
+.coupon-redeem-form input,
+.coupon-code-row input {
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.coupon-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 12px;
+}
+
+/* 一張券：左邊圖、右邊內容，中間像票券一樣的虛線 */
+.coupon-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  min-height: 132px;
+  overflow: hidden;
+  background: #121b21;
+  border: 1px solid #22313a;
+  border-radius: 16px;
+}
+
+
+.coupon-art {
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: linear-gradient(140deg, #1d3a35, #12252b);
+  border-right: 2px dashed #2b3d47;
+}
+
+.coupon-gift .coupon-art { background: linear-gradient(140deg, #3a2a1d, #2b1d18); }
+
+.coupon-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.coupon-art-label {
+  padding: 8px;
+  color: #50dbc5;
+  font-weight: 800;
+  text-align: center;
+}
+
+.coupon-gift .coupon-art-label { color: #f0b46a; }
+
+.coupon-body {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+  padding: 14px 16px;
+}
+
+.coupon-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.coupon-type {
+  padding: 2px 8px;
+  color: #0b1a17;
+  font-size: .75rem;
+  font-weight: 700;
+  background: #50dbc5;
+  border-radius: 999px;
+}
+
+.coupon-gift .coupon-type { background: #f0b46a; }
+
+.coupon-code {
+  overflow: hidden;
+  color: #9fb0b7;
+  font-size: .8rem;
+  letter-spacing: .06em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.coupon-title {
+  color: #eef4f6;
+  font-size: 1.05rem;
+  overflow-wrap: anywhere;
+}
+
+.coupon-description,
+.coupon-summary,
+.coupon-usage,
+.coupon-remaining,
+.coupon-hint {
+  margin: 0;
+  color: #93a3aa;
+  font-size: .85rem;
+  line-height: 1.5;
+}
+
+.coupon-summary { color: #c8d4d8; }
+
+.coupon-state {
+  justify-self: start;
+  padding: 2px 8px;
+  color: #93a3aa;
+  font-size: .78rem;
+  background: #1b262d;
+  border-radius: 999px;
+}
+
+.coupon-state.is-usable {
+  color: #50dbc5;
+  background: rgba(80, 219, 197, .12);
+}
+
+.coupon-card.is-spent { opacity: .62; }
+
+.coupon-claim {
+  justify-self: start;
+  margin-top: 4px;
+}
+
+.coupon-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.coupon-actions button {
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: .82rem;
+}
+
+.coupon-preview .coupon-card { max-width: 560px; }
+
+/* 管理頁 */
+.admin-coupons-panel {
+  display: grid;
+  gap: 18px;
+}
+
+.admin-coupon-form h2 {
+  margin: 0 0 12px;
+  font-size: 1.05rem;
+}
+
+.coupon-code-row {
+  display: flex;
+  gap: 8px;
+}
+
+.coupon-code-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-field-hint {
+  color: #829098;
+  font-size: .78rem;
+}
+
+/* 購物車 */
+.cart-coupon {
+  display: grid;
+  gap: 8px;
+  padding: 12px 0 0;
+  border-top: 1px solid #22313a;
+}
+
+.cart-coupon-field {
+  display: grid;
+  gap: 6px;
+  color: #93a3aa;
+  font-size: .85rem;
+}
+
+.cart-discount-lines {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 12px;
+  color: #93a3aa;
+  font-size: .88rem;
+}
+
+.cart-discount-lines span:nth-child(even) { text-align: right; }
+.cart-discount-value { color: #50dbc5; }
+
+.order-discount { color: #50dbc5; }
+
+@media (max-width: 720px) {
+  .coupon-list { grid-template-columns: 1fr; }
+  .coupon-card { grid-template-columns: 92px minmax(0, 1fr); }
+  .coupon-redeem-form { flex-direction: column; align-items: stretch; }
+}
