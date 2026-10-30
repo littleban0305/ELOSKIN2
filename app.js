@@ -131,7 +131,6 @@ const tradeState = {
   openFilter: ""
 };
 const favoriteCounts = new Map();
-const favoriteStatusChecks = new Set();
 let homeMarketMode = "popular";
 const steamConfig = window.ELOSKIN2_STEAM_CONFIG || {};
 const $ = (selector) => document.querySelector(selector);
@@ -592,30 +591,27 @@ function renderHomeProducts() {
   const featured = uniqueProducts.sort((a, b) => sorter(a, b) || a.name.localeCompare(b.name, "zh-Hant")).slice(0, 5);
   $("#featured-grid").innerHTML = featured.map((product) => productCardMarkup(product)).join("");
   $("#featured-grid").hidden = featured.length === 0;
-  featured.forEach(checkFavoriteStatus);
 }
 
-function checkFavoriteStatus(product) {
-  if (typeof window.eloGetProductFavorite !== "function") return;
-  const key = productFavoriteKey(product);
-  if (favoriteStatusChecks.has(key)) return;
-  favoriteStatusChecks.add(key);
-  window.eloGetProductFavorite(product).then((isFavorite) => {
-    const changed = isFavorite !== state.favorites.has(key);
-    if (isFavorite) state.favorites.add(key);
-    else state.favorites.delete(key);
-    if (!changed) return;
-    renderProducts();
-    renderHomeProducts();
-    renderProfileFavorites();
-  }).catch(() => favoriteStatusChecks.delete(key));
+// 收藏清單跟著帳號（auth.js 監聽 userFavorites/{uid}），換裝置也一樣
+let favoriteSaving = 0;
+window.addEventListener("elofavoriteschange", (event) => {
+  if (favoriteSaving > 0) return;
+  state.favorites = new Set(event.detail?.ids || []);
+  renderFavoriteViews();
+});
+
+function renderFavoriteViews() {
+  renderProducts();
+  renderTradeItems();
+  renderHomeProducts();
+  renderProfileFavorites();
 }
 
 const PREVIEW_COUNT = 5;
 
 function renderProfileFavorites() {
   if (!window.eloAuthUser || ($("#page-profile").hidden && $("#page-favorites").hidden)) return;
-  products.forEach(checkFavoriteStatus);
   const favorites = products.filter((product) => state.favorites.has(productFavoriteKey(product)));
   $("#profile-favorites-grid").innerHTML = favorites.map((product) => productCardMarkup(product)).join("");
   $("#profile-favorites-grid").hidden = favorites.length === 0;
@@ -1898,37 +1894,35 @@ document.addEventListener("click", (event) => {
   if (favorite) {
     const product = products.find((item) => item.id === favorite.dataset.favorite);
     if (!product) return;
+    // 收藏要登入，才能跟著帳號走
+    if (!window.eloAuthUser || window.eloAuthUser.isAnonymous) {
+      showToast(t("messages.favoriteLogin"));
+      $("#profile-login")?.click();
+      return;
+    }
+    const toggleFavorite = window.eloToggleProductFavorite;
+    if (typeof toggleFavorite !== "function") {
+      showToast(t("home.marketUnavailable"));
+      return;
+    }
     const key = productFavoriteKey(product);
     const shouldFavorite = !state.favorites.has(key);
     if (shouldFavorite) state.favorites.add(key);
     else state.favorites.delete(key);
-    renderProducts();
-    renderTradeItems();
-    renderHomeProducts();
-    renderProfileFavorites();
+    renderFavoriteViews();
     showToast(shouldFavorite ? t("messages.favoriteAdded") : t("messages.favoriteRemoved"));
-    const toggleFavorite = window.eloToggleProductFavorite;
-    if (typeof toggleFavorite === "function") {
-      toggleFavorite(product, shouldFavorite).then((result) => {
-        if (result) {
-          if (result.isFavorite) state.favorites.add(key);
-          else state.favorites.delete(key);
-          favoriteCounts.set(favoriteDocumentId(product), result.count);
-          renderProducts();
-          renderTradeItems();
-          renderHomeProducts();
-          renderProfileFavorites();
-        }
-      }).catch(() => {
-        if (shouldFavorite) state.favorites.delete(key);
-        else state.favorites.add(key);
-        renderProducts();
-        renderTradeItems();
-        renderHomeProducts();
-        renderProfileFavorites();
-        showToast(t("home.marketUnavailable"));
-      });
-    }
+    favoriteSaving += 1;
+    toggleFavorite(product, shouldFavorite).then((result) => {
+      favoriteCounts.set(favoriteDocumentId(product), result.count);
+    }).catch((error) => {
+      console.warn("Favorite failed:", error);
+      if (shouldFavorite) state.favorites.delete(key);
+      else state.favorites.add(key);
+      showToast(t("messages.favoriteFailed"));
+    }).finally(() => {
+      favoriteSaving -= 1;
+      renderFavoriteViews();
+    });
     return;
   }
 

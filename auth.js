@@ -36,11 +36,8 @@ const steamCallback = (() => {
 let authMode = "login";
 let firebaseAuth = null;
 let firebaseDb = null;
-let favoriteAuth = null;
-let favoriteDb = null;
-let favoriteAuthReady = Promise.resolve();
 let firebaseReady = false;
-let anonymousSignInPromise = null;
+let stopFavoriteWatch = null;
 const checkedProfileUids = new Set();
 let profileSetupUser = null;
 
@@ -413,21 +410,32 @@ function favoriteDocumentId(product) {
   return encodeURIComponent(productKey);
 }
 
-function ensureFavoriteUser() {
-  if (!favoriteAuth) return Promise.reject(new Error("firebase_auth_unavailable"));
-  if (!anonymousSignInPromise) {
-    anonymousSignInPromise = favoriteAuthReady.then(() => {
-      if (favoriteAuth.currentUser) return favoriteAuth.currentUser;
-      return favoriteAuth.signInAnonymously().then((credential) => credential.user);
-    })
-      .finally(() => { anonymousSignInPromise = null; });
+// 收藏記在登入的帳號上：userFavorites/{uid} 存收藏了哪些商品，換裝置也會同步
+// productFavorites/{商品}/voters/{uid} 和 productFavoriteCounts 用來算每個商品被收藏幾次（首頁「熱門」排序）
+const MAX_FAVORITES = 300;
+
+function favoriteUser() {
+  const user = firebaseAuth?.currentUser;
+  if (!user || user.isAnonymous) throw new Error("favorite_login_required");
+  return user;
+}
+
+function watchFavorites(user) {
+  stopFavoriteWatch?.();
+  stopFavoriteWatch = null;
+  if (!firebaseDb || !user || user.isAnonymous) {
+    window.dispatchEvent(new CustomEvent("elofavoriteschange", { detail: { ids: [] } }));
+    return;
   }
-  return anonymousSignInPromise;
+  stopFavoriteWatch = firebaseDb.doc(`userFavorites/${user.uid}`).onSnapshot((snapshot) => {
+    const ids = snapshot.exists && Array.isArray(snapshot.data().ids) ? snapshot.data().ids.filter((id) => typeof id === "string") : [];
+    window.dispatchEvent(new CustomEvent("elofavoriteschange", { detail: { ids } }));
+  }, (error) => console.warn("Favorites unavailable:", error));
 }
 
 function installFavoriteFeatures() {
-  if (!favoriteDb || !favoriteAuth) return;
-  favoriteDb.collection("productFavoriteCounts").onSnapshot((snapshot) => {
+  if (!firebaseDb || !firebaseAuth) return;
+  firebaseDb.collection("productFavoriteCounts").onSnapshot((snapshot) => {
     const counts = {};
     snapshot.forEach((document) => {
       const count = document.data().count;
@@ -435,41 +443,37 @@ function installFavoriteFeatures() {
     });
     window.dispatchEvent(new CustomEvent("favoritecountschanged", { detail: counts }));
   });
-
-  window.eloGetProductFavorite = async (product) => {
-    const user = await ensureFavoriteUser();
-    const reference = favoriteDb.doc(`productFavorites/${favoriteDocumentId(product)}/voters/${user.uid}`);
-    return (await reference.get()).exists;
-  };
+  firebaseAuth.onAuthStateChanged(watchFavorites);
 
   window.eloToggleProductFavorite = async (product, shouldFavorite) => {
-    const user = await ensureFavoriteUser();
+    const user = favoriteUser();
     const productId = favoriteDocumentId(product);
-    const countReference = favoriteDb.doc(`productFavoriteCounts/${productId}`);
-    const voteReference = favoriteDb.doc(`productFavorites/${productId}/voters/${user.uid}`);
+    const key = String(product.id);
+    const countReference = firebaseDb.doc(`productFavoriteCounts/${productId}`);
+    const voteReference = firebaseDb.doc(`productFavorites/${productId}/voters/${user.uid}`);
+    const listReference = firebaseDb.doc(`userFavorites/${user.uid}`);
     let count = 0;
     let isFavorite = shouldFavorite;
 
-    await favoriteDb.runTransaction(async (transaction) => {
+    await firebaseDb.runTransaction(async (transaction) => {
       const vote = await transaction.get(voteReference);
       const counter = await transaction.get(countReference);
+      const list = await transaction.get(listReference);
+      const ids = list.exists && Array.isArray(list.data().ids) ? list.data().ids.filter((id) => typeof id === "string") : [];
+      const nextIds = shouldFavorite ? [...ids.filter((id) => id !== key), key].slice(-MAX_FAVORITES) : ids.filter((id) => id !== key);
+      transaction.set(listReference, { ids: nextIds, updatedAt: Date.now() });
       count = counter.exists ? counter.data().count : 0;
-      isFavorite = vote.exists;
+      isFavorite = shouldFavorite;
       if (vote.exists === shouldFavorite) return;
       if (shouldFavorite) {
         transaction.set(voteReference, { uid: user.uid });
         if (counter.exists) transaction.update(countReference, { count: count + 1 });
         else transaction.set(countReference, { count: 1 });
         count += 1;
-        isFavorite = true;
-      } else {
-        if (!counter.exists || !Number.isInteger(count) || count < 1) {
-          throw new Error("favorite_count_invalid");
-        }
+      } else if (counter.exists && Number.isInteger(count) && count >= 1) {
         transaction.delete(voteReference);
         transaction.update(countReference, { count: count - 1 });
         count -= 1;
-        isFavorite = false;
       }
     });
     return { isFavorite, count };
@@ -512,21 +516,6 @@ async function initializeFirebase() {
     try {
       await loadFirebaseScript(`https://www.gstatic.com/firebasejs/${version}/firebase-firestore-compat.js`);
       firebaseDb = firebase.firestore();
-      const favoriteApp = firebase.apps.find((app) => app.name === "ELOSKIN2_FAVORITES")
-        || firebase.initializeApp(firebaseConfig, "ELOSKIN2_FAVORITES");
-      favoriteAuth = favoriteApp.auth();
-      favoriteDb = favoriteApp.firestore();
-      favoriteAuthReady = favoriteAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
-        .catch(() => {})
-        .then(() => new Promise((resolve) => {
-          const unsubscribe = favoriteAuth.onAuthStateChanged(() => {
-            unsubscribe();
-            resolve();
-          }, () => {
-            unsubscribe();
-            resolve();
-          });
-        }));
     } catch (error) {
       console.warn("Firestore unavailable:", error);
     }

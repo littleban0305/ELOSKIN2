@@ -993,6 +993,8 @@ window.ELOSKIN2_TEXT = {
   messages: {
     favoriteAdded: "已加入收藏",
     favoriteRemoved: "已從收藏移除",
+    favoriteLogin: "登入後才能收藏，收藏會跟著你的帳號",
+    favoriteFailed: "收藏沒有存成功，請再試一次",
     cartAdded: "已加入購物車"
   }
 };

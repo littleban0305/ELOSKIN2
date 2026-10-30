@@ -415,6 +415,18 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // 每個人收藏了哪些商品（跟著帳號，換裝置也同步）
+    match /userFavorites/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create, update: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly(["ids", "updatedAt"])
+        && request.resource.data.ids is list
+        && request.resource.data.ids.size() <= 300
+        && request.resource.data.updatedAt is int;
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+
     match /productFavorites/{productId}/voters/{userId} {
       allow read: if request.auth != null && request.auth.uid == userId;
       allow create: if request.auth != null
