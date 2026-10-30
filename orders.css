@@ -442,3 +442,5 @@
 
 .admin-bot-status[data-kind="success"] { color: #50dbc5; }
 .admin-bot-status[data-kind="success"]::before { background: #50dbc5; }
+.admin-bot-status[data-kind="error"] { color: #ff9b8a; }
+.admin-bot-status[data-kind="error"]::before { background: #ff9b8a; }

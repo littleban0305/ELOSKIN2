@@ -719,7 +719,8 @@ window.ELOSKIN2_TEXT = {
     botQueued: "已交給機器人，稍等一下就會送出報價",
     botOnline: "交易機器人在線",
     botOnlineAuto: "交易機器人在線（購買訂單自動出貨）",
-    botOffline: "交易機器人離線"
+    botOffline: "交易機器人離線",
+    botNeedsLogin: "交易機器人需要重新登入（中繼站手機執行 node bot.mjs --login）"
   },
   inventory: {
     quickTitle: "一鍵讀取（推薦）",

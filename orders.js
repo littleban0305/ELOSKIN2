@@ -490,6 +490,14 @@
     const label = $("#admin-bot-status");
     if (!label) return;
     const online = botOnline();
+    const alive = Date.now() - (Number(botStatus?.lastSeen) || 0) < BOT_ONLINE_MS;
+    if (!online && alive && botStatus?.needsLogin) {
+      label.textContent = text("orders.botNeedsLogin");
+      label.title = String(botStatus.message || "");
+      label.dataset.kind = "error";
+      return;
+    }
+    label.title = "";
     label.textContent = text(online ? (botStatus.autoPurchase ? "orders.botOnlineAuto" : "orders.botOnline") : "orders.botOffline");
     label.dataset.kind = online ? "success" : "muted";
   }

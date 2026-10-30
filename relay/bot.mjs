@@ -246,26 +246,75 @@ async function main() {
   });
 
   // ---------- 登入 ----------
+  // 規則：
+  //   1. 背景執行（start.sh）時只用記住的登入狀態（bot-data/refresh-token.txt）。
+  //      半自動模式絕對不會自己用帳號密碼登入，避免 Steam App 一直跳登入要求。
+  //   2. 登入狀態失效就停下來，等你在 Termux 執行 node bot.mjs --login 手動登入一次；
+  //      程式不結束（start.sh 才不會一直重開），管理頁會顯示「需要重新登入」。
+  //   3. 網路、Steam 暫時出錯就慢慢重試（1、2、5、10、30 分鐘）。
+
+  const LOGIN_MODE = process.argv.includes("--login");
+  const interactive = Boolean(process.stdin.isTTY);
+  const canUsePassword = Boolean(account.password) && (Boolean(account.sharedSecret) || (LOGIN_MODE && interactive));
+  const RETRY_MINUTES = [1, 2, 5, 10, 30];
+  const AUTH_ERRORS = new Set([5, 15, 18, 27, 63, 65, 66, 85, 88]); // 密碼錯、拒絕、過期、需要驗證碼等
+  let retries = 0;
+  let retryTimer = null;
+  let halted = "";
+
+  // 暫停登入；之後只要 node bot.mjs --login 存好新的登入狀態，這裡一分鐘內會自己接著跑，不用重開
+  let resumeTimer = null;
+  function halt(message) {
+    halted = message;
+    ready = false;
+    clearTimeout(retryTimer);
+    log(`暫停：${message}`);
+    beat();
+    if (LOGIN_MODE || resumeTimer) return;
+    resumeTimer = setInterval(() => {
+      if (!existsSync(TOKEN_FILE)) return;
+      clearInterval(resumeTimer);
+      resumeTimer = null;
+      halted = "";
+      retries = 0;
+      log("看到新的登入狀態，繼續");
+      try { client.logOff(); } catch { /* 本來就沒登入 */ }
+      setTimeout(logOn, 3000);
+    }, 60 * 1000);
+  }
+
+  function scheduleRetry(minutes) {
+    clearTimeout(retryTimer);
+    const wait = minutes ?? RETRY_MINUTES[Math.min(retries, RETRY_MINUTES.length - 1)];
+    retries += 1;
+    log(`${wait} 分鐘後重新登入`);
+    retryTimer = setTimeout(logOn, wait * 60 * 1000);
+  }
 
   function logOn() {
+    if (halted) return;
     if (existsSync(TOKEN_FILE)) {
       usingToken = true;
       client.logOn({ refreshToken: readFileSync(TOKEN_FILE, "utf8").trim(), machineName: "ELOSKIN2 bot" });
-    } else {
-      usingToken = false;
-      const details = { accountName: account.accountName, password: account.password, machineName: "ELOSKIN2 bot" };
-      if (account.sharedSecret) details.twoFactorCode = SteamTotp.generateAuthCode(account.sharedSecret);
-      client.logOn(details);
+      return;
     }
+    if (!canUsePassword) {
+      halt("需要手動登入一次：在 Termux 執行 node bot.mjs --login");
+      return;
+    }
+    usingToken = false;
+    const details = { accountName: account.accountName, password: account.password, machineName: "ELOSKIN2 bot" };
+    if (account.sharedSecret) details.twoFactorCode = SteamTotp.generateAuthCode(account.sharedSecret);
+    client.logOn(details);
   }
 
   client.on("steamGuard", async (domain, callback, lastCodeWrong) => {
     if (account.sharedSecret && !domain) {
+      if (lastCodeWrong && retries > 2) return halt("驗證器的代碼一直被拒絕，請檢查 maFile");
       setTimeout(() => callback(SteamTotp.generateAuthCode(account.sharedSecret)), lastCodeWrong ? 30000 : 0);
       return;
     }
-    // 半自動模式：第一次登入要手動輸入驗證碼，之後會記住登入狀態
-    if (!process.stdin.isTTY) fail("需要輸入 Steam Guard 驗證碼：請先在 Termux 手動執行一次 node bot.mjs 登入，之後再用 start.sh");
+    if (!interactive) return halt("需要手動登入一次：在 Termux 執行 node bot.mjs --login");
     const { createInterface } = await import("node:readline/promises");
     const prompt = createInterface({ input: process.stdin, output: process.stdout });
     const where = domain ? `寄到 ${domain} 的電子郵件` : "手機 Steam App（Steam Guard）";
@@ -276,14 +325,25 @@ async function main() {
 
   client.on("refreshToken", (token) => {
     writeFileSync(TOKEN_FILE, token, { mode: 0o600 });
+    if (LOGIN_MODE) {
+      log("登入成功，已經記住登入狀態。現在可以用 ./start.sh 啟動了");
+      setTimeout(() => process.exit(0), 2000);
+    }
   });
 
   client.on("loggedOn", () => {
+    retries = 0;
     log(`已登入 Steam（${client.steamID.getSteamID64()}）`);
-    client.setPersona(SteamUser.EPersonaState.Online);
+    // 專用機器人帳號才顯示上線；用主帳號（半自動）就不動你的線上狀態
+    if (account.sharedSecret) client.setPersona(SteamUser.EPersonaState.Online);
+    if (LOGIN_MODE && usingToken) {
+      log("已經是登入狀態，不用再登入。可以用 ./start.sh 啟動了");
+      setTimeout(() => process.exit(0), 1000);
+    }
   });
 
   client.on("webSession", (sessionId, cookies) => {
+    if (LOGIN_MODE) return;
     community.setCookies(cookies);
     manager.setCookies(cookies, (error) => {
       if (error) {
@@ -301,7 +361,8 @@ async function main() {
   });
 
   community.on("sessionExpired", () => {
-    log("Steam 網頁登入過期，重新登入");
+    if (!ready) return;
+    log("Steam 網頁登入過期，重新取得");
     client.webLogOn();
   });
 
@@ -312,28 +373,35 @@ async function main() {
 
   client.on("error", (error) => {
     ready = false;
-    if (usingToken) {
-      log("用記住的登入狀態登入失敗，改用帳號密碼：", error.message);
-      try { unlinkSync(TOKEN_FILE); } catch { /* 沒有就算了 */ }
-      if (!account.password) fail("bot-config.json 沒有 password，沒辦法重新登入");
-      setTimeout(logOn, 5000);
-      return;
+    const eresult = Number(error.eresult);
+    log(`Steam 登入出錯（${eresult || "?"}）：${error.message}`);
+    if (LOGIN_MODE) {
+      console.error("登入失敗，請確認帳號密碼後再試一次");
+      process.exit(1);
     }
-    log("Steam 登入失敗：", error.message);
-    setTimeout(() => process.exit(1), 60000); // start.sh 會在一分鐘後重開
+    if (eresult === 6 || eresult === 34) return scheduleRetry(10); // 在別的地方登入
+    if (eresult === 84 || eresult === 87) return scheduleRetry(30); // 登入太頻繁
+    if (AUTH_ERRORS.has(eresult) || /token|password|denied|expired/i.test(error.message)) {
+      if (usingToken) {
+        try { unlinkSync(TOKEN_FILE); } catch { /* 沒有就算了 */ }
+      }
+      if (canUsePassword && retries < 3) return scheduleRetry(1);
+      return halt("登入狀態失效了，需要手動登入一次：在 Termux 執行 node bot.mjs --login");
+    }
+    scheduleRetry();
   });
 
   // ---------- 啟動 ----------
 
-  bot.watch();
-  logOn();
-
-  const beat = async () => {
+  async function beat() {
+    if (LOGIN_MODE) return;
     try {
       await db.collection("relayStatus").doc("bot").set({
         name: config.name,
         lastSeen: Date.now(),
         loggedIn: ready,
+        needsLogin: Boolean(halted),
+        message: halted,
         steamId: steam.steamId(),
         autoPurchase: config.autoPurchase,
         ...bot.stats()
@@ -341,9 +409,19 @@ async function main() {
     } catch (error) {
       log("回報在線狀態失敗：", error.message);
     }
-  };
-  beat();
-  setInterval(beat, HEARTBEAT_MS);
+  }
+
+  if (LOGIN_MODE) {
+    if (!interactive) fail("node bot.mjs --login 要在 Termux 裡直接執行");
+    if (!account.password) fail("bot-config.json 要填 password 才能登入");
+    try { unlinkSync(TOKEN_FILE); } catch { /* 沒有就算了 */ }
+    log("開始登入，Steam 可能會問驗證碼，或在 Steam App 跳出登入確認");
+  } else {
+    bot.watch();
+    setInterval(beat, HEARTBEAT_MS);
+    beat();
+  }
+  logOn();
 }
 
 main().catch((error) => {

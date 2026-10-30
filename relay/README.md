@@ -77,7 +77,7 @@ chmod +x ~/.termux/boot/start-relay.sh
 | 送報價 | 機器人自己確認 | 機器人送出後，你要在手機 Steam App →「確認」按一下，管理頁也會收到通知 |
 | 設定 | 下面第 1～4 步全部 | 跳過第 1、2 步，`bot-config.json` 只填 `accountName`、`password`，刪掉 `maFile` 那行 |
 
-半自動第一次啟動要在 Termux 手動跑 `node bot.mjs`，它會問 Steam App 上的驗證碼，輸入一次之後就會記住登入狀態（存在 `bot-data/`，大約半年後才要再輸入）。半自動預設**不會**拒絕別人送給你的報價，因為那是你的主帳號；機器人只會送已經上架的物品。
+半自動第一次啟動前，要在 Termux 手動跑一次 `node bot.mjs --login`：輸入 Steam App 上的驗證碼（或在 App 按確認）後，它會記住登入狀態（存在 `bot-data/`）並自己結束，接著用 `./start.sh` 啟動。之後機器人在背景**只會用記住的登入狀態，絕對不會自己用密碼登入**；登入狀態失效時會停下來，管理頁「訂單」會顯示「交易機器人需要重新登入」，這時再跑一次 `node bot.mjs --login` 就好，不用重開 `start.sh`，一分鐘內會自己接上。半自動預設**不會**拒絕別人送給你的報價，因為那是你的主帳號；機器人只會送已經上架的物品。
 
 ### 1. 準備機器人帳號
 
@@ -131,10 +131,10 @@ nano bot-config.json
 cd ~/ELOSKIN2/relay
 git pull
 npm install
-node bot.mjs
+node bot.mjs --login
 ```
 
-看到「已登入 Steam」和「交易功能就緒」就成功了，按 `Ctrl + C` 停掉，之後用 `./start.sh` 啟動（有 `bot-config.json` 時會同時開中繼站和機器人）。管理頁「訂單」分頁右上角會顯示「交易機器人在線」。
+看到「登入成功，已經記住登入狀態」就好了（它會自己結束），之後用 `./start.sh` 啟動，Termux 會印出「交易功能就緒」（有 `bot-config.json` 時會同時開中繼站和機器人）。管理頁「訂單」分頁右上角會顯示「交易機器人在線」。
 
 ### 5. 網站這邊要做的
 
