@@ -73,6 +73,8 @@ window.ELOSKIN2_TEXT = {
     knife: "刀具",
     gloves: "手套",
     rivals: "Rivals 道具",
+    otherDefault: "其他",
+    otherSuggestions: ["點數卡", "遊戲周邊", "實體商品", "服務", "其他"],
     art: {
       item: "ITEMS",
       case: "CASE",
@@ -91,6 +93,7 @@ window.ELOSKIN2_TEXT = {
     all: "全部遊戲",
     cs2: "CS2",
     rivals: "ROBLOX RIVALS",
+    other: "其他商品",
     collection: "CS2 收藏庫",
     combined: "CS2 · ROBLOX RIVALS"
   },
@@ -561,6 +564,8 @@ window.ELOSKIN2_TEXT = {
     twdInvalid: "台幣價格需為 0 以上的數字",
     fieldGame: "遊戲",
     fieldCategory: "類別",
+    fieldCustomCategory: "類別（自己取名）",
+    customCategoryPlaceholder: "例如：點數卡、周邊",
     fieldImage: "圖片網址（選填）",
     imagePlaceholder: "https://...",
     fieldTags: "標籤",

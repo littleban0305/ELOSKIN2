@@ -48,10 +48,17 @@ function detectRarity(type) {
   return "unknown";
 }
 
+function gameName(game) {
+  return game === "OTHER" ? copy.games.other : game === "ROBLOX RIVALS" ? copy.games.rivals : copy.games.cs2;
+}
+
 function listingProduct(listing) {
-  const key = typeof copy.categories[listing.category] === "string" ? listing.category : "item";
-  const category = copy.categories[key];
-  const kind = key === "case" || key === "competitor" ? category
+  // 非遊戲商品（game = "OTHER"）的類別是管理員自己取的名字
+  const other = listing.game === "OTHER";
+  const key = !other && typeof copy.categories[listing.category] === "string" ? listing.category : "item";
+  const category = other ? String(listing.category || "") || copy.categories.otherDefault : copy.categories[key];
+  const kind = other ? category
+    : key === "case" || key === "competitor" ? category
     : WEAPON_CATEGORY_KEYS.includes(key) ? copy.categories.weapon : copy.categories.item;
   const name = String(listing.name || "");
   return {
@@ -61,7 +68,7 @@ function listingProduct(listing) {
     listingSource: listing.source,
     listed: listing.listed !== false,
     name,
-    game: listing.game === "ROBLOX RIVALS" ? "ROBLOX RIVALS" : "CS2",
+    game: other ? "OTHER" : listing.game === "ROBLOX RIVALS" ? "ROBLOX RIVALS" : "CS2",
     category,
     categoryKey: key,
     kind,
@@ -78,7 +85,7 @@ function listingProduct(listing) {
     hasCharm: Boolean(listing.steam?.details?.k?.length),
     details: listing.steam?.details || null,
     label: category.toUpperCase(),
-    art: LISTING_CATEGORY_ART[key] || "",
+    art: other ? "" : LISTING_CATEGORY_ART[key] || "",
     accent: "#74c9c0",
     iconUrl: /^https:\/\//.test(listing.imageUrl || "") ? listing.imageUrl : "",
     marketHashName: listing.steam?.marketHashName || "",
@@ -91,7 +98,8 @@ const categories = [copy.categories.allItems, ...categoryKeys.map((key) => copy.
 const games = [
   { id: "all", label: copy.games.all },
   { id: "CS2", label: copy.games.cs2 },
-  { id: "ROBLOX RIVALS", label: copy.games.rivals }
+  { id: "ROBLOX RIVALS", label: copy.games.rivals },
+  { id: "OTHER", label: copy.games.other }
 ];
 const SHOP_GAME_FILTERS = { categories: [], wear: [], rarity: [], stattrak: [], stickers: [], charms: [], miniGame: [] };
 const SHOP_FILTER_KEYS = {
@@ -185,6 +193,12 @@ function renderFilters() {
   ];
   if (state.game === "ROBLOX RIVALS") {
     parts.push(filter("shop-minigame-filter", copy.trade.miniGame, "miniGame", [{ value: "rivals", label: copy.trade.rivals }]));
+  } else if (state.game === "OTHER") {
+    // 其他商品的類別是自己取的，列出目前上架商品用到的
+    const otherCategories = [...new Set(products.filter((product) => product.game === "OTHER" && isProductPublished(product)).map((product) => product.category))]
+      .sort((a, b) => a.localeCompare(b, "zh-Hant"));
+    parts.push(filter("shop-type-filter", copy.shop.filterType, "categories",
+      otherCategories.map((category) => ({ value: category, label: category })), { emptyLabel: copy.trade.allTypes }));
   } else {
     parts.push(filter("shop-type-filter", copy.shop.filterType, "categories",
       typeKeys.map((key) => ({ value: copy.categories[key], label: copy.categories[key] })), { emptyLabel: copy.trade.allTypes }));
@@ -483,7 +497,7 @@ function productArtwork(product) {
       <path d="M143 143q4-36 37-36t37 36m-7 0q4-36 37-36t37 36" fill="none" stroke="#1e354d" stroke-width="13"/>
       <path d="m196 111 14 14 15-14" fill="none" stroke="#fff" stroke-width="5"/>`
   }[product.art];
-  if (!silhouette) return `<span class="product-art-placeholder" aria-hidden="true">${copy.games.cs2}</span>`;
+  if (!silhouette) return `<span class="product-art-placeholder" aria-hidden="true">${escapeHtml(product.game === "OTHER" ? product.category : product.game === "ROBLOX RIVALS" ? "RIVALS" : copy.games.cs2)}</span>`;
   return `<svg class="product-art" viewBox="0 0 420 180" role="img" aria-label="${escapeHtml(t("product.artAlt", { name: product.name }))}" focusable="false">${silhouette}</svg>`;
 }
 
@@ -686,7 +700,7 @@ function renderCart() {
     const product = products.find((item) => item.id === id);
     return `<div class="cart-row">
       <div class="cart-row-visual has-thumb">${product.iconUrl ? `<img src="${escapeHtml(product.iconUrl)}" alt="" loading="lazy">` : productArtwork(product)}</div>
-      <div class="cart-row-info"><strong>${escapeHtml(product.name)}</strong><span>${escapeHtml(product.game === "CS2" ? copy.games.cs2 : copy.games.rivals)}${product.wear === copy.product.notApplicable ? "" : ` · ${escapeHtml(product.wear)}`}</span></div>
+      <div class="cart-row-info"><strong>${escapeHtml(product.name)}</strong><span>${escapeHtml(product.game === "OTHER" ? product.category : gameName(product.game))}${product.wear === copy.product.notApplicable ? "" : ` · ${escapeHtml(product.wear)}`}</span></div>
       <strong class="cart-row-price">${product.price.toLocaleString()} ${escapeHtml(t("product.currency"))}</strong>
       <div class="quantity-control">
         <button type="button" data-quantity="${id}" data-change="-1" aria-label="${escapeHtml(t("cart.remove", { name: product.name }))}">-</button>
@@ -2144,7 +2158,7 @@ function openProductModal(productId, side = "") {
   const marketEc = product.marketHashName ? window.eloPrices?.ec(product.marketHashName) : null;
   const favoriteCount = favoriteCounts.get(favoriteDocumentId(product)) || 0;
   const specs = [
-    specRow(t("itemModal.game"), product.game === "ROBLOX RIVALS" ? copy.trade.roblox : copy.games.cs2),
+    specRow(t("itemModal.game"), product.game === "ROBLOX RIVALS" ? copy.trade.roblox : gameName(product.game)),
     detailSpecRows(details, product.marketHashName),
     marketEc !== null && marketEc !== undefined ? specRow(t("itemModal.marketPrice"), t("itemModal.marketPriceValue", { ec: marketEc.toLocaleString(), twd: marketTwd.toLocaleString() })) : "",
     product.source === "demo" ? "" : specRow(t("itemModal.stock"), t("itemModal.stockValue", { amount: product.stock })),

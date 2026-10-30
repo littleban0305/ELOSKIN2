@@ -17,15 +17,15 @@
     <link rel="stylesheet" href="wallet.css?v=1">
     <link rel="stylesheet" href="shop.css?v=9">
     <link rel="stylesheet" href="mobile.css?v=1">
-    <script src="content.js?v=54" defer></script>
+    <script src="content.js?v=55" defer></script>
     <script src="item-details.js?v=3" defer></script>
     <script src="inventory-import.js?v=5" defer></script>
     <script src="prices.js?v=5" defer></script>
     <script src="firebase-config.js?v=1" defer></script>
     <script src="steam-config.js?v=5" defer></script>
-    <script src="app.js?v=52" defer></script>
+    <script src="app.js?v=53" defer></script>
     <script src="auth.js?v=28" defer></script>
-    <script src="admin.js?v=17" defer></script>
+    <script src="admin.js?v=18" defer></script>
     <script src="orders.js?v=8" defer></script>
     <script src="wallet.js?v=3" defer></script>
   </head>
@@ -557,7 +557,8 @@
             <div class="admin-create-fields">
               <label class="admin-field admin-field-wide"><span class="admin-field-label" data-copy="admin.fieldName"></span><input id="admin-create-name" type="text" maxlength="100" required></label>
               <label class="admin-field"><span class="admin-field-label" data-copy="admin.fieldGame"></span><select class="admin-select" id="admin-create-game"></select></label>
-              <label class="admin-field"><span class="admin-field-label" data-copy="admin.fieldCategory"></span><select class="admin-select" id="admin-create-category"></select></label>
+              <label class="admin-field" id="admin-create-category-field"><span class="admin-field-label" data-copy="admin.fieldCategory"></span><select class="admin-select" id="admin-create-category"></select></label>
+              <label class="admin-field" id="admin-create-custom-category-field" hidden><span class="admin-field-label" data-copy="admin.fieldCustomCategory"></span><input id="admin-create-custom-category" type="text" maxlength="20" list="admin-custom-category-options" data-copy-placeholder="admin.customCategoryPlaceholder"><datalist id="admin-custom-category-options"></datalist></label>
               <label class="admin-field"><span class="admin-field-label" data-copy="admin.fieldTwd"></span><input id="admin-create-twd" type="number" min="0" step="any" inputmode="decimal" data-copy-placeholder="admin.twdPlaceholder" data-copy-title="admin.twdRate"></label>
               <label class="admin-field"><span class="admin-field-label" data-copy="admin.fieldPrice"></span><input id="admin-create-price" type="number" min="0" max="10000000" step="1" inputmode="numeric" data-copy-placeholder="admin.pricePlaceholder"></label>
               <label class="admin-field"><span class="admin-field-label" data-copy="admin.fieldStock"></span><input id="admin-create-stock" type="number" min="0" max="100000" step="1" inputmode="numeric" value="1"></label>

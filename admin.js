@@ -68,12 +68,14 @@
 
   // ---------- Shared helpers ----------
 
-  function categoryLabel(key) {
+  // 非遊戲商品（game = "OTHER"）的類別是管理員自己取的名字，直接顯示
+  function categoryLabel(key, game) {
+    if (game === "OTHER") return String(key || "") || copy.categories.otherDefault;
     return typeof copy.categories[key] === "string" ? copy.categories[key] : copy.categories.item;
   }
 
   function gameLabel(game) {
-    return game === "ROBLOX RIVALS" ? copy.games.rivals : copy.games.cs2;
+    return game === "OTHER" ? copy.games.other : game === "ROBLOX RIVALS" ? copy.games.rivals : copy.games.cs2;
   }
 
   function detectCategoryKey(name, type) {
@@ -425,7 +427,7 @@
 
   function matchesFilter(listing) {
     const term = productSearch.value.trim().toLocaleLowerCase("zh-Hant");
-    const haystack = [listing.name, categoryLabel(listing.category), gameLabel(listing.game), ...(listing.tags || [])]
+    const haystack = [listing.name, categoryLabel(listing.category, listing.game), gameLabel(listing.game), ...(listing.tags || [])]
       .join(" ").toLocaleLowerCase("zh-Hant");
     if (term && !haystack.includes(term)) return false;
     switch (productFilter.value) {
@@ -484,14 +486,14 @@
     const listingMarketTwd = listing.steam?.marketHashName ? window.eloPrices?.twd(listing.steam.marketHashName) : null;
     details.textContent = [
       gameLabel(listing.game),
-      categoryLabel(listing.category),
+      categoryLabel(listing.category, listing.game),
       listing.source === "steam" ? text("admin.sourceSteam") : text("admin.sourceCustom"),
       listingMarketTwd !== null && listingMarketTwd !== undefined ? text("admin.marketPrice", { twd: listingMarketTwd.toLocaleString() }) : ""
     ].filter(Boolean).join(" · ");
     const state = document.createElement("span");
     state.className = "admin-row-state";
     meta.append(title, details, state);
-    summary.append(artElement(listing.imageUrl, categoryLabel(listing.category)), meta);
+    summary.append(artElement(listing.imageUrl, categoryLabel(listing.category, listing.game)), meta);
 
     const nameInput = document.createElement("input");
     nameInput.type = "text";
@@ -746,12 +748,44 @@
     option.textContent = categoryLabel(key);
     return option;
   }));
-  createFields.game.replaceChildren(...[["CS2", copy.games.cs2], ["ROBLOX RIVALS", copy.games.rivals]].map(([value, label]) => {
+  createFields.game.replaceChildren(...[["CS2", copy.games.cs2], ["ROBLOX RIVALS", copy.games.rivals], ["OTHER", copy.games.other]].map(([value, label]) => {
     const option = document.createElement("option");
     option.value = value;
     option.textContent = label;
     return option;
   }));
+
+  // 選「其他商品」時，類別改成自己輸入（下拉選單會列出常用的和已經用過的）
+  const customCategoryInput = $("#admin-create-custom-category");
+  const customCategoryOptions = $("#admin-custom-category-options");
+
+  function isOtherGame() {
+    return createMode !== "steam" && createFields.game.value === "OTHER";
+  }
+
+  function updateCategoryField() {
+    const other = isOtherGame();
+    $("#admin-create-category-field").hidden = other;
+    $("#admin-create-custom-category-field").hidden = !other;
+    if (other) {
+      const used = listings.filter((listing) => listing.game === "OTHER").map((listing) => String(listing.category || ""));
+      const names = [...new Set([...copy.categories.otherSuggestions, ...used].filter(Boolean))];
+      customCategoryOptions.replaceChildren(...names.map((name) => {
+        const option = document.createElement("option");
+        option.value = name;
+        return option;
+      }));
+    }
+    updateCreatePreview();
+  }
+
+  function createCategoryValue() {
+    if (!isOtherGame()) return createFields.category.value;
+    return customCategoryInput.value.trim().slice(0, 20) || copy.categories.otherDefault;
+  }
+
+  createFields.game.addEventListener("change", updateCategoryField);
+  customCategoryInput.addEventListener("input", updateCreatePreview);
 
   createTags = createTagEditor([], () => {});
   $("#admin-create-tags").replaceWith(createTags.element);
@@ -764,7 +798,7 @@
 
   function updateCreatePreview() {
     const imageUrl = createMode === "steam" ? selectedSteamItem?.iconUrl : createFields.imageUrl.value.trim();
-    setArt(createArt, imageUrl, categoryLabel(createFields.category.value));
+    setArt(createArt, imageUrl, categoryLabel(createCategoryValue(), isOtherGame() ? "OTHER" : ""));
     createSourceLabel.textContent = createMode === "steam"
       ? selectedSteamItem ? text("admin.createSourceSteam", { name: selectedSteamItem.name }) : text("admin.steamSelectFirst")
       : text("admin.createSourceCustom");
@@ -776,6 +810,9 @@
     createFields.listed.checked = true;
     createFields.game.value = "CS2";
     createFields.category.value = "item";
+    customCategoryInput.value = "";
+    $("#admin-create-category-field").hidden = false;
+    $("#admin-create-custom-category-field").hidden = true;
     createTags.setTags([]);
     selectedSteamItem = null;
     steamGrid.querySelectorAll(".is-selected").forEach((element) => element.classList.remove("is-selected"));
@@ -791,6 +828,7 @@
     });
     steamPicker.hidden = mode !== "steam";
     imageField.hidden = mode === "steam";
+    createFields.game.querySelector('option[value="OTHER"]').disabled = mode === "steam";
     setCreateStatus("");
     resetCreateForm();
     if (mode === "steam" && steamLoadState === "idle") loadSteamInventory();
@@ -847,7 +885,7 @@
     const data = {
       name,
       game: createFields.game.value,
-      category: createFields.category.value,
+      category: createCategoryValue(),
       description: createFields.description.value.trim(),
       price: price.value,
       stock: stock.value,

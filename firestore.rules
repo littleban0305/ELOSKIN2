@@ -29,7 +29,7 @@ service cloud.firestore {
       return data.keys().hasOnly(["name", "game", "category", "description", "price", "stock", "tags", "imageUrl", "source", "steam", "listed", "createdAt", "updatedAt"])
         && data.keys().hasAll(["name", "game", "category", "description", "price", "stock", "tags", "imageUrl", "source", "listed", "createdAt"])
         && data.name is string && data.name.size() > 0 && data.name.size() <= 100
-        && data.game in ["CS2", "ROBLOX RIVALS"]
+        && data.game in ["CS2", "ROBLOX RIVALS", "OTHER"]
         && data.category is string && data.category.size() <= 30
         && data.description is string && data.description.size() <= 500
         && (data.price == null || (data.price is int && data.price >= 0 && data.price <= 10000000))
