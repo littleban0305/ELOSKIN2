@@ -376,7 +376,13 @@ async function main() {
     const eresult = Number(error.eresult);
     log(`Steam 登入出錯（${eresult || "?"}）：${error.message}`);
     if (LOGIN_MODE) {
-      console.error("登入失敗，請確認帳號密碼後再試一次");
+      if (eresult === 84 || eresult === 87) {
+        console.error("Steam 暫時鎖住這個帳號的登入（短時間登入太多次）。請至少等 1～2 小時再試，等待期間不要再登入，每試一次都可能讓冷卻變更久。");
+      } else if (eresult === 5 || eresult === 65 || eresult === 88) {
+        console.error("帳號、密碼或驗證碼錯了，請確認 bot-config.json 和 Steam App 上的驗證碼後再試一次");
+      } else {
+        console.error("登入失敗，請稍等一下再試一次");
+      }
       process.exit(1);
     }
     if (eresult === 6 || eresult === 34) return scheduleRetry(10); // 在別的地方登入
